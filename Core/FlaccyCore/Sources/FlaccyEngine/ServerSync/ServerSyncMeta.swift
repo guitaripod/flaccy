@@ -10,6 +10,7 @@ struct ServerSyncLink: Sendable, Equatable {
     var incarnation: String?
     var serverURL: String
     var serverName: String
+    var serverPin: String?
 }
 
 /// The `sync_meta` key-value table and the counters that live in it. Every function runs inside the caller's transaction.
@@ -26,6 +27,7 @@ enum SyncMeta {
     static let eventCounter = "event_counter"
     static let serverURL = "server_url"
     static let serverName = "server_name"
+    static let serverPin = "server_pin"
     static let imported = "imported"
     static let importCursor = "import_cursor"
     static let lastSynced = "last_synced_at"
@@ -75,7 +77,8 @@ enum SyncMeta {
             instance: try get(db, instance) ?? "",
             incarnation: try get(db, incarnation),
             serverURL: try get(db, serverURL) ?? "",
-            serverName: try get(db, serverName) ?? ""
+            serverName: try get(db, serverName) ?? "",
+            serverPin: try get(db, serverPin)
         )
     }
 

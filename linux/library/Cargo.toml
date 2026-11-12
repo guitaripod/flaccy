@@ -22,8 +22,10 @@ ureq = { version = "2", features = ["json"] }
 flaccy-server-core = { path = "../server-core" }
 hex = "0.4"
 tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
 
 [dev-dependencies]
+rcgen = { version = "0.13", default-features = false, features = ["crypto", "ring"] }
 flaccy-server-core = { path = "../server-core", features = ["sim"] }
 axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "sync"] }

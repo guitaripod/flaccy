@@ -1345,6 +1345,76 @@
         }
       }
     },
+    "%@ answered with a different security key than when it was added, so Flaccy stopped. If it was reinstalled or moved to another computer, remove it and add it again with a new code.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ hat einen anderen Sicherheitsschlüssel geantwortet als beim Hinzufügen, daher hat Flaccy angehalten. Wenn es neu installiert oder auf einen anderen Computer verschoben wurde, entferne es und füge es mit einem neuen Code erneut hinzu."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ answered with a different security key than when it was added, so Flaccy stopped. If it was reinstalled or moved to another computer, remove it and add it again with a new code."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ respondió con una clave de seguridad distinta a la de cuando se añadió, así que Flaccy se detuvo. Si se reinstaló o se movió a otro ordenador, elimínalo y añádelo de nuevo con un código nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a répondu avec une autre clé de sécurité que lors de l’ajout, donc Flaccy s’est arrêté. S’il a été réinstallé ou déplacé sur un autre ordinateur, supprime-le et ajoute-le de nouveau avec un nouveau code."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ha risposto con una chiave di sicurezza diversa da quella usata quando è stato aggiunto, quindi Flaccy si è fermato. Se è stato reinstallato o spostato su un altro computer, rimuovilo e aggiungilo di nuovo con un nuovo codice."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ が追加したときとは異なるセキュリティキーで応答したため、Flaccy は停止しました。再インストールしたか別のコンピュータに移した場合は、削除してから新しいコードで追加し直してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@이(가) 추가했을 때와 다른 보안 키로 응답해서 Flaccy가 중지되었습니다. 다시 설치했거나 다른 컴퓨터로 옮겼다면 삭제한 뒤 새 코드로 다시 추가하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ odpowiedział innym kluczem bezpieczeństwa niż przy dodawaniu, więc Flaccy się zatrzymał. Jeśli został ponownie zainstalowany lub przeniesiony na inny komputer, usuń go i dodaj ponownie z nowym kodem."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ respondeu com uma chave de segurança diferente da usada quando foi adicionado, então o Flaccy parou. Se ele foi reinstalado ou movido para outro computador, remova-o e adicione-o de novo com um código novo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 返回的安全密钥与添加时不同，因此 Flaccy 已停止。如果它被重新安装或移到了另一台电脑，请将其移除，然后用新代码重新添加。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 回應的安全金鑰與新增時不同，因此 Flaccy 已停止。如果它被重新安裝或移到了另一台電腦，請將其移除，然後用新代碼重新新增。"
+          }
+        }
+      }
+    },
     "%@ answered with an HTTP %lld error. A proxy in front of the server, or the server itself, is failing. Try again in a moment, or check the server’s log.": {
       "localizations": {
         "de": {
@@ -2179,6 +2249,146 @@
           "stringUnit": {
             "state": "translated",
             "value": "剩餘 %@"
+          }
+        }
+      }
+    },
+    "%@ has a new security key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ hat einen neuen Sicherheitsschlüssel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ has a new security key"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ tiene una clave de seguridad nueva"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a une nouvelle clé de sécurité"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ha una nuova chiave di sicurezza"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のセキュリティキーが変わりました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@의 보안 키가 새로 바뀌었습니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ma nowy klucz bezpieczeństwa"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ tem uma nova chave de segurança"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的安全密钥已更改"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的安全金鑰已更改"
+          }
+        }
+      }
+    },
+    "%@ has a new security key. Remove it and add it again to keep syncing.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ hat einen neuen Sicherheitsschlüssel. Entferne es und füge es erneut hinzu, damit die Synchronisierung weiterläuft."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ has a new security key. Remove it and add it again to keep syncing."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ tiene una clave de seguridad nueva. Elimínalo y añádelo de nuevo para seguir sincronizando."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a une nouvelle clé de sécurité. Supprime-le et ajoute-le de nouveau pour continuer la synchronisation."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ha una nuova chiave di sicurezza. Rimuovilo e aggiungilo di nuovo per continuare la sincronizzazione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のセキュリティキーが変わりました。同期を続けるには、削除してから追加し直してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@의 보안 키가 바뀌었습니다. 동기화를 계속하려면 삭제한 뒤 다시 추가하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ma nowy klucz bezpieczeństwa. Usuń go i dodaj ponownie, aby synchronizacja działała dalej."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ tem uma nova chave de segurança. Remova-o e adicione-o de novo para continuar sincronizando."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的安全密钥已更改。请将其移除并重新添加，以继续同步。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的安全金鑰已更改。請將其移除並重新新增，以繼續同步。"
           }
         }
       }
@@ -18095,72 +18305,72 @@
         }
       }
     },
-    "A code works once and expires after 10 minutes. On %@, run `flaccy-server enroll` for a new one.": {
+    "A code works once and lasts 10 minutes. Make a new one on %@ and try again.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein Code funktioniert nur einmal und läuft nach 10 Minuten ab. Auf %@ `flaccy-server enroll` ausführen, um einen neuen zu erhalten."
+            "value": "Ein Code funktioniert nur einmal und gilt 10 Minuten. Erstelle auf %@ einen neuen und versuche es erneut."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A code works once and expires after 10 minutes. On %@, run `flaccy-server enroll` for a new one."
+            "value": "A code works once and lasts 10 minutes. Make a new one on %@ and try again."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un código funciona una vez y caduca a los 10 minutos. En %@, ejecuta `flaccy-server enroll` para obtener uno nuevo."
+            "value": "Un código funciona una sola vez y dura 10 minutos. Genera uno nuevo en %@ y vuelve a intentarlo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un code ne fonctionne qu’une fois et expire au bout de 10 minutes. Sur %@, exécutez `flaccy-server enroll` pour en obtenir un nouveau."
+            "value": "Un code ne fonctionne qu’une fois et reste valable 10 minutes. Crée-en un nouveau sur %@ et réessaie."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un codice funziona una sola volta e scade dopo 10 minuti. Su %@, eseguire `flaccy-server enroll` per ottenerne uno nuovo."
+            "value": "Un codice funziona una sola volta e dura 10 minuti. Creane uno nuovo su %@ e riprova."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "コードは一度だけ使えて、10分で期限切れになります。%@ で `flaccy-server enroll` を実行し、新しいコードを取得してください。"
+            "value": "コードは1回だけ使え、有効期限は10分です。%@ で新しいコードを作成して、もう一度試してください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "코드는 한 번만 사용할 수 있고 10분 뒤에 만료돼요. %@에서 `flaccy-server enroll`을 실행해 새 코드를 받으세요."
+            "value": "코드는 한 번만 사용할 수 있으며 10분 동안 유효합니다. %@에서 새 코드를 만든 뒤 다시 시도하세요."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kod działa jeden raz i wygasa po 10 minutach. Na %@ uruchom `flaccy-server enroll`, aby uzyskać nowy."
+            "value": "Kod działa tylko raz i jest ważny przez 10 minut. Wygeneruj nowy na %@ i spróbuj ponownie."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Um código funciona uma vez e expira em 10 minutos. Em %@, execute `flaccy-server enroll` para gerar um novo."
+            "value": "Um código funciona uma única vez e vale por 10 minutos. Gere um novo em %@ e tente de novo."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "代码只能使用一次，10 分钟后失效。请在 %@ 上运行 `flaccy-server enroll` 获取新的代码。"
+            "value": "代码只能使用一次，有效期为 10 分钟。请在 %@ 上生成新代码，然后重试。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "代碼只能使用一次，10 分鐘後失效。請在 %@ 上執行 `flaccy-server enroll` 取得新的代碼。"
+            "value": "代碼只能使用一次，有效期為 10 分鐘。請在 %@ 上產生新代碼，然後重試。"
           }
         }
       }
@@ -21245,6 +21455,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "新增伺服器…"
+          }
+        }
+      }
+    },
+    "Add Tailscale to listen away from home.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge Tailscale hinzu, um auch unterwegs zu hören."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Tailscale to listen away from home."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade Tailscale para escuchar fuera de casa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez Tailscale pour écouter loin de chez vous."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi Tailscale per ascoltare fuori casa."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外出先で聴くには Tailscale を追加してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "외부에서 들으려면 Tailscale을 추가하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj Tailscale, aby słuchać poza domem."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicione o Tailscale para ouvir fora de casa."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加 Tailscale 即可在外出时收听。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增 Tailscale 即可在外出時聆聽。"
           }
         }
       }
@@ -27227,6 +27507,76 @@
         }
       }
     },
+    "Away from home?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterwegs?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Away from home?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Fuera de casa?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loin de chez vous ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuori casa?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外出先ですか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "외부에 계신가요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poza domem?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fora de casa?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外出时？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外出時？"
+          }
+        }
+      }
+    },
     "Bach, lossless, free · 130 MB": {
       "localizations": {
         "de": {
@@ -28909,142 +29259,142 @@
         }
       }
     },
-    "Can't reach %@ to list its devices. Is Tailscale on?": {
+    "Can't reach %@ to list its devices. Same Wi-Fi, or Tailscale on?": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ ist nicht erreichbar, um seine Geräte aufzulisten. Ist Tailscale aktiviert?"
+            "value": "%@ ist nicht erreichbar, um seine Geräte aufzulisten. Gleiches WLAN oder Tailscale aktiv?"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Can't reach %@ to list its devices. Is Tailscale on?"
+            "value": "Can't reach %@ to list its devices. Same Wi-Fi, or Tailscale on?"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se puede acceder a %@ para listar sus dispositivos. ¿Está Tailscale activado?"
+            "value": "No se puede acceder a %@ para listar sus dispositivos. ¿Mismo Wi-Fi o Tailscale activado?"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossible de joindre %@ pour lister ses appareils. Tailscale est-il activé ?"
+            "value": "Impossible de joindre %@ pour lister ses appareils. Même Wi-Fi, ou Tailscale activé ?"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossibile raggiungere %@ per elencare i suoi dispositivi. Tailscale è attivo?"
+            "value": "Impossibile raggiungere %@ per elencare i suoi dispositivi. Stessa rete Wi-Fi o Tailscale attivo?"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "デバイスを一覧表示するために %@ に接続できません。Tailscale はオンになっていますか？"
+            "value": "%@ に接続して機器一覧を取得できません。同じ Wi-Fi か、Tailscale はオンですか？"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "기기 목록을 가져오려고 %@에 연결할 수 없어요. Tailscale이 켜져 있나요?"
+            "value": "기기 목록을 가져오려고 %@에 연결할 수 없습니다. 같은 Wi-Fi인가요, 아니면 Tailscale이 켜져 있나요?"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nie można połączyć się z: %@, aby wyświetlić jego urządzenia. Czy Tailscale jest włączony?"
+            "value": "Nie można połączyć się z %@, by pobrać listę urządzeń. Ten sam Wi-Fi albo włączony Tailscale?"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Não foi possível acessar %@ para listar seus dispositivos. O Tailscale está ativado?"
+            "value": "Não foi possível acessar %@ para listar os dispositivos. Mesmo Wi-Fi ou Tailscale ativado?"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法连接到 %@ 以列出其设备。Tailscale 是否已开启？"
+            "value": "无法连接 %@ 以列出其设备。是否在同一 Wi-Fi，或已开启 Tailscale？"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "無法連線到 %@ 以列出其裝置。Tailscale 是否已開啟？"
+            "value": "無法連線到 %@ 以列出其裝置。是否在同一 Wi-Fi，或已開啟 Tailscale？"
           }
         }
       }
     },
-    "Can't reach %@. Is Tailscale on?": {
+    "Can't reach %@. Same Wi-Fi, or Tailscale on?": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ nicht erreichbar. Ist Tailscale aktiviert?"
+            "value": "%@ nicht erreichbar. Gleiches WLAN oder Tailscale aktiv?"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Can't reach %@. Is Tailscale on?"
+            "value": "Can't reach %@. Same Wi-Fi, or Tailscale on?"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se puede acceder a %@. ¿Está Tailscale activado?"
+            "value": "No se puede acceder a %@. ¿Mismo Wi-Fi o Tailscale activado?"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossible de joindre %@. Tailscale est-il activé ?"
+            "value": "Impossible de joindre %@. Même Wi-Fi, ou Tailscale activé ?"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossibile raggiungere %@. Tailscale è attivo?"
+            "value": "Impossibile raggiungere %@. Stessa rete Wi-Fi o Tailscale attivo?"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ に接続できません。Tailscale はオンになっていますか？"
+            "value": "%@ に接続できません。同じ Wi-Fi か、Tailscale はオンですか？"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@에 연결할 수 없어요. Tailscale이 켜져 있나요?"
+            "value": "%@에 연결할 수 없습니다. 같은 Wi-Fi인가요, 아니면 Tailscale이 켜져 있나요?"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nie można połączyć się z: %@. Czy Tailscale jest włączony?"
+            "value": "Nie można połączyć się z %@. Ten sam Wi-Fi albo włączony Tailscale?"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Não foi possível acessar %@. O Tailscale está ativado?"
+            "value": "Não foi possível acessar %@. Mesmo Wi-Fi ou Tailscale ativado?"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法连接到 %@。Tailscale 是否已开启？"
+            "value": "无法连接 %@。是否在同一 Wi-Fi，或已开启 Tailscale？"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "無法連線到 %@。Tailscale 是否已開啟？"
+            "value": "無法連線到 %@。是否在同一 Wi-Fi，或已開啟 Tailscale？"
           }
         }
       }
@@ -29707,72 +30057,142 @@
         }
       }
     },
-    "Check the name on the server with `tailscale status`, or scan the code from the server.": {
+    "Check that %@ is on and on the same Wi-Fi as this device, or that Tailscale is on for both. Then try again.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Den Namen auf dem Server mit `tailscale status` prüfen oder den Code vom Server scannen."
+            "value": "Prüfe, ob %@ eingeschaltet ist und im selben WLAN wie dieses Gerät ist, oder ob Tailscale auf beiden Geräten aktiv ist. Versuche es dann erneut."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check the name on the server with `tailscale status`, or scan the code from the server."
+            "value": "Check that %@ is on and on the same Wi-Fi as this device, or that Tailscale is on for both. Then try again."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Comprueba el nombre en el servidor con `tailscale status` o escanea el código del servidor."
+            "value": "Comprueba que %@ esté encendido y en el mismo Wi-Fi que este dispositivo, o que Tailscale esté activado en ambos. Luego vuelve a intentarlo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vérifiez le nom sur le serveur avec `tailscale status`, ou scannez le code affiché par le serveur."
+            "value": "Vérifie que %@ est allumé et sur le même Wi-Fi que cet appareil, ou que Tailscale est activé sur les deux. Réessaie ensuite."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Controlla il nome sul server con `tailscale status` oppure scansiona il codice dal server."
+            "value": "Verifica che %@ sia acceso e sulla stessa rete Wi-Fi di questo dispositivo, oppure che Tailscale sia attivo su entrambi. Poi riprova."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "サーバー上で `tailscale status` を実行して名前を確認するか、サーバーに表示されたコードをスキャンしてください。"
+            "value": "%@ の電源が入っていて、この機器と同じ Wi-Fi に接続されているか、両方で Tailscale がオンになっているか確認してください。その後、もう一度試してください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "서버에서 `tailscale status`로 이름을 확인하거나, 서버에 표시된 코드를 스캔하세요."
+            "value": "%@이(가) 켜져 있고 이 기기와 같은 Wi-Fi에 연결되어 있는지, 또는 두 기기 모두 Tailscale이 켜져 있는지 확인하세요. 그런 다음 다시 시도하세요."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sprawdź nazwę na serwerze poleceniem `tailscale status` albo zeskanuj kod z serwera."
+            "value": "Sprawdź, czy %@ jest włączony i w tej samej sieci Wi-Fi co to urządzenie, albo czy Tailscale jest włączony na obu. Potem spróbuj ponownie."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Confira o nome no servidor com `tailscale status` ou escaneie o código do servidor."
+            "value": "Verifique se %@ está ligado e na mesma rede Wi-Fi deste dispositivo, ou se o Tailscale está ativado nos dois. Depois tente de novo."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在服务器上运行 `tailscale status` 检查名称，或扫描服务器上的代码。"
+            "value": "请确认 %@ 已开机，并且与此设备在同一 Wi-Fi 下，或两端都已开启 Tailscale。然后重试。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在伺服器上執行 `tailscale status` 檢查名稱，或掃描伺服器上的代碼。"
+            "value": "請確認 %@ 已開機，並且與此裝置在同一 Wi-Fi 下，或兩端都已開啟 Tailscale。然後重試。"
+          }
+        }
+      }
+    },
+    "Check the address shown on %@, or scan its code again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prüfe die Adresse, die auf %@ angezeigt wird, oder scanne den Code erneut."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the address shown on %@, or scan its code again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprueba la dirección que muestra %@, o escanea de nuevo su código."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérifie l’adresse affichée sur %@, ou scanne de nouveau son code."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Controlla l’indirizzo mostrato su %@ o scansiona di nuovo il suo codice."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ に表示されているアドレスを確認するか、そのコードをもう一度スキャンしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에 표시된 주소를 확인하거나 코드를 다시 스캔하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprawdź adres pokazany na %@ albo zeskanuj jego kod ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confira o endereço mostrado em %@ ou escaneie o código dele de novo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请检查 %@ 上显示的地址，或重新扫描它的二维码。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請檢查 %@ 上顯示的位址，或重新掃描它的 QR Code。"
           }
         }
       }
@@ -43097,6 +43517,76 @@
         }
       }
     },
+    "Devices on this Wi-Fi connect directly": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geräte in diesem WLAN verbinden sich direkt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devices on this Wi-Fi connect directly"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los dispositivos en este Wi-Fi se conectan directamente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les appareils sur ce Wi-Fi se connectent directement"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I dispositivi su questa rete Wi-Fi si connettono direttamente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Wi-Fi の機器は直接接続します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Wi-Fi의 기기는 직접 연결됩니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Urządzenia w tej sieci Wi-Fi łączą się bezpośrednio"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dispositivos nesta rede Wi-Fi se conectam diretamente"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同一 Wi-Fi 上的设备直接连接"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同一 Wi-Fi 上的裝置直接連線"
+          }
+        }
+      }
+    },
     "Devotee": {
       "localizations": {
         "de": {
@@ -50799,130 +51289,142 @@
         }
       }
     },
-    "Flaccy Server shares the music on your Mac or PC with this iPad and keeps playlists, loves and history in step. It's free, and your music never leaves your own network.": {
+    "Flaccy Server plays the music on your Mac or PC on this iPad over your Wi-Fi, with playlists, loves and history in step. It's free, and your music never leaves your own network.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server teilt die Musik auf deinem Mac oder PC mit diesem iPad und hält Playlists, Favoriten und Verlauf synchron. Kostenlos, und deine Musik verlässt nie dein eigenes Netzwerk."
+            "value": "Flaccy Server spielt die Musik deines Macs oder PCs auf diesem iPad über dein WLAN ab, mit Playlists, Loves und Verlauf synchron. Er ist kostenlos, und deine Musik verlässt nie dein eigenes Netzwerk."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server plays the music on your Mac or PC on this iPad over your Wi-Fi, with playlists, loves and history in step. It's free, and your music never leaves your own network."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server comparte la música de tu Mac o PC con este iPad y mantiene sincronizados listas, favoritos e historial. Es gratis y tu música nunca sale de tu propia red."
+            "value": "Flaccy Server reproduce en este iPad la música de tu Mac o PC por Wi-Fi, con las listas, los me gusta y el historial al día. Es gratis, y tu música nunca sale de tu propia red."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server partage la musique de votre Mac ou PC avec cet iPad et garde playlists, coups de cœur et historique synchronisés. C'est gratuit, et votre musique ne quitte jamais votre propre réseau."
+            "value": "Flaccy Server joue sur cet iPad la musique de votre Mac ou PC via le Wi-Fi, avec playlists, favoris et historique synchronisés. C’est gratuit, et votre musique ne quitte jamais votre propre réseau."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server condivide la musica del tuo Mac o PC con questo iPad e tiene sincronizzati playlist, preferiti e cronologia. È gratis e la tua musica non lascia mai la tua rete."
+            "value": "Flaccy Server riproduce su questo iPad la musica del tuo Mac o PC tramite Wi-Fi, con playlist, Mi piace e cronologia sempre aggiornati. È gratuito e la tua musica non lascia mai la tua rete."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy ServerはMacやPCの音楽をこのiPadと共有し、プレイリスト、お気に入り、履歴を同期します。無料で、音楽が自分のネットワークの外に出ることはありません。"
+            "value": "Flaccy Server は、Mac や PC の音楽を Wi-Fi 経由でこの iPad で再生します。プレイリスト、お気に入り、再生履歴も同期されます。無料で、音楽が自分のネットワークの外へ出ることはありません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server는 Mac이나 PC의 음악을 이 iPad과 공유하고 플레이리스트, 좋아요, 기록을 동기화합니다. 무료이며 음악이 내 네트워크 밖으로 나가지 않습니다."
+            "value": "Flaccy Server는 Mac이나 PC의 음악을 Wi-Fi를 통해 이 iPad에서 재생합니다. 재생목록, 좋아요, 재생 기록도 함께 맞춰집니다. 무료이며, 음악은 내 네트워크 밖으로 나가지 않습니다."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server udostępnia muzykę z twojego Maca lub PC temu iPadowi i synchronizuje playlisty, ulubione i historię. Za darmo, a twoja muzyka nigdy nie opuszcza twojej sieci."
+            "value": "Flaccy Server odtwarza na tym iPadzie muzykę z twojego Maca lub PC przez Wi-Fi, z playlistami, polubieniami i historią na bieżąco. To bezpłatne, a twoja muzyka nigdy nie opuszcza twojej sieci."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Flaccy Server compartilha a música do seu Mac ou PC com este iPad e mantém playlists, favoritos e histórico sincronizados. É grátis, e sua música nunca sai da sua própria rede."
+            "value": "O Flaccy Server toca no seu iPad a música do Mac ou PC por Wi-Fi, com playlists, curtidas e histórico sincronizados. É grátis, e sua música nunca sai da sua própria rede."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server 将你 Mac 或 PC 上的音乐共享到这台 iPad，并同步播放列表、喜欢和历史。免费，你的音乐永远不会离开你自己的网络。"
+            "value": "Flaccy Server 通过 Wi-Fi 在这台 iPad 上播放你的 Mac 或 PC 中的音乐，播放列表、喜欢和历史记录保持同步。免费，你的音乐绝不会离开你自己的网络。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server 會把你 Mac 或 PC 上的音樂分享到這部 iPad，並同步播放列表、喜愛與記錄。免費，你的音樂永遠不會離開你自己的網路。"
+            "value": "Flaccy Server 透過 Wi-Fi 在這台 iPad 上播放你的 Mac 或 PC 中的音樂，播放列表、喜愛和紀錄保持同步。免費，你的音樂絕不會離開你自己的網路。"
           }
         }
       }
     },
-    "Flaccy Server shares the music on your Mac or PC with this iPhone and keeps playlists, loves and history in step. It's free, and your music never leaves your own network.": {
+    "Flaccy Server plays the music on your Mac or PC on this iPhone over your Wi-Fi, with playlists, loves and history in step. It's free, and your music never leaves your own network.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server teilt die Musik auf deinem Mac oder PC mit diesem iPhone und hält Playlists, Favoriten und Verlauf synchron. Kostenlos, und deine Musik verlässt nie dein eigenes Netzwerk."
+            "value": "Flaccy Server spielt die Musik deines Macs oder PCs auf diesem iPhone über dein WLAN ab, mit Playlists, Loves und Verlauf synchron. Er ist kostenlos, und deine Musik verlässt nie dein eigenes Netzwerk."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server plays the music on your Mac or PC on this iPhone over your Wi-Fi, with playlists, loves and history in step. It's free, and your music never leaves your own network."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server comparte la música de tu Mac o PC con este iPhone y mantiene sincronizados listas, favoritos e historial. Es gratis y tu música nunca sale de tu propia red."
+            "value": "Flaccy Server reproduce en este iPhone la música de tu Mac o PC por Wi-Fi, con las listas, los me gusta y el historial al día. Es gratis, y tu música nunca sale de tu propia red."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server partage la musique de votre Mac ou PC avec cet iPhone et garde playlists, coups de cœur et historique synchronisés. C'est gratuit, et votre musique ne quitte jamais votre propre réseau."
+            "value": "Flaccy Server joue sur cet iPhone la musique de votre Mac ou PC via le Wi-Fi, avec playlists, favoris et historique synchronisés. C’est gratuit, et votre musique ne quitte jamais votre propre réseau."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server condivide la musica del tuo Mac o PC con questo iPhone e tiene sincronizzati playlist, preferiti e cronologia. È gratis e la tua musica non lascia mai la tua rete."
+            "value": "Flaccy Server riproduce su questo iPhone la musica del tuo Mac o PC tramite Wi-Fi, con playlist, Mi piace e cronologia sempre aggiornati. È gratuito e la tua musica non lascia mai la tua rete."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy ServerはMacやPCの音楽をこのiPhoneと共有し、プレイリスト、お気に入り、履歴を同期します。無料で、音楽が自分のネットワークの外に出ることはありません。"
+            "value": "Flaccy Server は、Mac や PC の音楽を Wi-Fi 経由でこの iPhone で再生します。プレイリスト、お気に入り、再生履歴も同期されます。無料で、音楽が自分のネットワークの外へ出ることはありません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server는 Mac이나 PC의 음악을 이 iPhone과 공유하고 플레이리스트, 좋아요, 기록을 동기화합니다. 무료이며 음악이 내 네트워크 밖으로 나가지 않습니다."
+            "value": "Flaccy Server는 Mac이나 PC의 음악을 Wi-Fi를 통해 이 iPhone에서 재생합니다. 재생목록, 좋아요, 재생 기록도 함께 맞춰집니다. 무료이며, 음악은 내 네트워크 밖으로 나가지 않습니다."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server udostępnia muzykę z twojego Maca lub PC temu iPhone'owi i synchronizuje playlisty, ulubione i historię. Za darmo, a twoja muzyka nigdy nie opuszcza twojej sieci."
+            "value": "Flaccy Server odtwarza na tym iPhonie muzykę z twojego Maca lub PC przez Wi-Fi, z playlistami, polubieniami i historią na bieżąco. To bezpłatne, a twoja muzyka nigdy nie opuszcza twojej sieci."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Flaccy Server compartilha a música do seu Mac ou PC com este iPhone e mantém playlists, favoritos e histórico sincronizados. É grátis, e sua música nunca sai da sua própria rede."
+            "value": "O Flaccy Server toca no seu iPhone a música do Mac ou PC por Wi-Fi, com playlists, curtidas e histórico sincronizados. É grátis, e sua música nunca sai da sua própria rede."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server 将你 Mac 或 PC 上的音乐共享到这台 iPhone，并同步播放列表、喜欢和历史。免费，你的音乐永远不会离开你自己的网络。"
+            "value": "Flaccy Server 通过 Wi-Fi 在这台 iPhone 上播放你的 Mac 或 PC 中的音乐，播放列表、喜欢和历史记录保持同步。免费，你的音乐绝不会离开你自己的网络。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server 會把你 Mac 或 PC 上的音樂分享到這部 iPhone，並同步播放列表、喜愛與記錄。免費，你的音樂永遠不會離開你自己的網路。"
+            "value": "Flaccy Server 透過 Wi-Fi 在這台 iPhone 上播放你的 Mac 或 PC 中的音樂，播放列表、喜愛和紀錄保持同步。免費，你的音樂絕不會離開你自己的網路。"
           }
         }
       }
@@ -54855,70 +55357,6 @@
         }
       }
     },
-    "Get Tailscale on both": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale auf beiden Geräten"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale en los dos"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale sur les deux"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale su entrambi"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "両方にTailscaleを入れる"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "양쪽에 Tailscale 설치"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale na obu"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale nos dois"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "两边都装 Tailscale"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "兩邊都安裝 Tailscale"
-          }
-        }
-      }
-    },
     "Get the New Flaccy": {
       "localizations": {
         "de": {
@@ -55811,76 +56249,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在把曲目歸入專輯和演出者。"
-          }
-        }
-      }
-    },
-    "Have a computer with your music on it? Flaccy Server shares it with your other devices, and keeps playlists, loves and history in sync. It's free: flaccy.app/server.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein Computer mit Musik darauf? Flaccy Server teilt sie mit anderen Geräten und hält Playlists, Favoriten und Verlauf synchron. Kostenlos: flaccy.app/server."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Have a computer with your music on it? Flaccy Server shares it with your other devices, and keeps playlists, loves and history in sync. It's free: flaccy.app/server."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Tienes un ordenador con tu música? Flaccy Server la comparte con tus otros dispositivos y mantiene sincronizadas las playlists, las favoritas y el historial. Es gratis: flaccy.app/server."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un ordinateur avec votre musique ? Flaccy Server la partage avec vos autres appareils et garde synchronisés playlists, morceaux aimés et historique. C’est gratuit : flaccy.app/server."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hai un computer con la tua musica? Flaccy Server la condivide con gli altri dispositivi e tiene sincronizzate playlist, preferiti e cronologia. È gratuito: flaccy.app/server."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音楽が入ったコンピューターをお持ちですか？Flaccy Server を使うと、その音楽を他のデバイスと共有し、プレイリスト、お気に入り、履歴を同期できます。無料です：flaccy.app/server。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "음악이 든 컴퓨터가 있나요? Flaccy Server를 사용하면 음악을 다른 기기와 공유하고, 재생목록, 좋아요, 기록을 동기화할 수 있어요. 무료예요: flaccy.app/server."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Masz komputer z muzyką? Flaccy Server udostępnia ją innym urządzeniom i synchronizuje playlisty, ulubione i historię. Jest bezpłatny: flaccy.app/server."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tem um computador com sua música? O Flaccy Server compartilha com seus outros dispositivos e mantém playlists, curtidas e histórico sincronizados. É grátis: flaccy.app/server."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "电脑里有你的音乐？Flaccy Server 可以把它与你的其他设备共享，并同步播放列表、喜欢和记录。免费使用：flaccy.app/server。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "電腦裡有你的音樂？Flaccy Server 可以把它與你的其他裝置共享，並同步播放列表、喜愛和記錄。免費使用：flaccy.app/server。"
           }
         }
       }
@@ -59619,130 +59987,142 @@
         }
       }
     },
-    "Install Tailscale on this iPad and on your computer, and sign in to the same account. It connects them safely, at home or away.": {
+    "Install Tailscale on this iPad and on your computer, signed in to the same account, and your music plays anywhere.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Installiere Tailscale auf diesem iPad und auf deinem Computer und melde dich mit demselben Konto an. Es verbindet beide sicher, zu Hause und unterwegs."
+            "value": "Installiere Tailscale auf diesem iPad und auf deinem Computer, angemeldet mit demselben Konto, dann spielt deine Musik überall."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install Tailscale on this iPad and on your computer, signed in to the same account, and your music plays anywhere."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Instala Tailscale en este iPad y en tu ordenador, e inicia sesión con la misma cuenta. Los conecta de forma segura, en casa o fuera."
+            "value": "Instala Tailscale en este iPad y en tu ordenador, con la misma cuenta iniciada, y tu música sonará en cualquier lugar."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Installez Tailscale sur cet iPad et sur votre ordinateur, et connectez-vous au même compte. Il les relie en toute sécurité, chez vous ou ailleurs."
+            "value": "Installez Tailscale sur cet iPad et sur votre ordinateur, connectés au même compte, et votre musique se joue partout."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Installa Tailscale su questo iPad e sul computer, e accedi con lo stesso account. Li collega in modo sicuro, a casa o fuori."
+            "value": "Installa Tailscale su questo iPad e sul tuo computer, con lo stesso account, e la tua musica suonerà ovunque."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このiPadとコンピュータにTailscaleをインストールし、同じアカウントでサインインします。自宅でも外出先でも安全につながります。"
+            "value": "この iPad とコンピュータに Tailscale を入れ、同じアカウントでサインインすれば、どこでも音楽が再生できます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 iPad과 컴퓨터에 Tailscale을 설치하고 같은 계정으로 로그인하세요. 집에서도 밖에서도 안전하게 연결됩니다."
+            "value": "이 iPad와 컴퓨터에 Tailscale을 설치하고 같은 계정으로 로그인하면 어디서든 음악을 들을 수 있습니다."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zainstaluj Tailscale na tym iPadzie i na komputerze, i zaloguj się na to samo konto. Połączy je bezpiecznie, w domu i poza nim."
+            "value": "Zainstaluj Tailscale na tym iPadzie i na komputerze, zalogowany na to samo konto, a twoja muzyka będzie grać wszędzie."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Instale o Tailscale neste iPad e no seu computador, e entre na mesma conta. Ele os conecta com segurança, em casa ou fora."
+            "value": "Instale o Tailscale neste iPad e no seu computador, conectados à mesma conta, e sua música toca em qualquer lugar."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在这台 iPad 和你的电脑上安装 Tailscale，并登录同一个账户。无论在家还是在外，它都能安全地连接两者。"
+            "value": "在这台 iPad 和你的电脑上安装 Tailscale 并登录同一账户，你的音乐就能随处播放。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在這部 iPad 和你的電腦上安裝 Tailscale，並登入同一個帳號。無論在家或外出，它都能安全地連接兩者。"
+            "value": "在這台 iPad 和你的電腦上安裝 Tailscale 並登入同一帳號，你的音樂就能隨處播放。"
           }
         }
       }
     },
-    "Install Tailscale on this iPhone and on your computer, and sign in to the same account. It connects them safely, at home or away.": {
+    "Install Tailscale on this iPhone and on your computer, signed in to the same account, and your music plays anywhere.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Installiere Tailscale auf diesem iPhone und auf deinem Computer und melde dich mit demselben Konto an. Es verbindet beide sicher, zu Hause und unterwegs."
+            "value": "Installiere Tailscale auf diesem iPhone und auf deinem Computer, angemeldet mit demselben Konto, dann spielt deine Musik überall."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install Tailscale on this iPhone and on your computer, signed in to the same account, and your music plays anywhere."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Instala Tailscale en este iPhone y en tu ordenador, e inicia sesión con la misma cuenta. Los conecta de forma segura, en casa o fuera."
+            "value": "Instala Tailscale en este iPhone y en tu ordenador, con la misma cuenta iniciada, y tu música sonará en cualquier lugar."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Installez Tailscale sur cet iPhone et sur votre ordinateur, et connectez-vous au même compte. Il les relie en toute sécurité, chez vous ou ailleurs."
+            "value": "Installez Tailscale sur cet iPhone et sur votre ordinateur, connectés au même compte, et votre musique se joue partout."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Installa Tailscale su questo iPhone e sul computer, e accedi con lo stesso account. Li collega in modo sicuro, a casa o fuori."
+            "value": "Installa Tailscale su questo iPhone e sul tuo computer, con lo stesso account, e la tua musica suonerà ovunque."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このiPhoneとコンピュータにTailscaleをインストールし、同じアカウントでサインインします。自宅でも外出先でも安全につながります。"
+            "value": "この iPhone とコンピュータに Tailscale を入れ、同じアカウントでサインインすれば、どこでも音楽が再生できます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 iPhone과 컴퓨터에 Tailscale을 설치하고 같은 계정으로 로그인하세요. 집에서도 밖에서도 안전하게 연결됩니다."
+            "value": "이 iPhone과 컴퓨터에 Tailscale을 설치하고 같은 계정으로 로그인하면 어디서든 음악을 들을 수 있습니다."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zainstaluj Tailscale na tym iPhonie i na komputerze, i zaloguj się na to samo konto. Połączy je bezpiecznie, w domu i poza nim."
+            "value": "Zainstaluj Tailscale na tym iPhonie i na komputerze, zalogowany na to samo konto, a twoja muzyka będzie grać wszędzie."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Instale o Tailscale neste iPhone e no seu computador, e entre na mesma conta. Ele os conecta com segurança, em casa ou fora."
+            "value": "Instale o Tailscale neste iPhone e no seu computador, conectados à mesma conta, e sua música toca em qualquer lugar."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在这台 iPhone 和你的电脑上安装 Tailscale，并登录同一个账户。无论在家还是在外，它都能安全地连接两者。"
+            "value": "在这台 iPhone 和你的电脑上安装 Tailscale 并登录同一账户，你的音乐就能随处播放。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在這部 iPhone 和你的電腦上安裝 Tailscale，並登入同一個帳號。無論在家或外出，它都能安全地連接兩者。"
+            "value": "在這台 iPhone 和你的電腦上安裝 Tailscale 並登入同一帳號，你的音樂就能隨處播放。"
           }
         }
       }
@@ -60195,76 +60575,6 @@
         }
       }
     },
-    "Is Tailscale on? Open Tailscale and connect on this device and on %@, then try again.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ist Tailscale aktiviert? Tailscale auf diesem Gerät und auf %@ öffnen und verbinden, dann erneut versuchen."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Is Tailscale on? Open Tailscale and connect on this device and on %@, then try again."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Está Tailscale activado? Abre Tailscale, conéctate en este dispositivo y en %@, y vuelve a intentarlo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale est-il activé ? Ouvrez Tailscale et connectez-vous sur cet appareil et sur %@, puis réessayez."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale è attivo? Apri Tailscale e connettiti su questo dispositivo e su %@, poi riprova."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale はオンになっていますか？このデバイスと %@ の両方で Tailscale を開いて接続し、もう一度お試しください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale이 켜져 있나요? 이 기기와 %@에서 Tailscale을 열어 연결한 뒤 다시 시도하세요."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czy Tailscale jest włączony? Otwórz Tailscale i połącz się na tym urządzeniu oraz na: %@, a potem spróbuj ponownie."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O Tailscale está ativado? Abra o Tailscale, conecte-se neste dispositivo e em %@, e tente de novo."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale 是否已开启？请在此设备和 %@ 上打开 Tailscale 并连接，然后重试。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tailscale 是否已開啟？請在此裝置和 %@ 上開啟 Tailscale 並連線，然後重試。"
-          }
-        }
-      }
-    },
     "It answered, but not as Flaccy Server. If it is Navidrome or another Subsonic server, add it as a regular server.": {
       "localizations": {
         "de": {
@@ -60331,6 +60641,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "它有回應，但不是 Flaccy Server。如果它是 Navidrome 或其他 Subsonic 伺服器，請將其新增為一般伺服器。"
+          }
+        }
+      }
+    },
+    "It doesn't match the key from when this device was added, so nothing was sent. If %@ was reinstalled or moved, remove it and add it again with a new code.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Er stimmt nicht mit dem Schlüssel überein, der beim Hinzufügen dieses Geräts gespeichert wurde, daher wurde nichts gesendet. Wenn %@ neu installiert oder verschoben wurde, entferne es und füge es mit einem neuen Code erneut hinzu."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It doesn't match the key from when this device was added, so nothing was sent. If %@ was reinstalled or moved, remove it and add it again with a new code."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No coincide con la clave de cuando se añadió este dispositivo, así que no se envió nada. Si %@ se reinstaló o se movió, elimínalo y añádelo de nuevo con un código nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elle ne correspond pas à la clé de l’ajout de cet appareil, donc rien n’a été envoyé. Si %@ a été réinstallé ou déplacé, supprime-le et ajoute-le de nouveau avec un nouveau code."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non corrisponde alla chiave di quando questo dispositivo è stato aggiunto, quindi non è stato inviato nulla. Se %@ è stato reinstallato o spostato, rimuovilo e aggiungilo di nuovo con un nuovo codice."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この機器を追加したときの鍵と一致しないため、何も送信されていません。%@ を再インストールまたは移動した場合は、削除してから新しいコードで追加し直してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기를 추가했을 때의 키와 일치하지 않아 아무것도 전송되지 않았습니다. %@을(를) 다시 설치하거나 옮겼다면 삭제한 뒤 새 코드로 다시 추가하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie zgadza się z kluczem z chwili dodania tego urządzenia, więc nic nie zostało wysłane. Jeśli %@ został ponownie zainstalowany lub przeniesiony, usuń go i dodaj ponownie z nowym kodem."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não corresponde à chave de quando este dispositivo foi adicionado, então nada foi enviado. Se %@ foi reinstalado ou movido, remova-o e adicione-o de novo com um código novo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与添加此设备时的密钥不匹配，因此未发送任何内容。如果 %@ 被重新安装或移动，请将其移除，然后用新代码重新添加。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "與新增此裝置時的金鑰不符，因此未傳送任何內容。如果 %@ 被重新安裝或移動，請將其移除，然後用新代碼重新新增。"
           }
         }
       }
@@ -61049,6 +61429,146 @@
           "stringUnit": {
             "state": "translated",
             "value": "待播清單結束後讓音樂繼續"
+          }
+        }
+      }
+    },
+    "Keep this iPad on the same Wi-Fi. When your computer shows a code, scan it and Flaccy connects.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Halte dieses iPad im selben WLAN. Wenn dein Computer einen Code anzeigt, scanne ihn, und Flaccy verbindet sich."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep this iPad on the same Wi-Fi. When your computer shows a code, scan it and Flaccy connects."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantén este iPad en el mismo Wi-Fi. Cuando tu ordenador muestre un código, escanéalo y Flaccy se conectará."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gardez cet iPad sur le même Wi-Fi. Quand votre ordinateur affiche un code, scannez-le et Flaccy se connecte."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni questo iPad sulla stessa rete Wi-Fi. Quando il computer mostra un codice, scansionalo e Flaccy si connette."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この iPad を同じ Wi-Fi に接続したままにしてください。コンピュータにコードが表示されたら、スキャンすると Flaccy が接続します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPad를 같은 Wi-Fi에 연결해 두세요. 컴퓨터에 코드가 표시되면 스캔하세요. Flaccy가 연결됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trzymaj ten iPad w tej samej sieci Wi-Fi. Gdy komputer pokaże kod, zeskanuj go, a Flaccy się połączy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantenha este iPad na mesma rede Wi-Fi. Quando seu computador mostrar um código, escaneie-o e o Flaccy se conecta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请让这台 iPad 保持在同一 Wi-Fi 下。电脑显示代码时，扫描它，Flaccy 就会连接。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請讓這台 iPad 保持在同一 Wi-Fi 下。電腦顯示代碼時，掃描它，Flaccy 就會連線。"
+          }
+        }
+      }
+    },
+    "Keep this iPhone on the same Wi-Fi. When your computer shows a code, scan it and Flaccy connects.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Halte dieses iPhone im selben WLAN. Wenn dein Computer einen Code anzeigt, scanne ihn, und Flaccy verbindet sich."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep this iPhone on the same Wi-Fi. When your computer shows a code, scan it and Flaccy connects."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantén este iPhone en el mismo Wi-Fi. Cuando tu ordenador muestre un código, escanéalo y Flaccy se conectará."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gardez cet iPhone sur le même Wi-Fi. Quand votre ordinateur affiche un code, scannez-le et Flaccy se connecte."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni questo iPhone sulla stessa rete Wi-Fi. Quando il computer mostra un codice, scansionalo e Flaccy si connette."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この iPhone を同じ Wi-Fi に接続したままにしてください。コンピュータにコードが表示されたら、スキャンすると Flaccy が接続します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPhone을 같은 Wi-Fi에 연결해 두세요. 컴퓨터에 코드가 표시되면 스캔하세요. Flaccy가 연결됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trzymaj ten iPhone w tej samej sieci Wi-Fi. Gdy komputer pokaże kod, zeskanuj go, a Flaccy się połączy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantenha este iPhone na mesma rede Wi-Fi. Quando seu computador mostrar um código, escaneie-o e o Flaccy se conecta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请让这台 iPhone 保持在同一 Wi-Fi 下。电脑显示代码时，扫描它，Flaccy 就会连接。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請讓這台 iPhone 保持在同一 Wi-Fi 下。電腦顯示代碼時，掃描它，Flaccy 就會連線。"
           }
         }
       }
@@ -69185,6 +69705,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "音樂在另一部電腦上？連接 Flaccy Server…"
+          }
+        }
+      }
+    },
+    "Music on another computer? Flaccy Server plays it here and keeps playlists, loves and history in sync. Free: midgarcorp.cc/flaccy/server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik auf einem anderen Computer? Flaccy Server spielt sie hier ab und hält Playlists, Loves und Verlauf synchron. Kostenlos: midgarcorp.cc/flaccy/server"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Music on another computer? Flaccy Server plays it here and keeps playlists, loves and history in sync. Free: midgarcorp.cc/flaccy/server"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Música en otro ordenador? Flaccy Server la reproduce aquí y mantiene sincronizadas las listas, los me gusta y el historial. Gratis: midgarcorp.cc/flaccy/server"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De la musique sur un autre ordinateur ? Flaccy Server la joue ici et garde les playlists, favoris et historique synchronisés. Gratuit : midgarcorp.cc/flaccy/server"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musica su un altro computer? Flaccy Server la riproduce qui e mantiene sincronizzati playlist, Mi piace e cronologia. Gratis: midgarcorp.cc/flaccy/server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のコンピュータに音楽がありますか？ Flaccy Server ならここで再生でき、プレイリスト、お気に入り、再生履歴も同期されます。無料：midgarcorp.cc/flaccy/server"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 컴퓨터에 음악이 있나요? Flaccy Server가 여기서 재생하고 재생목록, 좋아요, 재생 기록을 동기화합니다. 무료: midgarcorp.cc/flaccy/server"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muzyka na innym komputerze? Flaccy Server odtwarza ją tutaj i synchronizuje playlisty, polubienia oraz historię. Za darmo: midgarcorp.cc/flaccy/server"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Música em outro computador? O Flaccy Server toca aqui e mantém playlists, curtidas e histórico sincronizados. Grátis: midgarcorp.cc/flaccy/server"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音乐在另一台电脑上？Flaccy Server 可在这里播放，并同步播放列表、喜欢和历史记录。免费：midgarcorp.cc/flaccy/server"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音樂在另一台電腦上？Flaccy Server 可在這裡播放，並同步播放列表、喜愛和紀錄。免費：midgarcorp.cc/flaccy/server"
           }
         }
       }
@@ -77392,6 +77982,76 @@
         }
       }
     },
+    "On this Wi-Fi: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In diesem WLAN: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On this Wi-Fi: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En este Wi-Fi: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur ce Wi-Fi : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su questo Wi-Fi: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Wi-Fi: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Wi-Fi: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W tej sieci Wi-Fi: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nesta rede Wi-Fi: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同一 Wi-Fi 上：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同一 Wi-Fi 上：%@"
+          }
+        }
+      }
+    },
     "On this day in %@": {
       "localizations": {
         "de": {
@@ -83612,6 +84272,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "播放範例專輯"
+          }
+        }
+      }
+    },
+    "Play this Mac's music on your iPhone and other devices, with playlists, loves and history in step. Devices on this Wi-Fi connect directly; Tailscale adds listening away from home.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiele die Musik dieses Macs auf deinem iPhone und anderen Geräten ab, mit Playlists, Loves und Verlauf synchron. Geräte in diesem WLAN verbinden sich direkt; Tailscale ermöglicht das Hören unterwegs."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play this Mac's music on your iPhone and other devices, with playlists, loves and history in step. Devices on this Wi-Fi connect directly; Tailscale adds listening away from home."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproduce la música de este Mac en tu iPhone y otros dispositivos, con listas, me gusta e historial al día. Los dispositivos en este Wi-Fi se conectan directamente; Tailscale añade la escucha fuera de casa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jouez la musique de ce Mac sur votre iPhone et vos autres appareils, avec playlists, favoris et historique synchronisés. Les appareils sur ce Wi-Fi se connectent directement ; Tailscale permet d’écouter loin de chez vous."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduci la musica di questo Mac sull’iPhone e sugli altri dispositivi, con playlist, Mi piace e cronologia sempre aggiornati. I dispositivi su questa rete Wi-Fi si connettono direttamente; Tailscale aggiunge l’ascolto fuori casa."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Mac の音楽を iPhone などの機器で再生できます。プレイリスト、お気に入り、再生履歴も同期されます。同じ Wi-Fi の機器は直接接続し、Tailscale を使うと外出先でも聴けます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Mac의 음악을 iPhone 등 다른 기기에서 재생하세요. 재생목록, 좋아요, 재생 기록도 함께 맞춰집니다. 같은 Wi-Fi의 기기는 직접 연결되고, Tailscale을 쓰면 외부에서도 들을 수 있습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwarzaj muzykę z tego Maca na iPhonie i innych urządzeniach, z playlistami, polubieniami i historią na bieżąco. Urządzenia w tej sieci Wi-Fi łączą się bezpośrednio; Tailscale umożliwia słuchanie poza domem."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toque a música deste Mac no seu iPhone e em outros dispositivos, com playlists, curtidas e histórico sincronizados. Dispositivos nesta rede Wi-Fi se conectam diretamente; o Tailscale adiciona a escuta fora de casa."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 iPhone 和其他设备上播放这台 Mac 的音乐，播放列表、喜欢和历史记录保持同步。同一 Wi-Fi 下的设备直接连接；Tailscale 可让你在外出时继续收听。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 iPhone 和其他裝置上播放這台 Mac 的音樂，播放列表、喜愛和紀錄保持同步。同一 Wi-Fi 下的裝置直接連線；Tailscale 可讓你在外出時繼續聆聽。"
           }
         }
       }
@@ -98194,72 +98924,72 @@
         }
       }
     },
-    "Scan this with Flaccy on your iPhone, Mac or Linux, or open the link on a device that has Flaccy.": {
+    "Scan this code with the camera in Flaccy on your iPhone or iPad. On another Mac or a Linux computer, paste the link into Add Flaccy Server.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mit Flaccy auf iPhone, Mac oder Linux scannen oder den Link auf einem Gerät mit Flaccy öffnen."
+            "value": "Scanne diesen Code mit der Kamera in Flaccy auf deinem iPhone oder iPad. Auf einem anderen Mac oder einem Linux-Computer fügst du den Link in „Flaccy Server hinzufügen“ ein."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scan this with Flaccy on your iPhone, Mac or Linux, or open the link on a device that has Flaccy."
+            "value": "Scan this code with the camera in Flaccy on your iPhone or iPad. On another Mac or a Linux computer, paste the link into Add Flaccy Server."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Escanea esto con Flaccy en iPhone, Mac o Linux, o abre el enlace en un dispositivo que tenga Flaccy."
+            "value": "Escanea este código con la cámara de Flaccy en tu iPhone o iPad. En otro Mac o en un ordenador Linux, pega el enlace en «Añadir Flaccy Server»."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scannez-le avec Flaccy sur iPhone, Mac ou Linux, ou ouvrez le lien sur un appareil équipé de Flaccy."
+            "value": "Scannez ce code avec l’appareil photo de Flaccy sur votre iPhone ou iPad. Sur un autre Mac ou un ordinateur Linux, collez le lien dans « Ajouter Flaccy Server »."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scansionalo con Flaccy su iPhone, Mac o Linux, oppure apri il link su un dispositivo con Flaccy."
+            "value": "Scansiona questo codice con la fotocamera di Flaccy sul tuo iPhone o iPad. Su un altro Mac o un computer Linux, incolla il link in «Aggiungi Flaccy Server»."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "iPhone、Mac、Linux の Flaccy でこれをスキャンするか、Flaccy がインストールされたデバイスでリンクを開いてください。"
+            "value": "iPhone または iPad の Flaccy のカメラでこのコードをスキャンしてください。別の Mac や Linux コンピュータでは、リンクを「Flaccy Server を追加」に貼り付けてください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "iPhone, Mac 또는 Linux의 Flaccy로 이것을 스캔하거나, Flaccy가 설치된 기기에서 링크를 여세요."
+            "value": "iPhone이나 iPad의 Flaccy 카메라로 이 코드를 스캔하세요. 다른 Mac이나 Linux 컴퓨터에서는 링크를 “Flaccy Server 추가”에 붙여넣으세요."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zeskanuj go w Flaccy na iPhonie, Macu lub Linuksie albo otwórz link na urządzeniu z Flaccy."
+            "value": "Zeskanuj ten kod aparatem w Flaccy na iPhonie lub iPadzie. Na innym Macu lub komputerze z Linuksem wklej link w polu „Dodaj Flaccy Server”."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Escaneie com o Flaccy no iPhone, Mac ou Linux, ou abra o link em um dispositivo que tenha o Flaccy."
+            "value": "Escaneie este código com a câmera do Flaccy no seu iPhone ou iPad. Em outro Mac ou em um computador Linux, cole o link em “Adicionar Flaccy Server”."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "用 iPhone、Mac 或 Linux 上的 Flaccy 扫描此码，或在装有 Flaccy 的设备上打开链接。"
+            "value": "请用 iPhone 或 iPad 上的 Flaccy 相机扫描此二维码。在其他 Mac 或 Linux 电脑上，请将链接粘贴到“添加 Flaccy Server”中。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "用 iPhone、Mac 或 Linux 上的 Flaccy 掃描此碼，或在已安裝 Flaccy 的裝置上開啟連結。"
+            "value": "請用 iPhone 或 iPad 上的 Flaccy 相機掃描此 QR Code。在其他 Mac 或 Linux 電腦上，請將連結貼到「新增 Flaccy Server」中。"
           }
         }
       }
@@ -102920,76 +103650,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "共享此 Mac 的資料庫"
-          }
-        }
-      }
-    },
-    "Share this Mac's library with your iPhone and other devices. Flaccy reaches them through Tailscale; nothing leaves your network.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mediathek dieses Macs mit dem iPhone und anderen Geräten teilen. Flaccy erreicht sie über Tailscale; nichts verlässt das eigene Netzwerk."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Share this Mac's library with your iPhone and other devices. Flaccy reaches them through Tailscale; nothing leaves your network."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comparte la biblioteca de este Mac con tu iPhone y otros dispositivos. Flaccy llega a ellos a través de Tailscale; nada sale de tu red."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Partagez la bibliothèque de ce Mac avec votre iPhone et vos autres appareils. Flaccy les atteint via Tailscale ; rien ne quitte votre réseau."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Condividi la libreria di questo Mac con il tuo iPhone e altri dispositivi. Flaccy li raggiunge tramite Tailscale; nulla lascia la tua rete."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このMacのライブラリを iPhone などのデバイスと共有します。Flaccy は Tailscale 経由で接続するため、データがお使いのネットワークの外に出ることはありません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 Mac의 보관함을 iPhone 등 다른 기기와 공유해요. Flaccy는 Tailscale을 통해 연결하므로, 데이터가 내 네트워크 밖으로 나가지 않아요."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Udostępnij bibliotekę tego Maca iPhone’owi i innym urządzeniom. Flaccy łączy się z nimi przez Tailscale; nic nie opuszcza twojej sieci."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Compartilhe a biblioteca deste Mac com seu iPhone e outros dispositivos. O Flaccy chega até eles pelo Tailscale; nada sai da sua rede."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "与你的 iPhone 和其他设备共享此 Mac 的资料库。Flaccy 通过 Tailscale 连接它们，数据不会离开你的网络。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "與你的 iPhone 和其他裝置共享此 Mac 的資料庫。Flaccy 透過 Tailscale 連線它們，資料不會離開你的網路。"
           }
         }
       }
@@ -111479,72 +112139,72 @@
         }
       }
     },
-    "Sync stays off until the server's date and time are right. Check it with `timedatectl`.": {
+    "Sync stays off until the date and time on %@ are right.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Synchronisierung bleibt aus, bis Datum und Uhrzeit des Servers stimmen. Prüfen mit `timedatectl`."
+            "value": "Die Synchronisierung bleibt aus, bis Datum und Uhrzeit auf %@ stimmen."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sync stays off until the server's date and time are right. Check it with `timedatectl`."
+            "value": "Sync stays off until the date and time on %@ are right."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La sincronización seguirá desactivada hasta que la fecha y la hora del servidor sean correctas. Compruébalo con `timedatectl`."
+            "value": "La sincronización sigue desactivada hasta que la fecha y la hora de %@ sean correctas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "La synchronisation reste désactivée tant que la date et l’heure du serveur ne sont pas correctes. Vérifiez-les avec `timedatectl`."
+            "value": "La synchronisation reste désactivée tant que la date et l’heure de %@ ne sont pas justes."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La sincronizzazione resta disattivata finché data e ora del server non sono corrette. Verificale con `timedatectl`."
+            "value": "La sincronizzazione resta disattivata finché data e ora su %@ non sono corrette."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "サーバーの日付と時刻が正しくなるまで、同期はオフのままです。`timedatectl` で確認してください。"
+            "value": "%@ の日付と時刻が正しくなるまで、同期はオフのままです。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "서버의 날짜와 시간이 맞을 때까지 동기화는 꺼진 상태로 유지돼요. `timedatectl`로 확인하세요."
+            "value": "%@의 날짜와 시간이 맞을 때까지 동기화는 꺼진 상태로 유지됩니다."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Synchronizacja pozostaje wyłączona, dopóki data i godzina na serwerze nie będą poprawne. Sprawdź je poleceniem `timedatectl`."
+            "value": "Synchronizacja pozostaje wyłączona, dopóki data i godzina na %@ nie będą prawidłowe."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "A sincronização fica desativada até que a data e a hora do servidor estejam certas. Confira com `timedatectl`."
+            "value": "A sincronização fica desativada até que a data e a hora em %@ estejam corretas."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在服务器的日期和时间正确之前，同步将保持关闭。请用 `timedatectl` 检查。"
+            "value": "在 %@ 上的日期和时间正确之前，同步将保持关闭。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在伺服器的日期和時間正確之前，同步將保持關閉。請用 `timedatectl` 檢查。"
+            "value": "在 %@ 上的日期和時間正確之前，同步將保持關閉。"
           }
         }
       }
@@ -113367,72 +114027,72 @@
         }
       }
     },
-    "Tailscale is not installed or not signed in: sharing on this Mac only": {
+    "Tailscale is off and this Wi-Fi isn't shared, so only this Mac can play it. Turn on either one.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tailscale ist nicht installiert oder nicht angemeldet: Freigabe nur auf diesem Mac"
+            "value": "Tailscale ist aus und dieses WLAN wird nicht geteilt, daher kann nur dieser Mac es abspielen. Schalte eins von beiden ein."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tailscale is not installed or not signed in: sharing on this Mac only"
+            "value": "Tailscale is off and this Wi-Fi isn't shared, so only this Mac can play it. Turn on either one."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tailscale no está instalado o no has iniciado sesión: uso compartido solo en este Mac"
+            "value": "Tailscale está desactivado y este Wi-Fi no está compartido, así que solo este Mac puede reproducirla. Activa una de las dos opciones."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tailscale n’est pas installé ou vous n’êtes pas connecté : partage sur ce Mac uniquement"
+            "value": "Tailscale est désactivé et ce Wi-Fi n’est pas partagé : seul ce Mac peut la lire. Activez l’une des deux options."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tailscale non è installato o non hai eseguito l’accesso: condivisione solo su questo Mac"
+            "value": "Tailscale è disattivato e questa rete Wi-Fi non è condivisa, quindi solo questo Mac può riprodurla. Attiva una delle due."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tailscale が未インストールか、サインインしていないため、このMacでのみ共有します"
+            "value": "Tailscale がオフで、この Wi-Fi は共有されていないため、このMacでしか再生できません。どちらかをオンにしてください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tailscale이 설치되지 않았거나 로그인되지 않아 이 Mac에서만 공유해요"
+            "value": "Tailscale이 꺼져 있고 이 Wi-Fi는 공유되지 않아서 이 Mac에서만 재생할 수 있습니다. 둘 중 하나를 켜세요."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tailscale nie jest zainstalowany lub nie zalogowano: udostępnianie tylko na tym Macu"
+            "value": "Tailscale jest wyłączony, a ta sieć Wi-Fi nie jest udostępniona, więc tylko ten Mac może ją odtwarzać. Włącz jedno z nich."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Tailscale não está instalado ou você não entrou: compartilhamento só neste Mac"
+            "value": "O Tailscale está desativado e este Wi-Fi não está compartilhado, então só este Mac pode tocá-la. Ative um dos dois."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "未安装或未登录 Tailscale：仅在此 Mac 上共享"
+            "value": "Tailscale 已关闭，且此 Wi-Fi 未共享，因此只有这台 Mac 能播放。请开启其中一项。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "未安裝或未登入 Tailscale：僅在此 Mac 上共享"
+            "value": "Tailscale 已關閉，且此 Wi-Fi 未共享，因此只有這台 Mac 能播放。請開啟其中一項。"
           }
         }
       }
@@ -114607,72 +115267,72 @@
         }
       }
     },
-    "That isn’t a code from Flaccy Server. Run `flaccy-server enroll` on your computer and scan the code it prints.": {
+    "That isn’t a Flaccy Server code. Scan the code from Add a Device on your Mac, or the one your server printed.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das ist kein Code von Flaccy Server. Auf dem Computer `flaccy-server enroll` ausführen und den ausgegebenen Code scannen."
+            "value": "Das ist kein Code von Flaccy Server. Scanne den Code aus „Gerät hinzufügen“ auf deinem Mac oder den, den dein Server ausgibt."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "That isn’t a code from Flaccy Server. Run `flaccy-server enroll` on your computer and scan the code it prints."
+            "value": "That isn’t a Flaccy Server code. Scan the code from Add a Device on your Mac, or the one your server printed."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ese no es un código de Flaccy Server. Ejecuta `flaccy-server enroll` en tu ordenador y escanea el código que muestra."
+            "value": "Ese no es un código de Flaccy Server. Escanea el código de «Añadir un dispositivo» en tu Mac o el que muestre tu servidor."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ce n’est pas un code de Flaccy Server. Exécutez `flaccy-server enroll` sur votre ordinateur et scannez le code affiché."
+            "value": "Ce n’est pas un code de Flaccy Server. Scanne le code de « Ajouter un appareil » sur ton Mac, ou celui affiché par ton serveur."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Questo non è un codice di Flaccy Server. Esegui `flaccy-server enroll` sul computer e scansiona il codice che stampa."
+            "value": "Non è un codice di Flaccy Server. Scansiona il codice da «Aggiungi un dispositivo» sul Mac o quello mostrato dal server."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "それは Flaccy Server のコードではありません。コンピューターで `flaccy-server enroll` を実行し、表示されたコードをスキャンしてください。"
+            "value": "Flaccy Server のコードではありません。Mac の「デバイスを追加」のコードか、サーバーに表示されたコードをスキャンしてください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Server에서 받은 코드가 아니에요. 컴퓨터에서 `flaccy-server enroll`을 실행하고, 출력된 코드를 스캔하세요."
+            "value": "Flaccy Server 코드가 아닙니다. Mac의 “기기 추가”에 있는 코드나 서버에 표시된 코드를 스캔하세요."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "To nie jest kod z Flaccy Server. Uruchom `flaccy-server enroll` na swoim komputerze i zeskanuj wyświetlony kod."
+            "value": "To nie jest kod Flaccy Server. Zeskanuj kod z „Dodaj urządzenie” na Macu albo ten, który wyświetlił serwer."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Esse não é um código do Flaccy Server. Execute `flaccy-server enroll` no seu computador e escaneie o código que ele exibir."
+            "value": "Este não é um código do Flaccy Server. Escaneie o código de “Adicionar um dispositivo” no seu Mac ou o que o seu servidor exibiu."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这不是 Flaccy Server 的代码。请在你的电脑上运行 `flaccy-server enroll`，然后扫描它输出的代码。"
+            "value": "这不是 Flaccy Server 的代码。请扫描 Mac 上“添加设备”中的代码，或服务器打印的代码。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這不是 Flaccy Server 的代碼。請在你的電腦上執行 `flaccy-server enroll`，然後掃描它列印的代碼。"
+            "value": "這不是 Flaccy Server 的代碼。請掃描 Mac 上「新增裝置」中的代碼，或伺服器印出的代碼。"
           }
         }
       }
@@ -118035,6 +118695,76 @@
         }
       }
     },
+    "This Mac isn't on a network, so only it can play the library. Join Wi-Fi or turn on Tailscale.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Mac ist in keinem Netzwerk, daher kann nur er die Mediathek abspielen. Verbinde dich mit einem WLAN oder aktiviere Tailscale."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac isn't on a network, so only it can play the library. Join Wi-Fi or turn on Tailscale."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este Mac no está en ninguna red, así que solo él puede reproducir la biblioteca. Conéctate a una red Wi-Fi o activa Tailscale."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce Mac n’est sur aucun réseau : lui seul peut lire la bibliothèque. Connectez-vous au Wi-Fi ou activez Tailscale."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo Mac non è collegato a una rete, quindi solo lui può riprodurre la libreria. Connettiti al Wi-Fi o attiva Tailscale."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Mac はネットワークに接続されていないため、ライブラリを再生できるのはこの Mac だけです。Wi-Fi に接続するか、Tailscale をオンにしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Mac이 네트워크에 연결되어 있지 않아 이 Mac만 보관함을 재생할 수 있습니다. Wi-Fi에 연결하거나 Tailscale을 켜세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ten Mac nie jest w sieci, więc tylko on może odtwarzać bibliotekę. Połącz się z Wi-Fi albo włącz Tailscale."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este Mac não está em rede, então só ele pode tocar a biblioteca. Conecte-se ao Wi-Fi ou ative o Tailscale."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这台 Mac 未联网，因此只有它能播放资料库。请连接 Wi-Fi 或开启 Tailscale。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這台 Mac 未連網，因此只有它能播放資料庫。請連接 Wi-Fi 或開啟 Tailscale。"
+          }
+        }
+      }
+    },
     "This Mac stops syncing with %@. Your playlists and history stay here, and %@ keeps its copy.": {
       "localizations": {
         "de": {
@@ -119707,72 +120437,72 @@
         }
       }
     },
-    "This version of Flaccy needs Flaccy Server 1.0 or newer.": {
+    "This version of Flaccy needs Flaccy Server 1.0 or newer. Update Flaccy on the Mac that shares, or the flaccy-server package on the computer that runs it.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diese Version von Flaccy benötigt Flaccy Server 1.0 oder neuer."
+            "value": "Diese Flaccy-Version braucht Flaccy Server 1.0 oder neuer. Aktualisiere Flaccy auf dem Mac, der teilt, oder das Paket flaccy-server auf dem Computer, der ihn ausführt."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This version of Flaccy needs Flaccy Server 1.0 or newer."
+            "value": "This version of Flaccy needs Flaccy Server 1.0 or newer. Update Flaccy on the Mac that shares, or the flaccy-server package on the computer that runs it."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Esta versión de Flaccy necesita Flaccy Server 1.0 o posterior."
+            "value": "Esta versión de Flaccy necesita Flaccy Server 1.0 o posterior. Actualiza Flaccy en el Mac que comparte, o el paquete flaccy-server en el ordenador que lo ejecuta."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cette version de Flaccy nécessite Flaccy Server 1.0 ou une version ultérieure."
+            "value": "Cette version de Flaccy nécessite Flaccy Server 1.0 ou plus récent. Mettez à jour Flaccy sur le Mac qui partage, ou le paquet flaccy-server sur l’ordinateur qui l’exécute."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Questa versione di Flaccy richiede Flaccy Server 1.0 o successivo."
+            "value": "Questa versione di Flaccy richiede Flaccy Server 1.0 o successiva. Aggiorna Flaccy sul Mac che condivide o il pacchetto flaccy-server sul computer che lo esegue."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このバージョンの Flaccy には Flaccy Server 1.0 以降が必要です。"
+            "value": "この Flaccy のバージョンには Flaccy Server 1.0 以降が必要です。共有している Mac の Flaccy、または実行しているコンピュータの flaccy-server パッケージを更新してください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 버전의 Flaccy에는 Flaccy Server 1.0 이상이 필요해요."
+            "value": "이 버전의 Flaccy는 Flaccy Server 1.0 이상이 필요합니다. 공유하는 Mac의 Flaccy, 또는 서버를 실행하는 컴퓨터의 flaccy-server 패키지를 업데이트하세요."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ta wersja Flaccy wymaga Flaccy Server 1.0 lub nowszego."
+            "value": "Ta wersja Flaccy wymaga Flaccy Server 1.0 lub nowszego. Zaktualizuj Flaccy na udostępniającym Macu albo pakiet flaccy-server na komputerze, na którym działa."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Esta versão do Flaccy precisa do Flaccy Server 1.0 ou mais recente."
+            "value": "Esta versão do Flaccy precisa do Flaccy Server 1.0 ou mais recente. Atualize o Flaccy no Mac que compartilha, ou o pacote flaccy-server no computador que o executa."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "此版本的 Flaccy 需要 Flaccy Server 1.0 或更新版本。"
+            "value": "此版本的 Flaccy 需要 Flaccy Server 1.0 或更高版本。请更新共享的 Mac 上的 Flaccy，或运行它的电脑上的 flaccy-server 软件包。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "此版本的 Flaccy 需要 Flaccy Server 1.0 或更新版本。"
+            "value": "此版本的 Flaccy 需要 Flaccy Server 1.0 或更新版本。請更新分享的 Mac 上的 Flaccy，或執行它的電腦上的 flaccy-server 套件。"
           }
         }
       }
@@ -128625,6 +129355,76 @@
         }
       }
     },
+    "With Tailscale: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit Tailscale: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With Tailscale: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con Tailscale: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avec Tailscale : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con Tailscale: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale 経由: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z Tailscale: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Com o Tailscale: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 Tailscale：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過 Tailscale：%@"
+          }
+        }
+      }
+    },
     "Won’t fit, needs %@": {
       "localizations": {
         "de": {
@@ -131721,70 +132521,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "電腦和這部 iPhone 需要連接同一個 Wi-Fi。"
-          }
-        }
-      }
-    },
-    "Your computer shows a code when the server is ready. Scan it and Flaccy connects.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dein Computer zeigt einen Code, sobald der Server bereit ist. Scanne ihn, und Flaccy verbindet sich."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu ordenador muestra un código cuando el servidor está listo. Escanéalo y Flaccy se conecta."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Votre ordinateur affiche un code quand le serveur est prêt. Scannez-le et Flaccy se connecte."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il computer mostra un codice quando il server è pronto. Scansionalo e Flaccy si collega."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サーバーの準備ができるとコンピュータにコードが表示されます。スキャンするとFlaccyが接続します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "서버가 준비되면 컴퓨터에 코드가 표시됩니다. 스캔하면 Flaccy가 연결됩니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gdy serwer będzie gotowy, komputer pokaże kod. Zeskanuj go, a Flaccy się połączy."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seu computador mostra um código quando o servidor está pronto. Escaneie e o Flaccy se conecta."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "服务器就绪后，你的电脑会显示一个代码。扫描它，Flaccy 就会连接。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "伺服器就緒後，你的電腦會顯示一個代碼。掃描它，Flaccy 就會連線。"
           }
         }
       }

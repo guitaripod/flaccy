@@ -55,6 +55,12 @@ pub struct EmbedConfig {
     pub ffmpeg: Option<String>,
     /// Where `flaccy.log` goes.
     pub log_dir: PathBuf,
+    /// Also share on the local network over TLS, so devices on the same Wi-Fi need no Tailscale.
+    #[serde(default)]
+    pub lan: bool,
+    /// The Bonjour name devices on this network use, without `.local`; the Mac's LocalHostName.
+    #[serde(default)]
+    pub lan_name: Option<String>,
 }
 
 /// Why an embedded server could not start or answer.
@@ -101,6 +107,10 @@ pub struct Enrollment {
     pub code: String,
     /// The address the device connects to.
     pub url: String,
+    /// The address to try when `url` cannot be reached.
+    pub alternate: Option<String>,
+    /// The pin of the key the `https` addresses answer with.
+    pub pin: Option<String>,
     /// The user the device will belong to.
     pub user: String,
     /// When the code stops working, RFC 3339.
@@ -160,7 +170,7 @@ impl Inner {
 
     fn online(&self) -> Result<Online, EmbedError> {
         match &*self.phase() {
-            Phase::Running(online) => Ok(Online { state: online.state.clone(), addresses: online.addresses.clone() }),
+            Phase::Running(online) => Ok(Online { state: online.state.clone(), addresses: online.addresses.clone(), lan: online.lan.clone() }),
             Phase::Starting => Err(EmbedError::Timeout),
             Phase::Failed(message) => Err(EmbedError::Failed(message.clone())),
             Phase::Stopped => Err(EmbedError::NotRunning),
@@ -226,6 +236,8 @@ fn server_config(config: &EmbedConfig) -> Config {
         port: config.port,
         data_dir: Some(config.data_dir.clone()),
         behind_proxy: false,
+        lan: config.lan,
+        lan_name: config.lan_name.clone(),
         mode: Mode::Easy,
         hosts: Vec::new(),
         lastfm: Default::default(),
@@ -335,20 +347,24 @@ impl Handle {
         }
     }
 
-    /// The state as JSON: `state` (starting, running, stopped or error), `addresses`, `urls`, `deviceCount`,
-    /// `songCount`, `lastError`, `name`, `musicFolder`, `dataFolder` and `version`.
+    /// The state as JSON: `state` (starting, running, stopped or error), `addresses`, `urls`, `localUrl` and `pin`
+    /// (while it shares on the local network), `deviceCount`, `songCount`, `lastError`, `name`, `musicFolder`,
+    /// `dataFolder` and `version`.
     pub fn status_json(&self) -> String {
         let (state, last_error, online) = match &*self.inner.phase() {
             Phase::Starting => ("starting", None, None),
-            Phase::Running(online) => ("running", None, Some(Online { state: online.state.clone(), addresses: online.addresses.clone() })),
+            Phase::Running(online) => ("running", None, Some(Online { state: online.state.clone(), addresses: online.addresses.clone(), lan: online.lan.clone() })),
             Phase::Failed(message) => ("error", Some(message.clone()), None),
             Phase::Stopped => ("stopped", None, None),
         };
         let devices = online.as_ref().and_then(|online| self.run(device_count(online.state.0.security.clone())).ok()).and_then(Result::ok);
+        let local = online.as_ref().and_then(Online::local_reach);
         let value = json!({
             "state": state,
             "addresses": online.as_ref().map(|online| online.addresses.bound().iter().map(ToString::to_string).collect::<Vec<_>>()).unwrap_or_default(),
             "urls": online.as_ref().map(|online| online.addresses.urls()).unwrap_or_default(),
+            "localUrl": local.as_ref().map(|local| local.url.clone()),
+            "pin": local.as_ref().map(|local| local.pin.clone()),
             "deviceCount": devices,
             "songCount": online.as_ref().map(|online| online.state.catalog().song_count()),
             "lastError": last_error,
@@ -366,11 +382,19 @@ impl Handle {
         self.wait_until_running(STARTUP_WAIT)?;
         let online = self.inner.online()?;
         let name = user.map(str::trim).filter(|name| !name.is_empty()).unwrap_or(OWNER).to_owned();
-        let url = online.addresses.urls().into_iter().next().ok_or(EmbedError::NotRunning)?;
+        let reach = online.device_reach().ok_or(EmbedError::NotRunning)?;
         let state = online.state.clone();
         let (user, code) = self.run(issue_code(state.0.security.clone(), name))??;
         let expires_at = (Utc::now() + chrono::Duration::from_std(ENROLLMENT_TTL).unwrap_or_default()).to_rfc3339_opts(SecondsFormat::Secs, true);
-        Ok(Enrollment { link: enrollment_link(&url, &code, state.server_name()), code, url, user: user.name, expires_at })
+        Ok(Enrollment {
+            link: enrollment_link(&reach, &code, state.server_name()),
+            code,
+            url: reach.url,
+            alternate: reach.alternate,
+            pin: reach.pin,
+            user: user.name,
+            expires_at,
+        })
     }
 
     /// Runs `future` on the server's runtime and waits for it, from any thread.

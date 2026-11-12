@@ -77,22 +77,27 @@ actor SubsonicClient {
     private let base: URL
     private let credentials: SubsonicCredentials
     private let session: URLSession
-    private let streams = SubsonicStreamSession()
+    private let pinning: PinnedServerTrust?
+    private let streams: SubsonicStreamSession
 
     private static let requestTimeout: TimeInterval = 30
     private static let songPageParameters: [(String, String)] = [
         ("query", ""), ("artistCount", "0"), ("albumCount", "0"),
     ]
 
-    init(serverID: String, base: URL, credentials: SubsonicCredentials) {
+    /// A client for the server at `base`. A Flaccy Server on the local network passes the `pin` of its key, which every
+    /// connection is checked against; any other server is trusted by the system's certificate authorities.
+    init(serverID: String, base: URL, credentials: SubsonicCredentials, pin: String? = nil) {
         self.serverID = serverID
         self.base = base
         self.credentials = credentials
         host = base.host ?? base.absoluteString
+        pinning = PinnedServerTrust.make(for: pin.map(ServerKeyTrust.pinned) ?? .system)
+        streams = SubsonicStreamSession(pinning: pinning)
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = Self.requestTimeout
         configuration.waitsForConnectivity = false
-        session = URLSession(configuration: configuration)
+        session = URLSession(configuration: configuration, delegate: pinning, delegateQueue: nil)
     }
 
     deinit {
@@ -203,6 +208,8 @@ actor SubsonicClient {
         do {
             let (response, chunks, cancel) = try await streams.open(request)
             return RemoteByteStream(head: RemoteStreamHead(response: response), chunks: chunks, cancel: cancel)
+        } catch where pinning?.refusedKey == true {
+            throw RemoteFailure.keyChanged(host: host)
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as URLError where error.code == .cancelled {
@@ -222,6 +229,8 @@ actor SubsonicClient {
                 throw RemoteFailure.httpStatus((response as? HTTPURLResponse)?.statusCode ?? 0, host: host)
             }
             return location
+        } catch is URLError where pinning?.refusedKey == true {
+            throw RemoteFailure.keyChanged(host: host)
         } catch let error as URLError {
             throw RemoteFailure(transport: error, host: host)
         }
@@ -249,6 +258,8 @@ actor SubsonicClient {
     private func perform(_ request: URLRequest) async throws -> (Data, URLResponse) {
         do {
             return try await session.data(for: request)
+        } catch is URLError where pinning?.refusedKey == true {
+            throw RemoteFailure.keyChanged(host: host)
         } catch let error as URLError where error.code == .cancelled {
             throw CancellationError()
         } catch let error as URLError {
@@ -288,8 +299,10 @@ nonisolated final class SubsonicStreamSession: NSObject, URLSessionDataDelegate,
     private let lock = NSLock()
     private var pending: [Int: Pending] = [:]
     private var session: URLSession!
+    private let pinning: PinnedServerTrust?
 
-    override init() {
+    init(pinning: PinnedServerTrust? = nil) {
+        self.pinning = pinning
         super.init()
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 600
@@ -349,6 +362,13 @@ nonisolated final class SubsonicStreamSession: NSObject, URLSessionDataDelegate,
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         let chunks = lock.withLock { pending[dataTask.taskIdentifier]?.chunks }
         chunks?.yield(data)
+    }
+
+    func urlSession(
+        _ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge
+    ) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+        guard let pinning else { return (.performDefaultHandling, nil) }
+        return await pinning.urlSession(session, task: task, didReceive: challenge)
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {

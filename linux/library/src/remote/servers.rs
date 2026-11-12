@@ -24,6 +24,10 @@ pub struct Server {
     pub api_key: Option<String>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub flaccy_server: bool,
+    /// The pin of the key a Flaccy Server answers with on the local network; its `https` address is trusted
+    /// by this pin instead of by a certificate authority.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pin: Option<String>,
 }
 
 fn is_false(value: &bool) -> bool {
@@ -41,6 +45,7 @@ impl fmt::Debug for Server {
             .field("password", &self.password.as_ref().map(|_| "***"))
             .field("api_key", &self.api_key.as_ref().map(|_| "***"))
             .field("flaccy_server", &self.flaccy_server)
+            .field("pin", &self.pin)
             .finish()
     }
 }
@@ -58,13 +63,15 @@ impl Server {
             password: if is_api_key { None } else { secret.clone() },
             api_key: if is_api_key { secret } else { None },
             flaccy_server: false,
+            pin: None,
         }
     }
 
     /// The library of a Flaccy Server this device is enrolled with: the device token signs in as an API key, and the server is marked so Preferences shows it in the Flaccy Server row instead of the list of regular servers.
-    pub fn flaccy_library(name: &str, address: &str, device_token: &str) -> Self {
+    pub fn flaccy_library(name: &str, address: &str, device_token: &str, pin: Option<&str>) -> Self {
         Self {
             flaccy_server: true,
+            pin: pin.map(str::to_owned),
             ..Self::new(name, address, "", device_token, true)
         }
     }

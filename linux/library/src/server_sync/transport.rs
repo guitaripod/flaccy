@@ -1,5 +1,6 @@
 use super::engine::PullRequest;
 use super::listens::{ListensPage, ListensRequest};
+use crate::remote::pinned_tls::{caused_by_key_change, PinnedTls};
 use flaccy_server_core::wire::{Hello, PullResponse, PushRequest, PushResponse};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -47,12 +48,15 @@ pub enum ApiError {
     },
     /// The answer was not the JSON the protocol describes.
     Malformed(String),
+    /// The server's TLS key is not the pinned one.
+    KeyChanged,
 }
 
 impl fmt::Display for ApiError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ApiError::Offline(cause) => write!(formatter, "Can't reach the server ({cause}). Check that Tailscale is on; Flaccy retries by itself."),
+            ApiError::Offline(cause) => write!(formatter, "Can't reach the server ({cause}). Check that this computer is on the server's network or that Tailscale is on; Flaccy retries by itself."),
+            ApiError::KeyChanged => write!(formatter, "The server answered with a different key than when this computer was added, so nothing was sent. If it was reinstalled or moved, disconnect it and add it again with a new code."),
             ApiError::Unauthorized => write!(formatter, "The server did not accept this device. Add the server again with a new link."),
             ApiError::IncarnationChanged(_) | ApiError::CookieAhead(_) => write!(formatter, "The server's data was replaced."),
             ApiError::InstanceConflict => write!(formatter, "The server met a different history for this device."),
@@ -155,6 +159,9 @@ pub struct Transport {
     base: String,
     token: Option<String>,
     agent: ureq::Agent,
+    connect: Duration,
+    total: Duration,
+    tls: Option<PinnedTls>,
 }
 
 impl fmt::Debug for Transport {
@@ -179,15 +186,61 @@ impl Transport {
     }
 
     fn with_timeouts(base_url: &str, connect: Duration, total: Duration) -> Self {
-        let agent = ureq::AgentBuilder::new()
-            .timeout_connect(connect)
-            .timeout(total)
-            .build();
         Transport {
             base: base_url.trim_end_matches('/').to_owned(),
             token: None,
-            agent,
+            agent: Self::agent(connect, total, None),
+            connect,
+            total,
+            tls: None,
         }
+    }
+
+    fn agent(connect: Duration, total: Duration, tls: Option<&PinnedTls>) -> ureq::Agent {
+        let mut builder = ureq::AgentBuilder::new().timeout_connect(connect).timeout(total);
+        if let Some(tls) = tls {
+            builder = builder.tls_config(tls.config());
+        }
+        builder.build()
+    }
+
+    /// The same client trusting the server's key by `pin` when its address is `https`; a client for an `http`
+    /// address, or without a pin, is unchanged.
+    pub fn pinned(self, pin: Option<&str>) -> Self {
+        match pin {
+            Some(pin) if self.is_https() => self.trusting(PinnedTls::pinned(pin)),
+            _ => self,
+        }
+    }
+
+    /// The same client trusting whatever key an `https` server shows first, for an address typed by hand;
+    /// [`seen_pin`](Self::seen_pin) then tells which key that was.
+    pub fn first_contact(self) -> Self {
+        if self.is_https() {
+            self.trusting(PinnedTls::first_contact())
+        } else {
+            self
+        }
+    }
+
+    /// The pin of the key the server showed, once a pinned or first-contact client has connected.
+    pub fn seen_pin(&self) -> Option<String> {
+        self.tls.as_ref().and_then(PinnedTls::seen_pin)
+    }
+
+    /// The TLS this client trusts the server with, for the live channel to use the same.
+    pub fn tls(&self) -> Option<&PinnedTls> {
+        self.tls.as_ref()
+    }
+
+    fn trusting(mut self, tls: PinnedTls) -> Self {
+        self.agent = Self::agent(self.connect, self.total, Some(&tls));
+        self.tls = Some(tls);
+        self
+    }
+
+    fn is_https(&self) -> bool {
+        self.base.starts_with("https://")
     }
 
     /// The same client signed in with `token`.
@@ -303,6 +356,7 @@ fn decode<T: serde::de::DeserializeOwned>(
     match outcome {
         Ok(response) => parse_body(&read_body(response)?),
         Err(ureq::Error::Status(status, response)) => Err(classify(status, response)),
+        Err(ureq::Error::Transport(transport)) if caused_by_key_change(&transport) => Err(ApiError::KeyChanged),
         Err(ureq::Error::Transport(transport)) => {
             Err(ApiError::Offline(transport.kind().to_string()))
         }

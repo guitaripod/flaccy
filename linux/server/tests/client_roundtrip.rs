@@ -84,6 +84,8 @@ async fn a_re_export_on_the_server_reaches_the_client_as_revision_two_of_the_sam
         port: 0,
         data_dir: Some(root.path().join("server-data")),
         behind_proxy: false,
+        lan: false,
+        lan_name: None,
         mode: Mode::Easy,
         lastfm: Default::default(),
         hosts: Vec::new(),

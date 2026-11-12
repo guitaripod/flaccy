@@ -11,14 +11,20 @@ private final class FakeHost: ServerHosting, @unchecked Sendable {
     private var bound: [String] = []
     private var failure: String?
     private(set) var startedPorts: [UInt16] = []
+    private(set) var startedOnLocalNetwork: [Bool] = []
+    private var lanName: String?
     private(set) var stops = 0
     private(set) var enrollments = 0
 
     var addressesOnStart = ["127.0.0.1:{port}", "100.127.250.64:{port}"]
 
-    func start(musicFolder: URL, name: String, dataDirectory: URL, logDirectory: URL, port: UInt16) throws -> ServerHostStatus {
+    func start(
+        musicFolder: URL, name: String, dataDirectory: URL, logDirectory: URL, port: UInt16, lan: Bool, lanName: String?
+    ) throws -> ServerHostStatus {
         lock.withLock {
             startedPorts.append(port)
+            startedOnLocalNetwork.append(lan)
+            self.lanName = lan ? lanName : nil
             if let failure {
                 current = .error
                 return snapshot(error: failure)
@@ -66,10 +72,17 @@ private final class FakeHost: ServerHosting, @unchecked Sendable {
     }
 
     private func snapshot(error: String? = nil) -> ServerHostStatus {
-        ServerHostStatus(
+        var status = ServerHostStatus(
             state: current, addresses: bound, urls: [], deviceCount: current == .running ? devices : nil,
             songCount: current == .running ? songs : nil, lastError: error ?? (current == .error ? failure : nil), version: "1.0.0"
         )
+        let local = bound.first { $0.hasPrefix("192.168.") }
+        if current == .running, startedOnLocalNetwork.last == true, let local, let split = local.lastIndex(of: ":") {
+            let host = lanName.map { "\($0).local" } ?? String(local[..<split])
+            status.localUrl = "https://\(host):\(local[local.index(after: split)...])"
+            status.pin = "PIN"
+        }
+        return status
     }
 }
 
@@ -136,7 +149,7 @@ private struct Rig {
         sharing = LibrarySharing(
             host: host, folder: folder, enroller: enroller, defaults: defaults,
             paths: .init(data: URL(filePath: "/tmp/data"), logs: URL(filePath: "/tmp/logs")),
-            machineName: { "arch" }, isPortFree: { !busyPorts.contains($0) }, pollInterval: nil,
+            machineName: { "arch" }, localHostName: { "Arch-Box" }, isPortFree: { !busyPorts.contains($0) }, pollInterval: nil,
             now: { clock.now }, sleep: { _ in await Task.yield() }
         )
     }
@@ -328,6 +341,34 @@ struct LibrarySharingTests {
         await rig.sharing.waitFor { if case .sharing = $0 { true } else { false } }
         guard case .sharing(let sharing) = rig.sharing.state else { Issue.record("not sharing"); return }
         #expect(!sharing.reachesTailnet)
+        await rig.sharing.shutDown()
+    }
+
+    @Test func sharingOnThisNetworkIsOnByDefaultAndReachesDevicesWithoutTailscale() async {
+        let rig = Rig()
+        rig.host.addressesOnStart = ["127.0.0.1:{port}", "192.168.1.5:{port}"]
+        rig.sharing.setEnabled(true)
+        await rig.sharing.waitFor { if case .sharing = $0 { true } else { false } }
+        guard case .sharing(let sharing) = rig.sharing.state else { Issue.record("not sharing"); return }
+        #expect(rig.sharing.sharesOnLocalNetwork)
+        #expect(rig.host.startedOnLocalNetwork == [true])
+        #expect(!sharing.reachesTailnet)
+        #expect(sharing.reachesOtherDevices)
+        #expect(sharing.localURL?.absoluteString == "https://Arch-Box.local:4545")
+        await rig.sharing.shutDown()
+    }
+
+    @Test func turningSharingOnThisNetworkOffRestartsTheServerWithoutIt() async {
+        let rig = Rig()
+        rig.host.addressesOnStart = ["127.0.0.1:{port}", "192.168.1.5:{port}"]
+        rig.sharing.setEnabled(true)
+        await rig.sharing.waitFor { if case .sharing = $0 { true } else { false } }
+        rig.sharing.setSharesOnLocalNetwork(false)
+        await rig.sharing.waitFor { if case .sharing(let sharing) = $0 { sharing.localURL == nil } else { false } }
+        guard case .sharing(let sharing) = rig.sharing.state else { Issue.record("not sharing"); return }
+        #expect(rig.host.startedOnLocalNetwork == [true, false])
+        #expect(!sharing.reachesOtherDevices)
+        #expect(!rig.sharing.sharesOnLocalNetwork)
         await rig.sharing.shutDown()
     }
 }

@@ -224,8 +224,8 @@ fn the_flaccy_servers_music_joins_as_one_marked_entry_and_leaves_with_its_songs(
     let rig = rig("flaccy-library");
     seed_songs(&rig, 2);
     let address = rig.fixture.address();
-    assert!(library::attach(&rig.remote, "arch", &address, "tok").unwrap());
-    assert!(!library::attach(&rig.remote, "arch", &address, "tok").unwrap());
+    assert!(library::attach(&rig.remote, "arch", &address, "tok", None).unwrap());
+    assert!(!library::attach(&rig.remote, "arch", &address, "tok", None).unwrap());
     assert_eq!(rig.remote.servers().len(), 1);
     let server = library::find(&rig.remote).unwrap();
     assert!(server.flaccy_server && server.uses_api_key());
@@ -242,12 +242,12 @@ fn another_token_replaces_the_entry_and_another_name_only_renames_it() {
     use crate::server_sync::library;
     let rig = rig("flaccy-library-replace");
     let address = rig.fixture.address();
-    library::attach(&rig.remote, "arch", &address, "tok").unwrap();
+    library::attach(&rig.remote, "arch", &address, "tok", None).unwrap();
     let first = library::find(&rig.remote).unwrap().id;
-    assert!(!library::attach(&rig.remote, "Arch Box", &address, "tok").unwrap());
+    assert!(!library::attach(&rig.remote, "Arch Box", &address, "tok", None).unwrap());
     let renamed = library::find(&rig.remote).unwrap();
     assert_eq!((renamed.id.as_str(), renamed.name.as_str()), (first.as_str(), "Arch Box"));
-    assert!(library::attach(&rig.remote, "Arch Box", &address, "other").unwrap());
+    assert!(library::attach(&rig.remote, "Arch Box", &address, "other", None).unwrap());
     assert_ne!(library::find(&rig.remote).unwrap().id, first);
     assert_eq!(rig.remote.servers().len(), 1);
 }
@@ -257,7 +257,7 @@ fn plays_and_loves_of_the_flaccy_servers_music_are_left_to_the_sync() {
     use crate::server_sync::library;
     let rig = rig("flaccy-library-quiet");
     seed_songs(&rig, 2);
-    library::attach(&rig.remote, "arch", &rig.fixture.address(), "tok").unwrap();
+    library::attach(&rig.remote, "arch", &rig.fixture.address(), "tok", None).unwrap();
     let flaccy = library::find(&rig.remote).unwrap().id;
     let regular = add_fixture_server(&rig);
     rig.remote.scrobble(&format!("remote://{flaccy}/song-0"), true);
@@ -275,7 +275,7 @@ fn a_server_that_refuses_the_key_is_unreachable_and_asked_again_only_now_and_the
     use crate::server_sync::library;
     let rig = rig("flaccy-library-refused");
     let address = rig.fixture.address();
-    library::attach(&rig.remote, "arch", &address, "revoked").unwrap();
+    library::attach(&rig.remote, "arch", &address, "revoked", None).unwrap();
     let id = library::find(&rig.remote).unwrap().id;
     rig.fixture.reject_logins();
     rig.remote.ping_all(0);

@@ -8,8 +8,10 @@
 
 pub mod cache;
 pub mod catalog;
+pub mod certificate_pin;
 pub mod client;
 pub mod manager;
+pub mod pinned_tls;
 pub mod proxy;
 pub mod redact;
 pub mod servers;

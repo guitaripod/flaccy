@@ -82,6 +82,23 @@ impl From<SyncError> for Stop {
     }
 }
 
+/// Where the live channel connects, the token it presents and the pin it trusts the server's key by.
+#[derive(Clone)]
+pub struct LiveTarget {
+    /// The server's base URL.
+    pub url: String,
+    /// This device's token. Secret.
+    pub token: String,
+    /// The pin of the server's key, for an `https` address on the local network.
+    pub pin: Option<String>,
+}
+
+impl std::fmt::Debug for LiveTarget {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.debug_struct("LiveTarget").field("url", &self.url).field("pin", &self.pin).finish_non_exhaustive()
+    }
+}
+
 /// Runs the sync loop against one server: enrolls, then pulls, pushes and reads the play history.
 pub struct Driver {
     engine: Engine,
@@ -168,19 +185,21 @@ impl Driver {
     }
 
     /// One look at a server: who it says it is, and whether this Flaccy and it can sync. Tries once, five seconds at most, and keeps no state.
+    /// An `https` address typed by hand is looked at whatever key it shows; enrolling pins that key.
     pub fn probe(&self, url: &str) -> Result<ServerIdentity> {
-        identity_of(Transport::probing(url).hello()?)
+        identity_of(Transport::probing(url).first_contact().hello()?)
+    }
+
+    /// One look at the server a pairing link names: its address, then its fallback when the first cannot be reached,
+    /// each checked against the link's pin.
+    pub fn probe_link(&self, link: &ServerLink) -> Result<ServerIdentity> {
+        let (_, _, hello) = reach_link(link)?;
+        identity_of(hello)
     }
 
     /// The devices of this account on the connected server. Tries once, five seconds at most.
     pub fn devices(&self, db: &Db) -> Result<Vec<DeviceInfo>> {
-        let url = self
-            .engine
-            .server_url(db)?
-            .ok_or(SyncError::NotConfigured)?;
-        Ok(Transport::probing(&url)
-            .with_token(self.tokens.load())
-            .devices()?)
+        Ok(self.signed(db)?.devices()?)
     }
 
     /// Renames a device of this account on the connected server. Tries once, five seconds at most.
@@ -194,17 +213,23 @@ impl Driver {
     }
 
     fn signed(&self, db: &Db) -> Result<Transport> {
+        let (url, pin) = self.endpoint(db)?;
+        Ok(Transport::probing(&url).pinned(pin.as_deref()).with_token(self.tokens.load()))
+    }
+
+    /// The connected server's base URL and the pin of its key.
+    fn endpoint(&self, db: &Db) -> Result<(String, Option<String>)> {
         let url = self
             .engine
             .server_url(db)?
             .ok_or(SyncError::NotConfigured)?;
-        Ok(Transport::probing(&url).with_token(self.tokens.load()))
+        Ok((url, self.engine.server_pin(db)?))
     }
 
-    /// Where the live channel connects and the token it presents, when a server is connected and this device holds a token.
-    pub fn live_target(&self, db: &Db) -> Option<(String, String)> {
-        let url = self.engine.server_url(db).ok().flatten()?;
-        Some((url, self.tokens.load()?))
+    /// Where the live channel connects, the token it presents and the pin it checks, when a server is connected and this device holds a token.
+    pub fn live_target(&self, db: &Db) -> Option<LiveTarget> {
+        let (url, pin) = self.endpoint(db).ok()?;
+        Some(LiveTarget { url, token: self.tokens.load()?, pin })
     }
 
     /// What the first connect combined, once, after the pull that showed it. `None` when nothing merged or it was already taken.
@@ -224,15 +249,17 @@ impl Driver {
                 "The link has no enrollment code. Ask the server for a new link.".into(),
             )
         })?;
-        self.probe(&link.url)?;
-        let transport = Transport::probing(&link.url);
+        let (url, transport, hello) = reach_link(link)?;
+        identity_of(hello)?;
         let instance = new_uuid_v7();
         let reply = transport.enroll(code, device_name, &instance)?;
+        let server_pin = link.pin.clone().or_else(|| transport.seen_pin());
         self.tokens.save(&reply.token)?;
         self.engine.attach(
             db,
             &Enrollment {
-                server_url: link.url.clone(),
+                server_url: url,
+                server_pin,
                 device: reply.device,
                 user: reply.user.id,
                 incarnation: reply.incarnation,
@@ -352,22 +379,16 @@ impl Driver {
         {
             return Ok(());
         }
-        let url = self
-            .engine
-            .server_url(db)?
-            .ok_or(SyncError::NotConfigured)?;
-        let hello = self.retry(|| Transport::probing(&url).hello())?;
+        let (url, pin) = self.endpoint(db)?;
+        let hello = self.retry(|| Transport::probing(&url).pinned(pin.as_deref()).hello())?;
         identity_of(hello)?;
         self.version_checked_at = Some(Instant::now());
         Ok(())
     }
 
     fn transport(&self, db: &Db) -> std::result::Result<Transport, Stop> {
-        let url = self
-            .engine
-            .server_url(db)?
-            .ok_or(SyncError::NotConfigured)?;
-        Ok(Transport::new(&url).with_token(self.tokens.load()))
+        let (url, pin) = self.endpoint(db)?;
+        Ok(Transport::new(&url).pinned(pin.as_deref()).with_token(self.tokens.load()))
     }
 
     fn pull_all(&mut self, db: &Db, transport: &Transport) -> std::result::Result<Flow, Stop> {
@@ -572,4 +593,22 @@ fn identity_of(hello: Hello) -> Result<ServerIdentity> {
     } else {
         Incompatibility::ServerTooOld
     }))
+}
+
+/// The first address of `link` that answers `hello`, with a client that trusts it by the link's pin, or by the key
+/// it shows first when the link has none. Only an unreachable address moves on to the next; any other answer is final.
+fn reach_link(link: &ServerLink) -> std::result::Result<(String, Transport, Hello), ApiError> {
+    let mut last = None;
+    for url in link.candidates() {
+        let transport = match &link.pin {
+            Some(pin) => Transport::probing(&url).pinned(Some(pin)),
+            None => Transport::probing(&url).first_contact(),
+        };
+        match transport.hello() {
+            Ok(hello) => return Ok((url, transport, hello)),
+            Err(error @ ApiError::Offline(_)) => last = Some(error),
+            Err(error) => return Err(error),
+        }
+    }
+    Err(last.unwrap_or_else(|| ApiError::Offline("the link names no address".into())))
 }

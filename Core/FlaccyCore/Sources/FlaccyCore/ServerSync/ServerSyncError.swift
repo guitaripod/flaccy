@@ -22,6 +22,7 @@ public enum ServerSyncError: Error, Hashable, Sendable {
     case refused(status: Int, code: String)
     case malformed(String)
     case notConnected
+    case keyChanged
 
     /// True for a failure worth retrying after a pause.
     public var isTransient: Bool {
@@ -52,6 +53,7 @@ public enum ServerSyncError: Error, Hashable, Sendable {
         case .clockBehind: .serverClockWrong
         case .diskFull: .diskFull
         case .unauthorized: .deviceRemoved
+        case .keyChanged: .keyChanged
         default: .other
         }
     }
@@ -89,6 +91,7 @@ public enum ServerSyncFailureKind: Hashable, Sendable {
     case serverClockWrong
     case diskFull
     case deviceRemoved
+    case keyChanged
     case other
 }
 
@@ -114,6 +117,7 @@ extension ServerSyncError: LocalizedError {
         case .refused(let status, let code): "The server refused the request (\(status) \(code))."
         case .malformed(let cause): "The server sent something Flaccy cannot read (\(cause))."
         case .notConnected: "No Flaccy Server is connected."
+        case .keyChanged: "The server answered with a different key than when this device was added."
         }
     }
 }

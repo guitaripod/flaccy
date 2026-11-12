@@ -1,5 +1,5 @@
 //! `flaccy-server doctor`: one line per check, `✓` or `✗` with the fix, in the order of `docs/server/UX.md`:
-//! Tailscale, bind, clock, disk, ffmpeg, database, last backup, clients.
+//! Tailscale, bind, this network (with `lan = true`), clock, disk, ffmpeg, database, last backup, clients.
 
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
@@ -8,7 +8,9 @@ use std::time::{Duration, SystemTime};
 use rusqlite::{Connection, OpenFlags};
 
 use crate::config::Config;
-use crate::net;
+use crate::lan_identity::LanIdentity;
+use crate::net::lan;
+use crate::reach;
 use crate::probe::{self, PortState};
 use crate::retention;
 use crate::runner::{Runner, SystemRunner};
@@ -125,9 +127,12 @@ pub async fn report(config: &Config, environment: &DoctorEnvironment<'_>, termin
 /// Every check, in the order they are printed.
 pub async fn diagnose(config: &Config, environment: &DoctorEnvironment<'_>) -> Vec<Check> {
     let tailnet = tailscale::detect(environment.runner);
-    let tailscale_check = tailscale_check(&tailnet);
-    let bind = bind_check(config, environment, net::addresses().unwrap_or_default()).await;
-    let mut checks = vec![tailscale_check, bind, clock_check(config, environment.now_ms)];
+    let tailscale_check = tailscale_check(&tailnet, config.lan);
+    let interfaces: Vec<IpAddr> = if_addrs::get_if_addrs().map(|found| found.iter().map(|interface| interface.ip()).collect()).unwrap_or_default();
+    let bind = bind_check(config, environment, interfaces.clone()).await;
+    let mut checks = vec![tailscale_check, bind];
+    checks.extend(network_check(config, &interfaces));
+    checks.push(clock_check(config, environment.now_ms));
     checks.extend(disk_checks(config, environment.runner));
     checks.push(ffmpeg_check(environment));
     checks.push(database_check(config));
@@ -137,9 +142,18 @@ pub async fn diagnose(config: &Config, environment: &DoctorEnvironment<'_>) -> V
     checks
 }
 
-/// The Tailscale line.
-pub fn tailscale_check(found: &Tailscale) -> Check {
+/// The Tailscale line. With `lan` on, a machine without Tailscale is noted rather than failed: devices on this
+/// network still connect.
+pub fn tailscale_check(found: &Tailscale, lan: bool) -> Check {
     match found {
+        Tailscale::NotInstalled if lan => Check::note(
+            "Tailscale",
+            "is not installed; devices on this network still connect, and Tailscale adds listening away from home",
+        ),
+        Tailscale::NotRunning(reason) if lan => Check::note(
+            "Tailscale",
+            format!("is not connected ({reason}); devices on this network still connect"),
+        ),
         Tailscale::Running(tailnet) => {
             let address = tailnet.primary_address().map(|ip| format!(" ({ip})")).unwrap_or_default();
             let version = if tailnet.version.is_empty() { String::new() } else { format!(", version {}", tailnet.version) };
@@ -173,18 +187,27 @@ fn listed(addresses: &[IpAddr], port: u16) -> String {
 /// The bind line: where the server listens and whether it is answering there.
 pub async fn bind_check(config: &Config, environment: &DoctorEnvironment<'_>, interface_addresses: Vec<IpAddr>) -> Check {
     let port = config.port;
-    let tailnet: Vec<IpAddr> = net::tailnet::tailnet_only(interface_addresses);
+    let found = lan::classify(interface_addresses, config.lan);
     let easy = config.address == "127.0.0.1";
-    if easy && tailnet.is_empty() {
-        return Check::fail(
-            "Bind",
-            "no Tailscale address is on this machine's network interfaces, so only this machine can reach the server",
-            "Start Tailscale, or set `address` in the configuration file to the address devices should use",
-        );
+    if easy && found.tailnet.is_empty() && found.local.is_empty() {
+        return if config.lan {
+            Check::fail(
+                "Bind",
+                "this machine has no Tailscale address and no local network address, so only it can reach the server",
+                "Join a network, or start Tailscale",
+            )
+        } else {
+            Check::fail(
+                "Bind",
+                "no Tailscale address is on this machine's network interfaces, so only this machine can reach the server",
+                "Start Tailscale, or add `lan = true` to the configuration file so devices on this network can connect",
+            )
+        };
     }
     let mut addresses: Vec<IpAddr> = vec![IpAddr::from([127, 0, 0, 1])];
     if easy {
-        addresses.extend(tailnet);
+        addresses.extend(found.tailnet);
+        addresses.extend(found.local);
     } else if let Ok(address) = config.address.parse::<IpAddr>() {
         addresses = vec![address];
     }
@@ -201,6 +224,33 @@ pub async fn bind_check(config: &Config, environment: &DoctorEnvironment<'_>, in
         Ok(_) => Check::fail("Bind", format!("the server is not answering on port {port}"), start_hint(environment.platform)),
         Err(message) => Check::fail("Bind", message.trim_end_matches('.'), "Set a `port` above 1024 in the configuration file"),
     }
+}
+
+/// With `lan = true`, the address devices on this network are given, or why there is none.
+fn network_check(config: &Config, interfaces: &[IpAddr]) -> Option<Check> {
+    if !config.lan || config.address != "127.0.0.1" {
+        return None;
+    }
+    let pin = match LanIdentity::read_pin(&config.data_dir()) {
+        Ok(Some(pin)) => pin,
+        Ok(None) => {
+            return Some(Check::note(
+                "Network",
+                "the server has not shared on this network yet; it makes its key the first time it starts with `lan = true`",
+            ))
+        }
+        Err(message) => return Some(Check::fail("Network", message.trim_end_matches('.'), "Then run `flaccy-server doctor` again")),
+    };
+    let bound: Vec<std::net::SocketAddr> = lan::classify(interfaces.iter().copied(), true)
+        .local
+        .into_iter()
+        .map(|ip| std::net::SocketAddr::new(ip, config.port))
+        .collect();
+    let (name, answers) = reach::bonjour_source(config);
+    Some(match reach::local_reach(&bound, &name, answers, &pin) {
+        Some(local) => Check::pass("Network", format!("devices on this network connect to {} over TLS", local.url)),
+        None => Check::fail("Network", "this machine has no local network address", "Join a network, then run `flaccy-server doctor` again"),
+    })
 }
 
 fn read_only(path: &Path) -> Option<Connection> {

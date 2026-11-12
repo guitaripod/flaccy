@@ -1,6 +1,8 @@
 //! The client of the live channel (`docs/server/PROTOCOL.md` section 9): a blocking WebSocket on a thread of its own that tells the sync worker when another device changed something, so a change shows within a second instead of at the next poll. It reads pokes, ignores presence and commands for now, and never talks to the interface.
 
 use crate::logger;
+use crate::remote::pinned_tls::PinnedTls;
+use rustls::ClientConfig;
 use std::io::ErrorKind;
 use std::net::{TcpStream, ToSocketAddrs};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -10,7 +12,7 @@ use tungstenite::client::IntoClientRequest;
 use tungstenite::handshake::HandshakeError;
 use tungstenite::http::HeaderValue;
 use tungstenite::protocol::frame::coding::CloseCode;
-use tungstenite::{Error, Message, WebSocket};
+use tungstenite::{Connector, Error, Message, WebSocket};
 
 const LOG: &str = "server-sync";
 const PATH: &str = "/flaccy/v1/live";
@@ -93,19 +95,22 @@ pub struct Live {
 }
 
 impl Live {
-    /// Opens the channel to the server at `base` with `token` on a new thread and keeps it open, reporting to `notify` from that thread. `None` when the thread could not start.
+    /// Opens the channel to the server at `base` with `token` on a new thread and keeps it open, reporting to `notify` from that thread.
+    /// An `https` base on the local network is trusted by `pin`. `None` when the thread could not start.
     pub fn start(
         base: &str,
         token: &str,
+        pin: Option<&str>,
         notify: impl Fn(LiveEvent) + Send + 'static,
     ) -> Option<Live> {
         let url = live_url(base)?;
         let token = token.to_owned();
+        let tls = pin.filter(|_| base.starts_with("https://")).map(|pin| PinnedTls::pinned(pin).config());
         let stop = Arc::new(AtomicBool::new(false));
         let flag = Arc::clone(&stop);
         std::thread::Builder::new()
             .name("flaccy-server-live".into())
-            .spawn(move || keep_open(&url, &token, &flag, &notify))
+            .spawn(move || keep_open(&url, &token, tls.as_ref(), &flag, &notify))
             .ok()?;
         Some(Live { stop })
     }
@@ -125,10 +130,10 @@ enum Ending {
     Lost { was_up_for: Option<Duration> },
 }
 
-fn keep_open(url: &str, token: &str, stop: &AtomicBool, notify: &dyn Fn(LiveEvent)) {
+fn keep_open(url: &str, token: &str, tls: Option<&Arc<ClientConfig>>, stop: &AtomicBool, notify: &dyn Fn(LiveEvent)) {
     let mut attempt = 0;
     while !stop.load(Ordering::Relaxed) {
-        let wait = match connect_and_read(url, token, stop, notify) {
+        let wait = match connect_and_read(url, token, tls, stop, notify) {
             Ending::Stopped => return,
             Ending::Revoked => {
                 notify(LiveEvent::Revoked);
@@ -161,10 +166,11 @@ fn nap(total: Duration, stop: &AtomicBool) {
 fn connect_and_read(
     url: &str,
     token: &str,
+    tls: Option<&Arc<ClientConfig>>,
     stop: &AtomicBool,
     notify: &dyn Fn(LiveEvent),
 ) -> Ending {
-    let (mut socket, timeouts) = match open(url, token) {
+    let (mut socket, timeouts) = match open(url, token, tls) {
         Ok(opened) => opened,
         Err(ending) => return ending,
     };
@@ -189,7 +195,7 @@ fn connect_and_read(
 
 type Socket = WebSocket<tungstenite::stream::MaybeTlsStream<TcpStream>>;
 
-fn open(url: &str, token: &str) -> Result<(Socket, TcpStream), Ending> {
+fn open(url: &str, token: &str, tls: Option<&Arc<ClientConfig>>) -> Result<(Socket, TcpStream), Ending> {
     let mut request = url.into_client_request().map_err(|error| {
         logger::warn(LOG, &format!("live channel address unusable: {error}"));
         Ending::Unsupported
@@ -207,7 +213,8 @@ fn open(url: &str, token: &str) -> Result<(Socket, TcpStream), Ending> {
     timeouts
         .set_read_timeout(Some(HANDSHAKE_TIMEOUT))
         .map_err(|_| Ending::Lost { was_up_for: None })?;
-    match tungstenite::client_tls(request, stream) {
+    let connector = tls.map(|config| Connector::Rustls(Arc::clone(config)));
+    match tungstenite::client_tls_with_config(request, stream, None, connector) {
         Ok((socket, _)) => Ok((socket, timeouts)),
         Err(HandshakeError::Failure(error)) => Err(handshake_ending(&error)),
         Err(HandshakeError::Interrupted(_)) => Err(Ending::Lost { was_up_for: None }),
@@ -398,7 +405,7 @@ mod tests {
 
     fn collect(base: &str, token: &str, wanted: usize) -> Vec<LiveEvent> {
         let (events, inbox) = mpsc::channel();
-        let live = Live::start(base, token, move |event| {
+        let live = Live::start(base, token, None, move |event| {
             let _ = events.send(event);
         })
         .expect("thread");

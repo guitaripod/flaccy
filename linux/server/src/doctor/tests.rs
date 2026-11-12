@@ -56,12 +56,46 @@ fn write_state(path: &Path, hlc: Option<i64>) {
 
 #[test]
 fn tailscale_lines_cover_the_three_states() {
-    let up = tailscale_check(&Tailscale::Running(tailnet()));
+    let up = tailscale_check(&Tailscale::Running(tailnet()), false);
     assert_eq!(up.line(), "✓ Tailscale: connected as arch (100.91.211.44), version 1.78.1");
-    let missing = tailscale_check(&Tailscale::NotInstalled);
+    let missing = tailscale_check(&Tailscale::NotInstalled, false);
     assert!(missing.failed() && missing.line().starts_with("✗ Tailscale: is not installed. Install it from tailscale.com/download"));
-    let down = tailscale_check(&Tailscale::NotRunning("its state is Stopped".to_owned()));
+    let down = tailscale_check(&Tailscale::NotRunning("its state is Stopped".to_owned()), false);
     assert!(down.failed() && down.line().contains("its state is Stopped") && down.line().contains("tailscale up"));
+}
+
+#[test]
+fn sharing_on_this_network_turns_a_missing_tailscale_into_a_note() {
+    let missing = tailscale_check(&Tailscale::NotInstalled, true);
+    assert!(!missing.failed() && missing.line().starts_with("! Tailscale: is not installed; devices on this network still connect"), "{}", missing.line());
+    let down = tailscale_check(&Tailscale::NotRunning("its state is Stopped".to_owned()), true);
+    assert!(!down.failed() && down.line().contains("its state is Stopped"), "{}", down.line());
+}
+
+#[tokio::test]
+async fn bind_accepts_a_local_address_when_sharing_on_this_network() {
+    let sandbox = Sandbox::new("bindlan");
+    let port = std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
+    let config = sandbox.config(&format!("port = {port}\nlan = true\n"));
+    let runner = FakeRunner::default();
+    let environment = environment(&runner);
+    let local = bind_check(&config, &environment, vec!["192.168.1.5".parse().unwrap()]).await;
+    assert!(local.line().contains("not answering on port"), "{}", local.line());
+    let none = bind_check(&config, &environment, vec!["8.8.8.8".parse().unwrap()]).await;
+    assert!(none.failed() && none.line().contains("no local network address"), "{}", none.line());
+}
+
+#[test]
+fn the_network_line_waits_for_the_first_start_then_names_the_address() {
+    let sandbox = Sandbox::new("network");
+    let config = sandbox.config("lan = true\nport = 4545\n");
+    let interfaces = vec!["192.168.1.5".parse().unwrap()];
+    let before = network_check(&config, &interfaces).unwrap();
+    assert!(!before.failed() && before.line().contains("has not shared on this network yet"), "{}", before.line());
+    LanIdentity::load_or_create(&config.data_dir(), &[]).unwrap();
+    let after = network_check(&config, &interfaces).unwrap();
+    assert!(after.line().contains(":4545 over TLS"), "{}", after.line());
+    assert!(network_check(&sandbox.config(""), &interfaces).is_none());
 }
 
 #[test]
@@ -164,7 +198,7 @@ async fn bind_fails_without_a_tailnet_address_and_names_a_down_server() {
     let runner = FakeRunner::default();
     let environment = environment(&runner);
     let nothing = bind_check(&config, &environment, vec!["192.168.1.5".parse().unwrap()]).await;
-    assert!(nothing.failed() && nothing.line().contains("no Tailscale address"), "{}", nothing.line());
+    assert!(nothing.failed() && nothing.line().contains("no Tailscale address") && nothing.line().contains("lan = true"), "{}", nothing.line());
     let down = bind_check(&config, &environment, vec!["100.91.211.44".parse().unwrap()]).await;
     assert!(down.failed() && down.line().contains(&format!("not answering on port {port}")) && down.line().contains("systemctl --user start"), "{}", down.line());
 }

@@ -11,6 +11,9 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
     private let sessionQueue = DispatchQueue(label: "cc.midgarcorp.flaccy.qr-scanner")
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private let hintLabel = UILabel()
+    private lazy var settingsButton = UIButton(configuration: .filled(), primaryAction: UIAction { [weak self] _ in
+        self?.openSettings()
+    })
     private let haptics = UINotificationFeedbackGenerator()
     private var hasDeliveredLink = false
 
@@ -39,10 +42,17 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         hintLabel.accessibilityIdentifier = "qrScanner.hint"
         hintLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(hintLabel)
+        settingsButton.configuration?.title = String(localized: "Open Settings")
+        settingsButton.isHidden = true
+        settingsButton.accessibilityIdentifier = "qrScanner.openSettings"
+        settingsButton.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(settingsButton)
         NSLayoutConstraint.activate([
             hintLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 24),
             hintLabel.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
-            hintLabel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -32),
+            hintLabel.bottomAnchor.constraint(equalTo: settingsButton.topAnchor, constant: -16),
+            settingsButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            settingsButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -32),
         ])
         requestAccessThenStart()
     }
@@ -74,7 +84,14 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
 
     private func showDenied() {
         hintLabel.text = String(localized: "Flaccy can\u{2019}t use the camera. Allow it in Settings, or type the server\u{2019}s details instead.")
+        settingsButton.isHidden = false
         haptics.notificationOccurred(.warning)
+    }
+
+    private func openSettings() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     private func configureSession() {
@@ -110,7 +127,7 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
                 hasDeliveredLink = true
                 onLink(link)
             } else {
-                hintLabel.text = String(localized: "That isn\u{2019}t a code from Flaccy Server. Run `flaccy-server enroll` on your computer and scan the code it prints.")
+                hintLabel.text = String(localized: "That isn\u{2019}t a Flaccy Server code. Scan the code from Add a Device on your Mac, or the one your server printed.")
                 haptics.notificationOccurred(.warning)
             }
         }

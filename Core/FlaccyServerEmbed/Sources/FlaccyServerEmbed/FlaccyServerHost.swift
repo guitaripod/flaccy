@@ -27,14 +27,18 @@ public struct FlaccyServerHost: Sendable {
         name: String,
         dataDirectory: URL = FlaccyServerHost.defaultDataDirectory,
         logDirectory: URL = FlaccyServerHost.defaultLogDirectory,
-        port: UInt16 = 0
+        port: UInt16 = 0,
+        lan: Bool = false,
+        lanName: String? = nil
     ) throws -> ServerHostStatus {
         let config = ServerHostConfig(
             musicFolder: musicFolder.standardizedFileURL.path(percentEncoded: false),
             dataDir: dataDirectory.standardizedFileURL.path(percentEncoded: false),
             logDir: logDirectory.standardizedFileURL.path(percentEncoded: false),
             name: name,
-            port: port
+            port: port,
+            lan: lan,
+            lanName: lanName
         )
         return try decode(try call { try embedStart(configJson: Self.encode(config)) })
     }

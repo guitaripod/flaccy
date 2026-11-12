@@ -6,21 +6,24 @@ Subsonic REST API, so Flaccy on iPhone, Mac and Linux works with it, and so
 does any Subsonic app. It runs headless: no GTK, no GStreamer.
 
 It never phones home. It makes no outbound network requests and sends no
-telemetry; it listens on this machine's Tailscale addresses and loopback, or the address you
-configure, and reads your folder.
+telemetry; it listens on this machine's Tailscale addresses and loopback, with `lan = true` also on
+its local network addresses over TLS, or on the address you configure, and reads your folder.
 
 Licensed GPL-3.0.
 
 ## Quickstart
 
-The short way, on a machine with Tailscale: install flaccy-server (below), then run
+The short way: install flaccy-server (below), then run
 
     flaccy-server setup
 
-It asks where your music is, scans it, starts the server as a service (a systemd user unit on
-Linux, a launchd agent on a Mac), and prints a QR code and link that enroll your first device.
-`--yes` takes every default and asks nothing; `--music PATH`, `--name NAME` and `--port N` answer
-the questions up front. Run it again at any time: it keeps your setup and only prints a new code.
+It asks where your music is, scans it (counting the songs as it goes), asks whether devices on this
+network may connect directly (always yes without Tailscale; `--no-lan` keeps it to Tailscale),
+starts the server as a service (a systemd user unit on Linux, a launchd agent on a Mac), and prints
+a QR code for the iPhone and a link to paste into Flaccy on a Mac or Linux. `--yes` takes every
+default and asks nothing; `--music PATH`, `--name NAME` and `--port N` answer the questions up
+front. Run it again at any time: it keeps your setup and only prints a new code, and on a machine
+where neither Tailscale nor this network would reach the server it offers to share on this network.
 `flaccy-server doctor` checks Tailscale, the network, the clock, the disk, ffmpeg, the databases,
 backups and the enrolled devices, one line each, and exits 1 when something needs fixing.
 
@@ -29,8 +32,9 @@ The same steps by hand:
 1. Install flaccy-server (below) and put your music folder in
    `~/.config/flaccy-server/config.toml`: `music_folder = "/home/you/Music"`.
 2. Run `flaccy-server serve`, or start the service unit described below. The server
-   listens in plain HTTP on this machine's Tailscale addresses and on loopback, and
-   closes connections from anywhere else before reading them.
+   listens in plain HTTP on this machine's Tailscale addresses and on loopback, with
+   `lan = true` also over TLS on its local network addresses, and closes connections
+   from anywhere else before reading them.
 3. Run `flaccy-server enroll --user you`. On a server with no users yet this makes
    `you` its admin. It prints a QR code, a link and a one-time code, valid for ten
    minutes.
@@ -103,6 +107,8 @@ The configuration lives at `~/.config/flaccy-server/config.toml` (on a Mac,
     behind_proxy = false
     mode = "easy"
     hosts = ["music.example.org"]
+    lan = true
+    lan_name = "music-box"
     backup_dir = "/mnt/nas/flaccy"
 
 Only `music_folder` is required. `address` defaults to `127.0.0.1`, `port` to
@@ -118,6 +124,18 @@ binding: leave it at `127.0.0.1` and the server listens on loopback and every
 Tailscale address of the machine, following the interfaces as they change. Set
 `address` to anything else and the server listens only there (for example `0.0.0.0` in
 a container), without the tailnet binding.
+
+`lan` (default `false`; `setup` writes `true` unless told `--no-lan`) also shares on the local
+network: devices on the same Wi-Fi connect without Tailscale. The server binds the private
+addresses of the machine's real interfaces (not container, virtual machine or VPN ones), admits
+peers from private and link-local ranges, and speaks TLS to them with a self-signed certificate
+around a key it makes once (`lan-key.der` in the data folder, mode 0600). Devices pin that key when
+they are added, so keep the file with the data folder when you move the server, or every device has
+to be added again. Tailscale and loopback connections stay plain HTTP on the same port. Enrollment
+links name this network's address by Bonjour name when the machine has one (macOS always; Linux
+while avahi runs, using the name avahi actually publishes), with the IP as the fallback; set
+`lan_name` (without `.local`) to choose the name. `flaccy-server doctor` prints the address devices
+are given.
 
 `hosts` (default none) lists names clients may put in the server URL besides the ones the server
 always answers to: any IP address, a name without a dot (`arch`), `localhost`, this machine's own

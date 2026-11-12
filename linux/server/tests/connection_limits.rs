@@ -67,7 +67,7 @@ async fn start_on(bind: &str, limits: Limits) -> Running {
     let task = tokio::spawn({
         let held = held.clone();
         async move {
-            let _ = serve(listener, app, held, async move {
+            let _ = serve(listener, app, held, None, async move {
                 let _ = stopped.await;
             })
             .await;

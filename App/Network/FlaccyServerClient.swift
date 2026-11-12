@@ -17,21 +17,32 @@ actor FlaccyServerClient: ServerSyncTransport {
     private let baseURL: URL
     private let token: String?
     private let session: URLSession
+    private let pinning: PinnedServerTrust?
 
-    init(baseURL: URL, token: String?, session: URLSession = FlaccyServerClient.makeSession()) {
+    init(baseURL: URL, token: String?, trust: ServerKeyTrust = .system) {
         self.baseURL = baseURL
         self.token = token
-        self.session = session
+        pinning = PinnedServerTrust.make(for: trust)
+        session = Self.makeSession(delegate: pinning)
     }
 
-    nonisolated static func makeSession() -> URLSession {
+    deinit {
+        session.finishTasksAndInvalidate()
+    }
+
+    nonisolated static func makeSession(delegate: PinnedServerTrust? = nil) -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = callTimeout
         configuration.httpMaximumConnectionsPerHost = 2
         configuration.waitsForConnectivity = false
         configuration.httpCookieStorage = nil
         configuration.urlCache = nil
-        return URLSession(configuration: configuration)
+        return URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
+    }
+
+    /// The pin of the key the server showed, once a pinned or first-contact client has connected.
+    nonisolated var seenPin: String? {
+        pinning?.seenPin
     }
 
     func hello() async throws -> ServerHello {
@@ -157,6 +168,7 @@ actor FlaccyServerClient: ServerSyncTransport {
         do {
             (data, response) = try await session.data(for: call)
         } catch let error as URLError {
+            if pinning?.refusedKey == true { throw ServerSyncError.keyChanged }
             throw Self.failure(of: error)
         }
         guard let http = response as? HTTPURLResponse else { throw ServerSyncError.malformed("not an HTTP answer") }
@@ -186,5 +198,9 @@ actor FlaccyServerClient: ServerSyncTransport {
 nonisolated struct FlaccyServerTransports: ServerSyncTransportFactory {
     func transport(baseURL: URL, token: String?) -> any ServerSyncTransport {
         FlaccyServerClient(baseURL: baseURL, token: token)
+    }
+
+    func transport(baseURL: URL, token: String?, trust: ServerKeyTrust) -> any ServerSyncTransport {
+        FlaccyServerClient(baseURL: baseURL, token: token, trust: trust)
     }
 }

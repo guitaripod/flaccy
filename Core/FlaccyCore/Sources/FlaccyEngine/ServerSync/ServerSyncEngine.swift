@@ -48,6 +48,10 @@ public struct ServerSyncConfiguration: Sendable {
 /// What connecting to a server produced.
 public struct ServerSyncConnection: Sendable, Equatable {
     public var serverName: String
+    /// The address that answered, which may be the link's fallback.
+    public var baseURL: URL
+    /// The pin of the server's key, from the link or learned on first contact.
+    public var pin: String?
     public var deviceID: String
     public var userID: String
     public var role: ServerRole
@@ -151,7 +155,7 @@ public actor ServerSyncEngine {
         guard let token = configuration.tokens.token(serverID: serverID(for: link.serverURL)) else {
             throw ServerSyncError.unauthorized
         }
-        return configuration.transports.transport(baseURL: url, token: token)
+        return configuration.transports.transport(baseURL: url, token: token, trust: .forAddress(url, pin: link.serverPin))
     }
 
     func retrying<T: Sendable>(_ call: () async throws -> T) async throws -> T {

@@ -11,6 +11,7 @@
 pub mod descriptors;
 pub mod guard;
 pub mod hosts;
+pub mod lan;
 pub mod limits;
 pub mod listen;
 pub mod names;

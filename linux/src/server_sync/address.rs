@@ -1,3 +1,4 @@
+use flaccy_shared::remote::local_network::is_local_host;
 use flaccy_shared::remote::server_address::normalize;
 
 const DEFAULT_PORT: u16 = 4545;
@@ -50,30 +51,43 @@ pub fn cursor_after_format(typed: &str, cursor: usize) -> usize {
     }
 }
 
-/// The base URL for an address the person typed: `arch`, `arch.tailnet.ts.net` or an IP, with or without `http://` and a port. A bare host gets `http` and port 4545.
+/// The base URL for an address the person typed: `arch`, `arch.tailnet.ts.net`, `arch.local` or an IP, with or without
+/// a scheme and a port. A bare host gets port 4545, and `https` when it is on the local network (where a Flaccy Server
+/// answers over TLS) or `http` otherwise.
 pub fn typed_address(typed: &str) -> Option<String> {
     let trimmed = typed.trim();
     if trimmed.is_empty() {
         return None;
     }
-    let prefixed = if trimmed.contains("://") {
-        trimmed.to_owned()
-    } else {
-        format!("http://{trimmed}")
-    };
-    normalize(&prefixed).map(with_default_port)
+    if trimmed.contains("://") {
+        return normalize(trimmed).map(|url| with_default_port(url, "http"));
+    }
+    let scheme = if is_local_host(host_of(trimmed)) { "https" } else { "http" };
+    normalize(&format!("{scheme}://{trimmed}")).map(|url| with_default_port(url, scheme))
 }
 
-fn with_default_port(url: String) -> String {
-    let Some(("http", rest)) = url.split_once("://") else {
+/// The host of a typed address without a scheme: before any path, and before a port unless the host is bracketed IPv6.
+fn host_of(typed: &str) -> &str {
+    let authority = typed.split('/').next().unwrap_or(typed);
+    if authority.starts_with('[') {
+        return authority.split(']').next().map_or(authority, |inside| inside.trim_start_matches('['));
+    }
+    authority.rsplit_once(':').map_or(authority, |(host, _)| host)
+}
+
+fn with_default_port(url: String, scheme: &str) -> String {
+    let Some((found, rest)) = url.split_once("://") else {
         return url;
     };
+    if found != scheme {
+        return url;
+    }
     let authority_end = rest.find('/').unwrap_or(rest.len());
     let (authority, path) = rest.split_at(authority_end);
     if has_port(authority) {
         return url;
     }
-    format!("http://{authority}:{DEFAULT_PORT}{path}")
+    format!("{scheme}://{authority}:{DEFAULT_PORT}{path}")
 }
 
 fn has_port(authority: &str) -> bool {
@@ -161,6 +175,15 @@ mod tests {
             typed_address(" 100.91.211.44 ").as_deref(),
             Some("http://100.91.211.44:4545")
         );
+    }
+
+    #[test]
+    fn a_bare_local_network_host_gets_https_and_the_default_port() {
+        assert_eq!(typed_address("192.168.1.5").as_deref(), Some("https://192.168.1.5:4545"));
+        assert_eq!(typed_address("Marcuss-Mac.local").as_deref(), Some("https://Marcuss-Mac.local:4545"));
+        assert_eq!(typed_address("192.168.1.5:9000").as_deref(), Some("https://192.168.1.5:9000"));
+        assert_eq!(typed_address("[fd12::5]").as_deref(), Some("https://[fd12::5]:4545"));
+        assert_eq!(typed_address("http://192.168.1.5").as_deref(), Some("http://192.168.1.5:4545"));
     }
 
     #[test]

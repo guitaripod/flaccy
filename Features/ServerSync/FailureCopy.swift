@@ -29,15 +29,15 @@ nonisolated struct FailureCopy: Equatable, Sendable {
         switch failure {
         case .unreachable(let server):
             title = String(localized: "Can't reach \(server)")
-            body = String(localized: "Is Tailscale on? Open Tailscale and connect on this device and on \(server), then try again.")
-            buttons = [Button(title: Self.openTailscale, action: .openTailscale), Button(title: Self.tryAgain, action: .tryAgain)]
+            body = String(localized: "Check that \(server) is on and on the same Wi-Fi as this device, or that Tailscale is on for both. Then try again.")
+            buttons = [Button(title: Self.tryAgain, action: .tryAgain), Button(title: Self.openTailscale, action: .openTailscale)]
         case .nameNotFound(let server):
             title = String(localized: "Can't find \(server)")
-            body = String(localized: "Check the name on the server with `tailscale status`, or scan the code from the server.")
+            body = String(localized: "Check the address shown on \(server), or scan its code again.")
             buttons = [Button(title: Self.tryAgain, action: .tryAgain)]
         case .codeRefused(let server):
             title = String(localized: "That code didn't work")
-            body = String(localized: "A code works once and expires after 10 minutes. On \(server), run `flaccy-server enroll` for a new one.")
+            body = String(localized: "A code works once and lasts 10 minutes. Make a new one on \(server) and try again.")
             buttons = [Button(title: Self.tryAgain, action: .tryAgain)]
         case .tooManyTries:
             title = String(localized: "Too many tries")
@@ -52,7 +52,7 @@ nonisolated struct FailureCopy: Equatable, Sendable {
             ]
         case .serverTooOld:
             title = String(localized: "Update your Flaccy Server")
-            body = String(localized: "This version of Flaccy needs Flaccy Server 1.0 or newer.")
+            body = String(localized: "This version of Flaccy needs Flaccy Server 1.0 or newer. Update Flaccy on the Mac that shares, or the flaccy-server package on the computer that runs it.")
             buttons = [Button(title: Self.ok, action: .dismiss)]
         case .appTooOld(let server):
             title = String(localized: "Update Flaccy")
@@ -60,7 +60,11 @@ nonisolated struct FailureCopy: Equatable, Sendable {
             buttons = [Button(title: String(localized: "Open App Store"), action: .openAppStore)]
         case .serverClockWrong(let server):
             title = String(localized: "The clock on \(server) is wrong")
-            body = String(localized: "Sync stays off until the server's date and time are right. Check it with `timedatectl`.")
+            body = String(localized: "Sync stays off until the date and time on \(server) are right.")
+            buttons = [Button(title: Self.ok, action: .dismiss)]
+        case .keyChanged(let server):
+            title = String(localized: "\(server) has a new security key")
+            body = String(localized: "It doesn't match the key from when this device was added, so nothing was sent. If \(server) was reinstalled or moved, remove it and add it again with a new code.")
             buttons = [Button(title: Self.ok, action: .dismiss)]
         case .other(let server):
             title = String(localized: "Couldn't connect to \(server)")

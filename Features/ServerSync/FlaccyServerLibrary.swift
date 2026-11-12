@@ -15,7 +15,7 @@ nonisolated enum FlaccyServerLibrary {
         guard let token = ServerSyncService.deviceToken(for: connection.baseURL) else { throw RemoteFailure.keychain }
         let record = try await RemoteServers.shared.add(
             address: connection.baseURL.absoluteString, name: connection.serverName,
-            authentication: .apiKey(token), serverType: serverType
+            authentication: .apiKey(token), serverType: serverType, pin: connection.pin
         )
         return record
     }

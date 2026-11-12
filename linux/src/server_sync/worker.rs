@@ -286,11 +286,11 @@ impl Worker {
 
     fn start_live(&mut self) {
         self.live = None;
-        let Some((url, token)) = self.driver.live_target(&self.db) else {
+        let Some(target) = self.driver.live_target(&self.db) else {
             return;
         };
         let commands = self.commands.clone();
-        self.live = Live::start(&url, &token, move |event| {
+        self.live = Live::start(&target.url, &target.token, target.pin.as_deref(), move |event| {
             let command = match event {
                 LiveEvent::Up => Command::LiveUp(true),
                 LiveEvent::Down => Command::LiveUp(false),
@@ -312,10 +312,10 @@ impl Worker {
             }
             return Ok(());
         }
-        let Some((url, token)) = self.driver.live_target(&self.db) else {
+        let Some(target) = self.driver.live_target(&self.db) else {
             return Err(copy::SERVICE_UNAVAILABLE.to_owned());
         };
-        if library::attach(remote, name, &url, &token)? {
+        if library::attach(remote, name, &target.url, &target.token, target.pin.as_deref())? {
             tell(&self.reports, Report::Library(LibraryChange::Added));
         }
         Ok(())
@@ -334,7 +334,7 @@ impl Worker {
         device_name: &str,
     ) -> Result<Connected, ConnectFailure> {
         let at = |stage| move |error| ConnectFailure { stage, error };
-        let server = self.driver.probe(&link.url).map_err(at(Stage::Probe))?;
+        let server = self.driver.probe_link(link).map_err(at(Stage::Probe))?;
         let imported = self
             .driver
             .enroll(&self.db, link, device_name)

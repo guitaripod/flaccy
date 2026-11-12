@@ -13,6 +13,7 @@ pub(crate) const OFFSET: &str = "server_offset_ms";
 pub(crate) const EVENT_COUNTER: &str = "event_counter";
 pub(crate) const SERVER_URL: &str = "server_url";
 pub(crate) const SERVER_ID: &str = "server_id";
+pub(crate) const SERVER_PIN: &str = "server_pin";
 pub(crate) const IMPORTED: &str = "imported";
 pub(crate) const MERGE_PENDING: &str = "merge_pending";
 pub(crate) const LAST_SYNCED: &str = "last_synced_at";

@@ -11,15 +11,16 @@ pub fn find(remote: &Remote) -> Option<Server> {
         .find(|server| server.flaccy_server)
 }
 
-/// Makes the Flaccy Server's music part of the library, replacing an earlier entry that pointed elsewhere or held another token. Answers true when a library entry was added and its songs still have to be fetched, false for an entry for the same address and token, which is kept and only renamed when the name changed.
+/// Makes the Flaccy Server's music part of the library, replacing an earlier entry that pointed elsewhere, held another token or trusted another key. Answers true when a library entry was added and its songs still have to be fetched, false for an entry for the same address and token, which is kept and only renamed when the name changed.
 pub fn attach(
     remote: &Remote,
     name: &str,
     address: &str,
     device_token: &str,
+    pin: Option<&str>,
 ) -> Result<bool, String> {
     if let Some(existing) = find(remote) {
-        if existing.address == address.trim() && existing.api_key.as_deref() == Some(device_token) {
+        if existing.address == address.trim() && existing.api_key.as_deref() == Some(device_token) && existing.pin.as_deref() == pin {
             if existing.name != name.trim() {
                 remote.rename_server(&existing.id, name)?;
             }
@@ -27,7 +28,7 @@ pub fn attach(
         }
         remote.remove_server(&existing.id)?;
     }
-    remote.add_server(Server::flaccy_library(name, address, device_token))?;
+    remote.add_server(Server::flaccy_library(name, address, device_token, pin))?;
     Ok(true)
 }
 

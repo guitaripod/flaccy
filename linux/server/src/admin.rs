@@ -15,7 +15,10 @@ use crate::command::{percent_encode, qr_text};
 use crate::config::Config;
 use crate::credentials;
 use crate::lastfm;
+use crate::lan_identity::LanIdentity;
 use crate::native::machine_name;
+use crate::net::{lan, tailnet};
+use crate::reach::{self, DeviceReach};
 use crate::security::{self, Device, Role, User};
 use crate::state::AppState;
 
@@ -33,7 +36,8 @@ pub struct EnrollArgs {
     /// The user the new device belongs to; the first admin when left out. On a server with no users yet, this creates the first admin.
     #[arg(long)]
     pub user: Option<String>,
-    /// How clients reach this server; default http://<this machine's name>:<port>.
+    /// How clients reach this server; default http://<this machine's name>:<port> on the tailnet, and with
+    /// `lan = true` this network's https address, alone or as the fallback.
     #[arg(long)]
     pub url: Option<String>,
     /// How long the code works: seconds, or a number with s, m or h.
@@ -117,14 +121,22 @@ fn bad_ttl(text: &str) -> String {
     format!("'{text}' is not a usable --ttl. Use a number of seconds or a number with s, m or h, between 1 second and 24h, for example 10m.")
 }
 
-/// The `flaccy://server` link a device opens to enroll.
-pub(crate) fn enrollment_link(url: &str, code: &str, name: &str) -> String {
-    format!(
+/// The `flaccy://server` link a device opens to enroll: `url` to try first, `alt` when that cannot be reached,
+/// and `pin` for every `https` address in it (docs/server/PROTOCOL.md section 3.4).
+pub(crate) fn enrollment_link(reach: &DeviceReach, code: &str, name: &str) -> String {
+    let mut link = format!(
         "flaccy://server?url={}&enroll={}&name={}",
-        percent_encode(url),
+        percent_encode(&reach.url),
         percent_encode(code),
         percent_encode(name)
-    )
+    );
+    if let Some(pin) = &reach.pin {
+        link.push_str(&format!("&pin={}", percent_encode(pin)));
+    }
+    if let Some(alternate) = &reach.alternate {
+        link.push_str(&format!("&alt={}", percent_encode(alternate)));
+    }
+    link
 }
 
 fn grouped(code: &str) -> String {
@@ -162,11 +174,20 @@ pub async fn enroll(config: &Config, args: EnrollArgs) -> Result<(), String> {
         None => first_admin(&security).await?,
     };
     let code = security.create_enrollment(&user.id, ttl).await.map_err(storage)?;
-    let url = args.url.unwrap_or_else(|| format!("http://{}:{}", machine_name(), config.port));
-    let link = enrollment_link(&url, &code, machine_name());
+    let reach = command_line_reach(config, args.url)?;
+    let link = enrollment_link(&reach, &code, machine_name());
     let expires = (Utc::now() + chrono::Duration::from_std(ttl).unwrap_or_default()).to_rfc3339_opts(SecondsFormat::Secs, true);
     if args.json {
-        say(&json!({ "link": link, "code": code, "url": url, "user": user.name, "expiresAt": expires }).to_string());
+        say(&json!({
+            "link": link,
+            "code": code,
+            "url": reach.url,
+            "alternate": reach.alternate,
+            "pin": reach.pin,
+            "user": user.name,
+            "expiresAt": expires
+        })
+        .to_string());
         return Ok(());
     }
     say(&format!("Enrollment for {} (shown once, valid until {expires}):", user.name));
@@ -174,6 +195,29 @@ pub async fn enroll(config: &Config, args: EnrollArgs) -> Result<(), String> {
     say(&format!("\nScan this in Flaccy to add the server, or open the link on the device:\n{}", qr_text(&link)?));
     say(&link);
     Ok(())
+}
+
+/// Where `enroll` sends a device: `--url` when given, otherwise the tailnet by this machine's name and, with
+/// `lan = true`, this network's address with the pin of the key the server made when it first shared here.
+fn command_line_reach(config: &Config, url: Option<String>) -> Result<DeviceReach, String> {
+    let pin = if config.lan { LanIdentity::read_pin(&config.data_dir())? } else { None };
+    if config.lan && pin.is_none() {
+        return Err("This server has not shared on this network yet. Start it once with `lan = true` (`flaccy-server serve`, or restart its service), then make the code again.".to_owned());
+    }
+    if let Some(url) = url {
+        return Ok(DeviceReach { url, alternate: None, pin });
+    }
+    let tailnet_up = tailnet::addresses().map(|found| !found.is_empty()).unwrap_or(false);
+    let tailnet = (tailnet_up || !config.lan).then(|| format!("http://{}:{}", machine_name(), config.port));
+    let local = pin.as_deref().and_then(|pin| {
+        let found = lan::discover(true).ok()?;
+        let bound: Vec<std::net::SocketAddr> = found.local.iter().map(|ip| std::net::SocketAddr::new(*ip, config.port)).collect();
+        let (name, answers) = reach::bonjour_source(config);
+        reach::local_reach(&bound, &name, answers, pin)
+    });
+    reach::device_reach(tailnet, local, None).ok_or_else(|| {
+        "This machine has no address on a local network and Tailscale is not up, so no device could reach it. Join a network or start Tailscale, then make the code again.".to_owned()
+    })
 }
 
 /// `user ...`
@@ -427,8 +471,22 @@ mod tests {
 
     #[test]
     fn the_link_escapes_every_value() {
-        let link = enrollment_link("http://my box:4545", "ABC", "My Mac");
+        let reach = DeviceReach { url: "http://my box:4545".into(), alternate: None, pin: None };
+        let link = enrollment_link(&reach, "ABC", "My Mac");
         assert_eq!(link, "flaccy://server?url=http%3A%2F%2Fmy%20box%3A4545&enroll=ABC&name=My%20Mac");
+    }
+
+    #[test]
+    fn a_local_network_link_carries_its_pin_and_fallback() {
+        let reach = DeviceReach {
+            url: "https://arch.local:4545".into(),
+            alternate: Some("https://192.168.1.5:4545".into()),
+            pin: Some("Ab-_9".into()),
+        };
+        assert_eq!(
+            enrollment_link(&reach, "ABC", "arch"),
+            "flaccy://server?url=https%3A%2F%2Farch.local%3A4545&enroll=ABC&name=arch&pin=Ab-_9&alt=https%3A%2F%2F192.168.1.5%3A4545"
+        );
     }
 
     #[test]

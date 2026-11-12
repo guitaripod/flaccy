@@ -1,5 +1,6 @@
-//! Easy mode's listener: every tailnet address plus loopback, with a source
-//! filter applied before a single byte is read.
+//! Easy mode's listener: every tailnet address plus loopback, and every local
+//! network address when the `lan` setting is on, with a source filter applied
+//! before a single byte is read.
 
 use std::collections::{HashMap, HashSet};
 use std::io;
@@ -13,6 +14,9 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
+use flaccy_shared::remote::local_network::is_bindable_local_network;
+
+use super::lan::{self, Found};
 use super::tailnet::{self, source_allowed, TailnetAddresses};
 
 const CATEGORY: &str = "server";
@@ -73,12 +77,26 @@ impl EasyHandle {
     }
 
     /// The `http://` URLs a client can use: tailnet addresses, or loopback when
-    /// Tailscale is not up.
+    /// Tailscale is not up. Local network addresses speak TLS and are never among them.
     pub fn urls(&self) -> Vec<String> {
         let bound = self.bound();
         let reachable: Vec<SocketAddr> = bound.iter().copied().filter(|addr| tailnet::is_tailnet(addr.ip())).collect();
-        let chosen = if reachable.is_empty() { bound } else { reachable };
+        let chosen: Vec<SocketAddr> = if reachable.is_empty() {
+            bound.into_iter().filter(|addr| addr.ip().is_loopback()).collect()
+        } else {
+            reachable
+        };
         chosen.iter().map(|addr| format!("http://{addr}")).collect()
+    }
+
+    /// The local network addresses among [`bound`](Self::bound): where devices on this network connect over TLS.
+    pub fn local_network(&self) -> Vec<SocketAddr> {
+        self.bound().into_iter().filter(|addr| is_bindable_local_network(addr.ip())).collect()
+    }
+
+    /// The `http://` URLs of the tailnet addresses among [`bound`](Self::bound).
+    pub fn tailnet_urls(&self) -> Vec<String> {
+        self.bound().iter().filter(|addr| tailnet::is_tailnet(addr.ip())).map(|addr| format!("http://{addr}")).collect()
     }
 
     fn publish(&self, mut bound: Vec<SocketAddr>) {
@@ -91,6 +109,7 @@ impl EasyHandle {
 /// Counts refused connections and decides when the log hears about them.
 struct RefusalLog {
     state: Mutex<RefusalState>,
+    lan: bool,
 }
 
 struct RefusalState {
@@ -99,9 +118,10 @@ struct RefusalState {
 }
 
 impl RefusalLog {
-    fn new() -> Self {
+    fn new(lan: bool) -> Self {
         Self {
             state: Mutex::new(RefusalState { pending: 0, last_report: None }),
+            lan,
         }
     }
 
@@ -121,9 +141,15 @@ impl RefusalLog {
         }
         let count = std::mem::take(&mut state.pending);
         state.last_report = Some(now);
-        Some(format!(
-            "closed {count} connection(s) from outside the tailnet without reading them, latest from {peer}; only Tailscale and loopback addresses may connect, so reach this server over Tailscale"
-        ))
+        Some(if self.lan {
+            format!(
+                "closed {count} connection(s) from outside this network and the tailnet without reading them, latest from {peer}; only addresses on this network, Tailscale and loopback may connect"
+            )
+        } else {
+            format!(
+                "closed {count} connection(s) from outside the tailnet without reading them, latest from {peer}; only Tailscale and loopback addresses may connect, so reach this server over Tailscale"
+            )
+        })
     }
 }
 
@@ -175,12 +201,15 @@ async fn accept_loop(
     }
 }
 
-/// Keeps the set of bound addresses equal to loopback plus the tailnet addresses.
+/// Keeps the set of bound addresses equal to loopback plus the tailnet addresses, and the
+/// local network addresses when `lan` is on.
 struct Manager {
     port: u16,
+    lan: bool,
     bound: HashMap<IpAddr, Bound>,
     unbindable: HashSet<IpAddr>,
     tailnet_up: Option<bool>,
+    local_up: Option<bool>,
     lookup_failed: bool,
     admitted: mpsc::Sender<(TcpStream, SocketAddr)>,
     refusals: Arc<RefusalLog>,
@@ -189,8 +218,8 @@ struct Manager {
 }
 
 impl Manager {
-    async fn reconcile(&mut self, tailnet: io::Result<Vec<IpAddr>>) -> Option<io::Error> {
-        let tailnet = match tailnet {
+    async fn reconcile(&mut self, found: io::Result<Found>) -> Option<io::Error> {
+        let Found { tailnet, local } = match found {
             Ok(found) => found,
             Err(error) => {
                 self.report_lookup_failure(&error);
@@ -199,7 +228,10 @@ impl Manager {
         };
         self.lookup_failed = false;
         self.report_tailnet_state(!tailnet.is_empty());
-        let wanted: Vec<IpAddr> = LOOPBACKS.iter().copied().chain(tailnet).collect();
+        if self.lan {
+            self.report_local_state(&local);
+        }
+        let wanted: Vec<IpAddr> = LOOPBACKS.iter().copied().chain(tailnet).chain(local).collect();
         let current: HashSet<IpAddr> = self.bound.keys().copied().collect();
         let Plan { add, drop } = plan(&current, &wanted);
         for ip in drop {
@@ -230,7 +262,8 @@ impl Manager {
         self.port = address.port();
         let task = tokio::spawn(accept_loop(listener, self.admitted.clone(), self.refusals.clone(), self.filter));
         self.bound.insert(ip, Bound { task });
-        logger::info(CATEGORY, &format!("listening on http://{address}"));
+        let scheme = if lan::wants_tls(ip) { "https" } else { "http" };
+        logger::info(CATEGORY, &format!("listening on {scheme}://{address}"));
         Ok(())
     }
 
@@ -245,10 +278,24 @@ impl Manager {
             return;
         }
         self.tailnet_up = Some(up);
+        match (up, self.lan) {
+            (true, _) => logger::info(CATEGORY, "Tailscale is up; listening on its addresses and on loopback"),
+            (false, true) => logger::info(CATEGORY, "Tailscale is not up; devices on this network can still connect"),
+            (false, false) => logger::warn(CATEGORY, "Tailscale is not up; listening on loopback only"),
+        }
+    }
+
+    fn report_local_state(&mut self, local: &[IpAddr]) {
+        let up = !local.is_empty();
+        if self.local_up == Some(up) {
+            return;
+        }
+        self.local_up = Some(up);
         if up {
-            logger::info(CATEGORY, "Tailscale is up; listening on its addresses and on loopback");
+            let addresses: Vec<String> = local.iter().map(IpAddr::to_string).collect();
+            logger::info(CATEGORY, &format!("sharing on this network at {}", addresses.join(", ")));
         } else {
-            logger::warn(CATEGORY, "Tailscale is not up; listening on loopback only");
+            logger::warn(CATEGORY, "this machine has no address on a local network; devices on Wi-Fi can connect once it joins one");
         }
     }
 
@@ -265,7 +312,8 @@ async fn keep_current(mut manager: Manager) {
     ticks.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     loop {
         ticks.tick().await;
-        let found = tokio::task::spawn_blocking(tailnet::addresses)
+        let lan = manager.lan;
+        let found = tokio::task::spawn_blocking(move || lan::discover(lan))
             .await
             .unwrap_or_else(|error| Err(io::Error::other(error)));
         manager.reconcile(found).await;
@@ -273,8 +321,9 @@ async fn keep_current(mut manager: Manager) {
 }
 
 /// A listener for easy mode: one logical listener over every tailnet address
-/// and loopback, re-evaluated every five seconds. Connections from any other
-/// source are closed unread. Dropping it stops all of its tasks.
+/// and loopback, and every local network address when `lan` is on, re-evaluated
+/// every five seconds. Connections from any other source are closed unread.
+/// Dropping it stops all of its tasks.
 pub struct EasyListener {
     incoming: mpsc::Receiver<(TcpStream, SocketAddr)>,
     handle: EasyHandle,
@@ -286,24 +335,33 @@ impl EasyListener {
     /// every tailnet address; port 0 picks one free port shared by all of them.
     /// Must run inside a Tokio runtime. Fails when 127.0.0.1 cannot be bound.
     pub async fn bind(port: u16) -> io::Result<Self> {
-        Self::bind_filtered(port, source_allowed).await
+        Self::bind_with(port, false).await
     }
 
-    async fn bind_filtered(port: u16, filter: SourceFilter) -> io::Result<Self> {
+    /// Like [`bind`](Self::bind), and with `lan` also on every local network address of this host,
+    /// admitting peers from the local network.
+    pub async fn bind_with(port: u16, lan: bool) -> io::Result<Self> {
+        let filter: SourceFilter = if lan { lan::source_allowed_with_lan } else { source_allowed };
+        Self::bind_filtered(port, lan, filter).await
+    }
+
+    async fn bind_filtered(port: u16, lan: bool, filter: SourceFilter) -> io::Result<Self> {
         let (admitted, incoming) = mpsc::channel(ACCEPT_BACKLOG);
         let handle = EasyHandle::new();
         let mut manager = Manager {
             port,
+            lan,
             bound: HashMap::new(),
             unbindable: HashSet::new(),
             tailnet_up: None,
+            local_up: None,
             lookup_failed: false,
             admitted,
-            refusals: Arc::new(RefusalLog::new()),
+            refusals: Arc::new(RefusalLog::new(lan)),
             handle: handle.clone(),
             filter,
         };
-        let found = tokio::task::spawn_blocking(tailnet::addresses)
+        let found = tokio::task::spawn_blocking(move || lan::discover(lan))
             .await
             .unwrap_or_else(|error| Err(io::Error::other(error)));
         let failure = manager.reconcile(found).await;
@@ -371,7 +429,7 @@ mod tests {
 
     #[test]
     fn refusals_are_reported_at_most_once_a_minute() {
-        let log = RefusalLog::new();
+        let log = RefusalLog::new(false);
         let start = Instant::now();
         let peer = ip("203.0.113.9");
         assert!(log.note_at(start, peer).unwrap().contains("closed 1 connection"));
@@ -403,7 +461,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_refused_source_is_closed_without_an_answer() {
-        let mut listener = EasyListener::bind_filtered(0, |_| false).await.unwrap();
+        let mut listener = EasyListener::bind_filtered(0, false, |_| false).await.unwrap();
         let address = listener.local_addr().unwrap();
         let mut client = TcpStream::connect(address).await.unwrap();
         let _ = client.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n").await;

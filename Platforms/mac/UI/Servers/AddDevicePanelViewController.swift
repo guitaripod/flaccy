@@ -14,6 +14,8 @@ final class AddDevicePanelViewController: NSViewController {
     private let linkField = NSTextField(wrappingLabelWithString: "")
     private let countdown = NSTextField(wrappingLabelWithString: "")
     private let problem = NSTextField(wrappingLabelWithString: "")
+    private let reach = NSTextField(wrappingLabelWithString: "")
+    private var actions = NSStackView()
     private let firewall = NSTextField(wrappingLabelWithString: SharingCopy.firewallHint)
     private let devicesStack = NSStackView()
     private var link: String?
@@ -36,7 +38,7 @@ final class AddDevicePanelViewController: NSViewController {
         view.translatesAutoresizingMaskIntoConstraints = false
         let title = NSTextField(labelWithString: String(localized: "Add a Device"))
         title.font = .systemFont(ofSize: 15, weight: .semibold)
-        let explainer = secondary(String(localized: "Scan this with Flaccy on your iPhone, Mac or Linux, or open the link on a device that has Flaccy."))
+        let explainer = secondary(String(localized: "Scan this code with the camera in Flaccy on your iPhone or iPad. On another Mac or a Linux computer, paste the link into Add Flaccy Server."))
 
         qrCard.wantsLayer = true
         qrCard.layer?.backgroundColor = NSColor.white.cgColor
@@ -73,9 +75,13 @@ final class AddDevicePanelViewController: NSViewController {
         }
         renew.bezelStyle = .rounded
         renew.setAccessibilityIdentifier("addDevice.newCode")
-        let actions = NSStackView(views: [copy, renew, NSView()])
+        actions = NSStackView(views: [copy, renew, NSView()])
         actions.orientation = .horizontal
         actions.spacing = 8
+        reach.font = .systemFont(ofSize: 12)
+        reach.textColor = .secondaryLabelColor
+        reach.isSelectable = true
+        reach.setAccessibilityIdentifier("addDevice.reach")
 
         problem.font = .systemFont(ofSize: 12)
         problem.textColor = .secondaryLabelColor
@@ -103,7 +109,7 @@ final class AddDevicePanelViewController: NSViewController {
         let devicesLabel = NSTextField(labelWithString: String(localized: "Devices").uppercased())
         devicesLabel.font = .systemFont(ofSize: 11, weight: .semibold)
         devicesLabel.textColor = .secondaryLabelColor
-        for item in [title, explainer, qrCard, linkField, countdown, actions, problem, firewall, devicesLabel, devicesStack, buttons] {
+        for item in [title, explainer, qrCard, linkField, countdown, actions, reach, problem, firewall, devicesLabel, devicesStack, buttons] {
             content.addArrangedSubview(item)
         }
         content.setCustomSpacing(8, after: linkField)
@@ -116,7 +122,7 @@ final class AddDevicePanelViewController: NSViewController {
             content.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             view.widthAnchor.constraint(equalToConstant: 460),
         ])
-        for item in [explainer, linkField, countdown, actions, problem, firewall, devicesStack, buttons] {
+        for item in [explainer, linkField, countdown, actions, reach, problem, firewall, devicesStack, buttons] {
             item.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -48).isActive = true
         }
         qrCard.centerXAnchor.constraint(equalTo: content.centerXAnchor).isActive = true
@@ -183,13 +189,17 @@ final class AddDevicePanelViewController: NSViewController {
             showNotSharing()
             return
         }
-        let reachable = state.reachesTailnet
-        qrCard.isHidden = !reachable || link == nil
-        linkField.isHidden = !reachable || link == nil
-        countdown.isHidden = !reachable || link == nil
+        let reachable = state.reachesOtherDevices
+        let showsCode = reachable && link != nil
+        qrCard.isHidden = !showsCode
+        linkField.isHidden = !showsCode
+        countdown.isHidden = !showsCode
+        actions.isHidden = !showsCode
+        reach.isHidden = !reachable
+        reach.stringValue = SharingCopy.reach(state)
         problem.isHidden = reachable
         if !reachable {
-            problem.stringValue = SharingCopy.tailscaleMissing
+            problem.stringValue = SharingCopy.statusLine(for: sharing.state) ?? SharingCopy.tailscaleMissing
         } else if let link {
             qrView.image = QRCode.image(for: link, side: 200)
             linkField.stringValue = link
@@ -201,6 +211,8 @@ final class AddDevicePanelViewController: NSViewController {
         qrCard.isHidden = true
         linkField.isHidden = true
         countdown.isHidden = true
+        actions.isHidden = true
+        reach.isHidden = true
         problem.isHidden = false
         problem.stringValue = SharingCopy.statusLine(for: sharing.state) ?? String(localized: "Sharing is off. Turn on Share this Mac's library to add a device.")
     }

@@ -117,10 +117,10 @@ mod tests {
     }
 
     #[test]
-    fn offline_with_nothing_waiting_asks_about_tailscale() {
+    fn offline_with_nothing_waiting_asks_about_the_wifi_and_tailscale() {
         assert_eq!(
             line(SyncState::Offline, 0, None),
-            "Can't reach arch. Is Tailscale on?"
+            "Can't reach arch. Same Wi-Fi, or Tailscale on?"
         );
     }
 

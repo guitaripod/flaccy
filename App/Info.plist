@@ -54,6 +54,10 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_flaccy._tcp</string>
+	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Flaccy connects to the music server on your home network.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

@@ -36,6 +36,14 @@ pub struct Config {
     /// directly, because any client can then send any address and dodge the lockout.
     #[serde(default)]
     pub behind_proxy: bool,
+    /// Also share on the local network: devices on the same Wi-Fi connect without Tailscale,
+    /// over TLS with a key they pin when they are added.
+    #[serde(default)]
+    pub lan: bool,
+    /// The Bonjour name devices on this network use, without `.local`; this machine's own when unset.
+    /// When this machine answers to no Bonjour name at all, devices are given its local IP address instead.
+    #[serde(default)]
+    pub lan_name: Option<String>,
     /// How the server is reached; only `easy` exists in this release.
     #[serde(default)]
     pub mode: Mode,
@@ -262,6 +270,15 @@ mod tests {
             error.to_string(),
             "Household mode is not available in this release; remove `mode` or set it to \"easy\"."
         );
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn sharing_on_the_local_network_is_off_unless_the_file_turns_it_on() {
+        let (dir, path) = write("music_folder = \"/m\"\n");
+        assert!(!Config::load(&path).unwrap().lan);
+        std::fs::write(&path, "music_folder = \"/m\"\nlan = true\n").unwrap();
+        assert!(Config::load(&path).unwrap().lan);
         std::fs::remove_dir_all(dir).unwrap();
     }
 

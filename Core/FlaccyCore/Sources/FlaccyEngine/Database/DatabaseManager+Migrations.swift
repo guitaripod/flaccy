@@ -381,6 +381,12 @@ extension DatabaseManager {
             }
         }
 
+        migrator.registerMigration("v23") { db in
+            try db.alter(table: "remoteServers") { t in
+                t.add(column: "certificatePin", .text)
+            }
+        }
+
         return migrator
     }
 }

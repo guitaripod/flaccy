@@ -9,15 +9,15 @@ extension ServerSyncEngine {
     public func connect(
         link: FlaccyServerLink, deviceName: String, startSyncing: Bool = true
     ) async throws -> ServerSyncConnection {
-        let anonymous = configuration.transports.transport(baseURL: link.baseURL, token: nil)
-        let hello = try await retrying { try await anonymous.hello() }
+        let (baseURL, anonymous, hello) = try await reach(link)
         try Self.checkCompatible(hello)
         let instance = ServerSyncIDs.uuidV7(nowMs: configuration.nowMs())
         let request = ServerEnrollRequest(
             enroll: link.enrollmentCode, name: deviceName, platform: configuration.platform, instance: instance
         )
         let reply = try await retrying { try await anonymous.enroll(request) }
-        let serverID = serverID(for: link.baseURL.absoluteString)
+        let pin = link.pin ?? anonymous.seenPin
+        let serverID = serverID(for: baseURL.absoluteString)
         if let previous = currentLink() {
             configuration.tokens.removeToken(serverID: self.serverID(for: previous.serverURL))
         }
@@ -27,12 +27,12 @@ extension ServerSyncEngine {
             logError("The device token could not be stored in the Keychain")
             throw ServerSyncError.malformed("the device token could not be stored")
         }
-        let role = await roleOfNewDevice(baseURL: link.baseURL, token: reply.token, fallback: reply.user.role)
+        let role = await roleOfNewDevice(baseURL: baseURL, pin: pin, token: reply.token, fallback: reply.user.role)
         var report: ServerSyncImportReport
         do {
             try store.refreshSongKeyIndex()
             report = try store.attach(ServerSyncEnrollment(
-                serverURL: link.baseURL.absoluteString, serverName: link.name ?? hello.server.name,
+                serverURL: baseURL.absoluteString, serverName: link.name ?? hello.server.name, serverPin: pin,
                 device: reply.device, user: reply.user.id, incarnation: reply.incarnation, instance: instance,
                 serverTimeMs: reply.serverTimeMs
             ), role: role)
@@ -48,16 +48,38 @@ extension ServerSyncEngine {
         let name = link.name ?? hello.server.name
         if let status = SyncStatus.readOnly(role: role, server: name) {
             publish(status)
-            return ServerSyncConnection(serverName: name, deviceID: reply.device, userID: reply.user.id, role: role, imported: report)
+            return ServerSyncConnection(
+                serverName: name, baseURL: baseURL, pin: pin, deviceID: reply.device, userID: reply.user.id, role: role, imported: report
+            )
         }
         report = try await importStructure(starting: report)
         publish(.syncing(changes: (try? store.unsentCount()) ?? 0))
         if startSyncing { Task { await self.syncNow() } }
-        return ServerSyncConnection(serverName: name, deviceID: reply.device, userID: reply.user.id, role: role, imported: report)
+        return ServerSyncConnection(
+            serverName: name, baseURL: baseURL, pin: pin, deviceID: reply.device, userID: reply.user.id, role: role, imported: report
+        )
     }
 
-    private func roleOfNewDevice(baseURL: URL, token: String, fallback: ServerRole) async -> ServerRole {
-        let signedIn = configuration.transports.transport(baseURL: baseURL, token: token)
+    /// The first address of `link` that answers, with a transport that trusts its key by the link's pin, or by the key it
+    /// shows first when the link has none. Only an unreachable address moves on to the next; the last one is retried.
+    private func reach(_ link: FlaccyServerLink) async throws -> (URL, any ServerSyncTransport, ServerHello) {
+        let candidates = link.candidates
+        for (index, url) in candidates.enumerated() {
+            let transport = configuration.transports.transport(baseURL: url, token: nil, trust: .forAddress(url, pin: link.pin))
+            if index == candidates.count - 1 {
+                return (url, transport, try await retrying { try await transport.hello() })
+            }
+            do {
+                return (url, transport, try await transport.hello())
+            } catch let failure as ServerSyncError where failure.isUnreachable {
+                log("\(url.host(percentEncoded: false) ?? "The first address") did not answer; trying the next address")
+            }
+        }
+        throw ServerSyncError.notConnected
+    }
+
+    private func roleOfNewDevice(baseURL: URL, pin: String?, token: String, fallback: ServerRole) async -> ServerRole {
+        let signedIn = configuration.transports.transport(baseURL: baseURL, token: token, trust: .forAddress(baseURL, pin: pin))
         let hello = try? await retrying { try await signedIn.hello() }
         return hello?.caller?.role ?? fallback
     }

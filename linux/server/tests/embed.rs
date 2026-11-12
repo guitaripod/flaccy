@@ -26,6 +26,8 @@ fn config_in(dir: &TempDir, name: &str) -> EmbedConfig {
         port: 0,
         ffmpeg: None,
         log_dir: dir.file("logs"),
+        lan: false,
+        lan_name: None,
     }
 }
 

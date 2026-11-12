@@ -8,6 +8,7 @@ nonisolated enum RemoteFailure: Error, Equatable, Sendable {
     case invalidAddress
     case unreachable(host: String)
     case tlsFailure(host: String)
+    case keyChanged(host: String)
     case wrongPassword(host: String)
     case wrongAPIKey(host: String)
     case tokenAuthUnsupported(host: String)
@@ -61,6 +62,8 @@ extension RemoteFailure: LocalizedError {
             String(localized: "Flaccy can\u{2019}t reach \(host). The server didn\u{2019}t answer. Check that it is running and that this device is on the same network or Tailscale, then try again.")
         case .tlsFailure(let host):
             String(localized: "Flaccy couldn\u{2019}t make a secure connection to \(host). Its certificate isn\u{2019}t trusted. Use the server\u{2019}s http:// address on your own network, or give it a valid certificate, then try again.")
+        case .keyChanged(let host):
+            String(localized: "\(host) answered with a different security key than when it was added, so Flaccy stopped. If it was reinstalled or moved to another computer, remove it and add it again with a new code.")
         case .wrongPassword(let host):
             String(localized: "\(host) refused the username or password. Check both and try again.")
         case .wrongAPIKey(let host):

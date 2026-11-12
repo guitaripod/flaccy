@@ -30,6 +30,11 @@ final class AddFlaccyServerPanelViewController: NSViewController, NSTextFieldDel
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        LocalNetworkAccess.requestIfNeeded()
+    }
+
     override func loadView() {
         let drop = LinkDropView()
         drop.onLink = { [weak self] link in self?.take(link) }

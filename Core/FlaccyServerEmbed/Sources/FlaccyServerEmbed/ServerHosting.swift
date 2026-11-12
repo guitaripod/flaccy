@@ -2,7 +2,7 @@ import Foundation
 
 /// What the sharing controller needs from the in-process server, so a test can stand in for it.
 public protocol ServerHosting: Sendable {
-    func start(musicFolder: URL, name: String, dataDirectory: URL, logDirectory: URL, port: UInt16) throws -> ServerHostStatus
+    func start(musicFolder: URL, name: String, dataDirectory: URL, logDirectory: URL, port: UInt16, lan: Bool, lanName: String?) throws -> ServerHostStatus
     func stop() throws
     func status() throws -> ServerHostStatus
     func enroll(user: String?) throws -> ServerEnrollment

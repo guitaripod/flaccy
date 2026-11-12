@@ -37,7 +37,7 @@ impl Sandbox {
     }
 
     fn args(&self, port: u16) -> SetupArgs {
-        SetupArgs { yes: true, music: Some(self.root.join("music")), name: Some("marcus".to_owned()), port: Some(port) }
+        SetupArgs { yes: true, music: Some(self.root.join("music")), name: Some("marcus".to_owned()), port: Some(port), no_lan: false }
     }
 }
 
@@ -70,12 +70,46 @@ fn numbers_group_by_thousands() {
 }
 
 #[tokio::test]
-async fn a_machine_without_tailscale_gets_the_documented_sentence_and_no_config() {
+async fn a_machine_without_tailscale_shares_on_this_network() {
+    let sandbox = Sandbox::new("lanonly");
+    let runner = FakeRunner::default().on("systemctl", FakeRunner::ok("")).on("loginctl show-user", FakeRunner::ok("Linger=yes\n"));
+    let environment = sandbox.environment(&runner, Platform::Linux);
+    let mut terminal = ScriptedTerminal::silent();
+    execute(&environment, &mut terminal, sandbox.args(free_port().await)).await.unwrap();
+    let out = &terminal.output;
+    assert!(out.contains("Tailscale: not installed. Devices on this network connect directly"), "{out}");
+    assert!(out.contains("This network: "), "{out}");
+    assert!(std::fs::read_to_string(&environment.config_path).unwrap().contains("lan = true"));
+    assert!(sandbox.root.join("data").join(crate::lan_identity::KEY_FILE).exists());
+    let has_local_address = crate::net::lan::discover(true).map(|found| !found.local.is_empty()).unwrap_or(false);
+    if has_local_address {
+        assert!(out.contains("flaccy://server?url=https%3A%2F%2F") && out.contains("&pin="), "{out}");
+    } else {
+        assert!(out.contains("no address on a local network"), "{out}");
+    }
+}
+
+#[tokio::test]
+async fn an_existing_setup_without_any_reach_is_offered_this_network() {
+    let sandbox = Sandbox::new("offerlan");
+    let runner = FakeRunner::default().on("systemctl", FakeRunner::ok("")).on("loginctl show-user", FakeRunner::ok("Linger=yes\n"));
+    let environment = sandbox.environment(&runner, Platform::Linux);
+    let port = free_port().await;
+    write_config(&environment.config_path, &sandbox.root.join("music"), port, false, environment.data_dir.as_deref()).unwrap();
+    let mut terminal = ScriptedTerminal::silent();
+    let _ = execute(&environment, &mut terminal, sandbox.args(port)).await;
+    assert!(std::fs::read_to_string(&environment.config_path).unwrap().ends_with("lan = true\n"));
+}
+
+#[tokio::test]
+async fn tailscale_only_without_tailscale_gets_the_documented_sentence_and_no_config() {
     let sandbox = Sandbox::new("notailscale");
     let runner = FakeRunner::default();
     let environment = sandbox.environment(&runner, Platform::Linux);
     let mut terminal = ScriptedTerminal::silent();
-    let error = execute(&environment, &mut terminal, sandbox.args(4545)).await.unwrap_err();
+    let mut args = sandbox.args(4545);
+    args.no_lan = true;
+    let error = execute(&environment, &mut terminal, args).await.unwrap_err();
     assert_eq!(
         error,
         "Tailscale isn't running on this machine. Flaccy Server reaches your devices through it. Install it from tailscale.com/download, sign in, then run this again."
@@ -123,11 +157,12 @@ async fn a_first_run_follows_the_conversation_and_a_second_keeps_the_setup() {
         "Where is your music? ",
         "  That folder has no music yet. Flaccy Server will pick files up as you add them.",
         "Tailscale: connected as arch (100.91.211.44).",
+        "This network: ",
         "Your name on this server? marcus",
         &format!("Starting the server on port {port}... started, but not answering yet."),
         "Keeping it running after you log out... done (flaccy-server.service).",
-        "Scan this with Flaccy on your iPhone, Mac or Linux:",
-        "Or open this link on a device that has Flaccy:",
+        "Scan this with the camera in Flaccy on your iPhone:",
+        "On a Mac or Linux, paste this link into Flaccy's Add Flaccy Server window:",
         &format!("  flaccy://server?url=http%3A%2F%2Farch%3A{port}&enroll="),
         "&name=arch",
         "The code works once and expires in 10 minutes. Make another with `flaccy-server enroll`.",
@@ -138,7 +173,7 @@ async fn a_first_run_follows_the_conversation_and_a_second_keeps_the_setup() {
         from += at;
     }
     let config = std::fs::read_to_string(&environment.config_path).unwrap();
-    assert!(config.contains(&format!("port = {port}")) && config.contains("mode = \"easy\""), "{config}");
+    assert!(config.contains(&format!("port = {port}")) && config.contains("mode = \"easy\"") && config.contains("lan = true"), "{config}");
     let unit = sandbox.root.join("config/systemd/user/flaccy-server.service");
     assert!(std::fs::read_to_string(unit).unwrap().contains("ExecStart=/usr/bin/flaccy-server serve"));
     assert!(runner.calls.borrow().iter().any(|call| call == "loginctl enable-linger marcus"));
@@ -173,7 +208,7 @@ async fn a_server_already_answering_is_left_running() {
             let _ = stream.write_all(reply.as_bytes()).await;
         }
     });
-    write_config(&environment.config_path, &sandbox.root.join("music"), port, environment.data_dir.as_deref()).unwrap();
+    write_config(&environment.config_path, &sandbox.root.join("music"), port, false, environment.data_dir.as_deref()).unwrap();
     let mut terminal = ScriptedTerminal::silent();
     execute(&environment, &mut terminal, sandbox.args(port)).await.unwrap();
     assert!(terminal.output.contains(&format!("Starting the server on port {port}... already running.")), "{}", terminal.output);
@@ -197,12 +232,15 @@ async fn an_interactive_run_asks_the_questions_in_order() {
     let sandbox = Sandbox::new("asks");
     let runner = working_runner();
     let environment = sandbox.environment(&runner, Platform::Linux);
-    let mut terminal = ScriptedTerminal::interactive(&[sandbox.root.join("music").to_str().unwrap(), "Marcus", "n"]);
-    let args = SetupArgs { yes: false, music: None, name: None, port: Some(free_port().await) };
+    let mut terminal = ScriptedTerminal::interactive(&[sandbox.root.join("music").to_str().unwrap(), "n", "Marcus", "n"]);
+    let args = SetupArgs { yes: false, music: None, name: None, port: Some(free_port().await), no_lan: false };
     execute(&environment, &mut terminal, args).await.unwrap();
     let out = &terminal.output;
     assert!(out.contains("Where is your music? [~/Music] "), "{out}");
+    assert!(out.contains("Also share with devices on this network that don't use Tailscale? [Y/n] "), "{out}");
     assert!(out.contains("Your name on this server? [marcus] "), "{out}");
+    assert!(!out.contains("This network: "), "{out}");
+    assert!(std::fs::read_to_string(&environment.config_path).unwrap().contains("lan = false"));
     assert!(out.contains("Keep it running after you log out? [Y/n] "), "{out}");
     assert!(out.contains("Keeping it running after you log out... skipped."), "{out}");
 }
@@ -216,6 +254,8 @@ fn a_ready_server_says_where_the_music_shows_up_and_a_mac_adds_the_firewall_hint
         port: 4545,
         data_dir: Some(sandbox.root.join("data")),
         behind_proxy: false,
+        lan: false,
+        lan_name: None,
         mode: crate::config::Mode::Easy,
         lastfm: Default::default(),
         hosts: Vec::new(),

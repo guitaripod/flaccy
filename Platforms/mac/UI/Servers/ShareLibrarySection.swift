@@ -13,6 +13,7 @@ final class ShareLibrarySection {
     private let sharing: LibrarySharing
     private let toggle = NSSwitch()
     private let toggleLabel = NSTextField(labelWithString: SharingCopy.title)
+    private lazy var localNetwork = NSButton(checkboxWithTitle: SharingCopy.localNetwork, target: self, action: #selector(localNetworkToggled))
     private let status = NSTextField(wrappingLabelWithString: "")
     private let syncLine = NSTextField(wrappingLabelWithString: "")
     private let firewall = NSTextField(wrappingLabelWithString: SharingCopy.firewallHint)
@@ -90,7 +91,8 @@ final class ShareLibrarySection {
         proSync.setAccessibilityIdentifier("settings.shareLibrary.pro")
         buttons.orientation = .horizontal
         buttons.spacing = 8
-        for item in [header, status, syncLine, proSync, buttons, firewall] {
+        localNetwork.setAccessibilityIdentifier("settings.shareLibrary.localNetwork")
+        for item in [header, localNetwork, status, syncLine, proSync, buttons, firewall] {
             view.addArrangedSubview(item)
         }
         for item in [header, status, syncLine, buttons, firewall] {
@@ -107,6 +109,8 @@ final class ShareLibrarySection {
     private func render() {
         let state = sharing.state
         toggle.state = sharing.isEnabled ? .on : .off
+        localNetwork.state = sharing.sharesOnLocalNetwork ? .on : .off
+        localNetwork.isHidden = !sharing.isEnabled
         let line = SharingCopy.statusLine(for: state) ?? SharingCopy.explanation
         status.stringValue = line
         status.textColor = isFailure(state) ? .systemRed : .secondaryLabelColor
@@ -124,7 +128,7 @@ final class ShareLibrarySection {
     private func renderButtons(_ state: LibrarySharing.State) {
         buttons.arrangedSubviews.forEach { $0.removeFromSuperview() }
         guard case .sharing(let sharing) = state else { return }
-        addDevice.isEnabled = sharing.reachesTailnet
+        addDevice.isEnabled = sharing.reachesOtherDevices
         buttons.addArrangedSubview(addDevice)
         if !sharing.reachesTailnet {
             tailscale.title = Tailscale.isInstalled ? SharingCopy.openTailscale : SharingCopy.getTailscale
@@ -152,6 +156,11 @@ final class ShareLibrarySection {
             element: status, notification: .announcementRequested,
             userInfo: [.announcement: line, .priority: NSAccessibilityPriorityLevel.medium.rawValue]
         )
+    }
+
+    @objc private func localNetworkToggled() {
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        sharing.setSharesOnLocalNetwork(localNetwork.state == .on)
     }
 
     @objc private func toggled() {

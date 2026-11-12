@@ -20,6 +20,8 @@ async fn behind_a_proxy() -> Harness {
         port: 0,
         data_dir: Some(dir.file("data")),
         behind_proxy: true,
+        lan: false,
+        lan_name: None,
         mode: Mode::Easy,
         lastfm: Default::default(),
         hosts: Vec::new(),

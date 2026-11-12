@@ -21,11 +21,11 @@ nonisolated enum WelcomeCopy {
 
     static var guideTitle: String { String(localized: "Connect Your Computer") }
     static var guideLead: String {
-        (DeviceKind.isPad ? String(localized: "Flaccy Server shares the music on your Mac or PC with this iPad and keeps playlists, loves and history in step. It's free, and your music never leaves your own network.") : String(localized: "Flaccy Server shares the music on your Mac or PC with this iPhone and keeps playlists, loves and history in step. It's free, and your music never leaves your own network."))
+        (DeviceKind.isPad ? String(localized: "Flaccy Server plays the music on your Mac or PC on this iPad over your Wi-Fi, with playlists, loves and history in step. It's free, and your music never leaves your own network.") : String(localized: "Flaccy Server plays the music on your Mac or PC on this iPhone over your Wi-Fi, with playlists, loves and history in step. It's free, and your music never leaves your own network."))
     }
-    static var stepTailscaleTitle: String { String(localized: "Get Tailscale on both") }
-    static var stepTailscaleDetail: String {
-        (DeviceKind.isPad ? String(localized: "Install Tailscale on this iPad and on your computer, and sign in to the same account. It connects them safely, at home or away.") : String(localized: "Install Tailscale on this iPhone and on your computer, and sign in to the same account. It connects them safely, at home or away."))
+    static var awayTitle: String { String(localized: "Away from home?") }
+    static var awayDetail: String {
+        (DeviceKind.isPad ? String(localized: "Install Tailscale on this iPad and on your computer, signed in to the same account, and your music plays anywhere.") : String(localized: "Install Tailscale on this iPhone and on your computer, signed in to the same account, and your music plays anywhere."))
     }
     static var getTailscale: String { String(localized: "Get Tailscale") }
     static var stepServerTitle: String { String(localized: "Start Flaccy Server") }
@@ -36,7 +36,7 @@ nonisolated enum WelcomeCopy {
     static var sendGuideMessage: String { String(localized: "Set up Flaccy Server on this computer") }
     static var stepScanTitle: String { String(localized: "Scan the code") }
     static var stepScanDetail: String {
-        String(localized: "Your computer shows a code when the server is ready. Scan it and Flaccy connects.")
+        (DeviceKind.isPad ? String(localized: "Keep this iPad on the same Wi-Fi. When your computer shows a code, scan it and Flaccy connects.") : String(localized: "Keep this iPhone on the same Wi-Fi. When your computer shows a code, scan it and Flaccy connects."))
     }
     static var scan: String { String(localized: "Scan the Code") }
     static var typeInstead: String { String(localized: "Type the Address Instead") }

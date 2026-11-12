@@ -102,7 +102,7 @@ actor RemoteServers {
         let credentials: SubsonicCredentials = record.auth == .apiKey
             ? .apiKey(secret)
             : .password(username: record.username, password: secret)
-        let client = SubsonicClient(serverID: id, base: base, credentials: credentials)
+        let client = SubsonicClient(serverID: id, base: base, credentials: credentials, pin: record.certificatePin)
         clients[id] = client
         return client
     }
@@ -143,12 +143,12 @@ actor RemoteServers {
     /// The catalog sync starts on its own; await `RemoteCatalogSync.sync` to wait for it.
     @discardableResult
     func add(
-        address: String, name: String? = nil, authentication: RemoteAuthentication, serverType: String? = nil
+        address: String, name: String? = nil, authentication: RemoteAuthentication, serverType: String? = nil, pin: String? = nil
     ) async throws -> RemoteServerRecord {
         guard let base = ServerAddress.normalize(address) else { throw RemoteFailure.invalidAddress }
         let existing = try list().first { $0.baseURL == base.absoluteString && $0.username == authentication.username }
         let id = existing?.id ?? UUID().uuidString.lowercased()
-        let probe = SubsonicClient(serverID: id, base: base, credentials: authentication.credentials)
+        let probe = SubsonicClient(serverID: id, base: base, credentials: authentication.credentials, pin: pin)
         let hello = try await probe.ping()
         let extensions = try await probe.extensions()
         try credentialStore.setSecret(authentication.secret, for: id)
@@ -162,6 +162,7 @@ actor RemoteServers {
         )
         if let name { record.name = name }
         record.authKind = authentication.kind.rawValue
+        record.certificatePin = pin
         record.serverType = serverType ?? hello.type
         record.serverVersion = hello.serverVersion
         record.extensionNames = extensions
@@ -193,7 +194,7 @@ actor RemoteServers {
             } else {
                 throw RemoteFailure.wrongPassword(host: base.host ?? record.baseURL)
             }
-            let probe = SubsonicClient(serverID: id, base: base, credentials: credentials)
+            let probe = SubsonicClient(serverID: id, base: base, credentials: credentials, pin: record.certificatePin)
             let hello = try await probe.ping()
             record.extensionNames = try await probe.extensions()
             record.serverType = hello.type

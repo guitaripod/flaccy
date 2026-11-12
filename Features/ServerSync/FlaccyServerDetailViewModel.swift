@@ -188,7 +188,7 @@ final class FlaccyServerDetailViewModel {
 
     nonisolated static func devicesFailure(_ error: any Error, server: String) -> String {
         if let failure = error as? ServerSyncError, failure.isUnreachable {
-            return String(localized: "Can't reach \(server) to list its devices. Is Tailscale on?")
+            return String(localized: "Can't reach \(server) to list its devices. Same Wi-Fi, or Tailscale on?")
         }
         return String(localized: "Couldn't list the devices on \(server). Pull down to try again.")
     }

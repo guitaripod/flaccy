@@ -1,8 +1,9 @@
 import MidgarCore
 import UIKit
 
-/// The welcome's Flaccy Server step: three numbered steps from nothing to a connected iPhone, the last one a camera.
-/// Scanning the code the computer shows connects at once; the person never types a URL unless they ask to.
+/// The welcome's Flaccy Server step: two numbered steps from nothing to a connected iPhone on the same Wi-Fi, the last one a
+/// camera, then Tailscale as the optional way to listen away from home. Scanning the code the computer shows connects at once;
+/// the person never types a URL unless they ask to.
 final class ServerSetupGuideViewController: UIViewController {
 
     var onConnected: (() -> Void)?
@@ -17,6 +18,11 @@ final class ServerSetupGuideViewController: UIViewController {
         navigationItem.largeTitleDisplayMode = .never
         buildContent()
         MidgarLog.info("Welcome: Flaccy Server step shown", category: .ui)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        LocalNetworkAccess.requestIfNeeded()
     }
 
     private func buildContent() {
@@ -45,14 +51,14 @@ final class ServerSetupGuideViewController: UIViewController {
         type.addAction(UIAction { [weak self] _ in self?.openAddServer(scanning: false) }, for: .touchUpInside)
 
         let steps = [
-            Self.step(1, WelcomeCopy.stepTailscaleTitle, WelcomeCopy.stepTailscaleDetail, actions: [tailscale]),
-            Self.step(2, WelcomeCopy.stepServerTitle, WelcomeCopy.stepServerDetail, actions: [send]),
-            Self.step(3, WelcomeCopy.stepScanTitle, WelcomeCopy.stepScanDetail, actions: [scan, type]),
+            Self.step(1, WelcomeCopy.stepServerTitle, WelcomeCopy.stepServerDetail, actions: [send]),
+            Self.step(2, WelcomeCopy.stepScanTitle, WelcomeCopy.stepScanDetail, actions: [scan, type]),
         ]
+        let away = Self.optional(WelcomeCopy.awayTitle, WelcomeCopy.awayDetail, action: tailscale)
 
         let note = WelcomeViewController.label(WelcomeCopy.proNote, style: .footnote, color: .tertiaryLabel)
 
-        let stack = UIStackView(arrangedSubviews: [lead] + steps + [note])
+        let stack = UIStackView(arrangedSubviews: [lead] + steps + [away, note])
         stack.axis = .vertical
         stack.spacing = 28
         stack.isLayoutMarginsRelativeArrangement = true
@@ -128,6 +134,21 @@ final class ServerSetupGuideViewController: UIViewController {
         row.alignment = .top
         row.spacing = 14
         return row
+    }
+
+    /// A step the person may skip: no number, set in from the numbered ones so it reads as an aside.
+    private static func optional(_ title: String, _ detail: String, action: UIView) -> UIView {
+        let titleLabel = WelcomeViewController.label(title, style: .headline)
+        titleLabel.accessibilityTraits = .header
+        let detailLabel = WelcomeViewController.label(detail, style: .subheadline, color: .secondaryLabel)
+        let stack = UIStackView(arrangedSubviews: [titleLabel, detailLabel, action])
+        stack.axis = .vertical
+        stack.alignment = .fill
+        stack.spacing = 6
+        stack.setCustomSpacing(12, after: detailLabel)
+        stack.isLayoutMarginsRelativeArrangement = true
+        stack.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 0, leading: 42, bottom: 0, trailing: 0)
+        return stack
     }
 
     private static func button(_ title: String, symbol: String, style: UIButton.Configuration) -> UIButton {

@@ -123,6 +123,8 @@ pub enum PullOutcome {
 pub struct Enrollment {
     /// The server's base URL.
     pub server_url: String,
+    /// The pin of the key the server answers with, when `server_url` is a local network address.
+    pub server_pin: Option<String>,
     /// This device's id on the server.
     pub device: String,
     /// The user id the device writes as.
@@ -171,6 +173,9 @@ impl Engine {
             wipe(conn)?;
             meta::set(conn, meta::SERVER_URL, &enrollment.server_url)?;
             meta::set(conn, meta::SERVER_ID, &server_id(&enrollment.server_url))?;
+            if let Some(pin) = &enrollment.server_pin {
+                meta::set(conn, meta::SERVER_PIN, pin)?;
+            }
             meta::set(conn, meta::USER, &enrollment.user)?;
             meta::set(conn, meta::INSTANCE, &enrollment.instance)?;
             meta::set(conn, meta::INCARNATION, &enrollment.incarnation)?;
@@ -410,6 +415,11 @@ impl Engine {
     /// The base URL of the configured server.
     pub fn server_url(&self, db: &Db) -> Result<Option<String>> {
         meta::get(db.connection(), meta::SERVER_URL)
+    }
+
+    /// The pin of the configured server's key, when it is reached on the local network.
+    pub fn server_pin(&self, db: &Db) -> Result<Option<String>> {
+        meta::get(db.connection(), meta::SERVER_PIN)
     }
 
     fn deliver(&self, changes: Vec<ScalarChange>) {

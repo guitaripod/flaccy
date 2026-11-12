@@ -23,8 +23,15 @@ public final class LibrarySharing {
         public let songCount: Int?
         public let deviceCount: Int
         public let addresses: ServerAddresses
+        /// The `https` address devices on this network use, while the Mac shares on it and has a local address.
+        public var localURL: URL? = nil
+        /// Whether the person lets devices on this network connect directly.
+        public var sharesOnLocalNetwork = false
 
         public var reachesTailnet: Bool { !addresses.tailnetHosts.isEmpty }
+
+        /// True when some other device can connect: over the tailnet, or on this network.
+        public var reachesOtherDevices: Bool { reachesTailnet || localURL != nil }
     }
 
     public enum Failure: Equatable, Sendable {
@@ -46,6 +53,7 @@ public final class LibrarySharing {
         static let enabled = "flaccy.mac.shareLibrary"
         static let port = "flaccy.mac.shareLibrary.port"
         static let introduced = "flaccy.mac.shareLibrary.introduced"
+        static let localNetwork = "flaccy.mac.shareLibrary.localNetwork"
     }
 
     private struct EnrollmentAttempt {
@@ -67,6 +75,7 @@ public final class LibrarySharing {
     private let defaults: UserDefaults
     private let paths: Paths
     private let machineName: @Sendable () -> String
+    private let localHostName: @Sendable () -> String?
     private let isPortFree: @Sendable (UInt16) -> Bool
     private let now: @Sendable () -> Date
     private let sleep: @Sendable (Duration) async -> Void
@@ -85,6 +94,7 @@ public final class LibrarySharing {
         defaults: UserDefaults = .standard,
         paths: Paths = Paths(),
         machineName: @escaping @Sendable () -> String,
+        localHostName: @escaping @Sendable () -> String? = { nil },
         isPortFree: @escaping @Sendable (UInt16) -> Bool,
         pollInterval: Duration? = .seconds(5),
         now: @escaping @Sendable () -> Date = { Date() },
@@ -96,6 +106,7 @@ public final class LibrarySharing {
         self.defaults = defaults
         self.paths = paths
         self.machineName = machineName
+        self.localHostName = localHostName
         self.isPortFree = isPortFree
         self.pollInterval = pollInterval
         self.now = now
@@ -104,6 +115,22 @@ public final class LibrarySharing {
 
     public var isEnabled: Bool {
         defaults.bool(forKey: Keys.enabled)
+    }
+
+    /// Whether devices on this Mac's network connect directly, without Tailscale. On unless the person turned it off.
+    public var sharesOnLocalNetwork: Bool {
+        defaults.object(forKey: Keys.localNetwork) as? Bool ?? true
+    }
+
+    /// Turns sharing on this network on or off; a running server restarts so the change takes effect.
+    public func setSharesOnLocalNetwork(_ shares: Bool) {
+        guard shares != sharesOnLocalNetwork else { return }
+        defaults.set(shares, forKey: Keys.localNetwork)
+        guard isEnabled else { return }
+        enqueue {
+            await $0.stopServer()
+            await $0.startServer()
+        }
     }
 
     public var hasBeenIntroduced: Bool {
@@ -216,9 +243,11 @@ public final class LibrarySharing {
         let name = machineName()
         let data = paths.data
         let logs = paths.logs
+        let lan = sharesOnLocalNetwork
+        let lanName = localHostName()
         do {
             _ = try await Task.detached {
-                try host.start(musicFolder: folder, name: name, dataDirectory: data, logDirectory: logs, port: port)
+                try host.start(musicFolder: folder, name: name, dataDirectory: data, logDirectory: logs, port: port, lan: lan, lanName: lanName)
             }.value
         } catch {
             return .failure(StartFailure(message: error.localizedDescription, isFinal: true))
@@ -308,7 +337,10 @@ public final class LibrarySharing {
         let devices = status.deviceCount ?? 0
         defaults.set(Int(addresses.port), forKey: Keys.port)
         if let attempt, devices > attempt.devicesBefore { self.attempt = nil }
-        state = .sharing(Sharing(name: machineName(), songCount: status.songCount, deviceCount: devices, addresses: addresses))
+        state = .sharing(Sharing(
+            name: machineName(), songCount: status.songCount, deviceCount: devices, addresses: addresses,
+            localURL: status.localUrl.flatMap(URL.init(string:)), sharesOnLocalNetwork: sharesOnLocalNetwork
+        ))
     }
 
     private func enrollThisMacIfNeeded() async {

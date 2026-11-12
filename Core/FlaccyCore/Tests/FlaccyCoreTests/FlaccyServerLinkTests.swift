@@ -113,4 +113,25 @@ final class ServerSyncPrimitivesTests: XCTestCase {
         XCTAssertNil(ServerJSON(text: "{broken"))
         XCTAssertEqual(ServerJSON(text: try XCTUnwrap(value.text)), value)
     }
+
+    func testALocalNetworkLinkCarriesItsPinAndFallbackLikeTheRustSide() throws {
+        let link = try XCTUnwrap(FlaccyServerLink(
+            text: "flaccy://server?url=https%3A%2F%2Farch.local%3A4545&enroll=ABC&name=arch&pin=Ab-_9&alt=https%3A%2F%2F192.168.1.5%3A4545"
+        ))
+        XCTAssertEqual(link.baseURL.absoluteString, "https://arch.local:4545")
+        XCTAssertEqual(link.pin, "Ab-_9")
+        XCTAssertEqual(link.alternateURL?.absoluteString, "https://192.168.1.5:4545")
+        XCTAssertEqual(link.candidates.map(\.absoluteString), ["https://arch.local:4545", "https://192.168.1.5:4545"])
+        let plain = try XCTUnwrap(FlaccyServerLink(text: "flaccy://server?url=arch&enroll=ABC"))
+        XCTAssertNil(plain.pin)
+        XCTAssertEqual(plain.candidates.count, 1)
+    }
+
+    func testABareLocalNetworkHostGetsHTTPSAndThePort() {
+        XCTAssertEqual(FlaccyServerLink.baseURL(from: "192.168.1.5")?.absoluteString, "https://192.168.1.5:4545")
+        XCTAssertEqual(FlaccyServerLink.baseURL(from: "Marcuss-Mac.local")?.absoluteString, "https://Marcuss-Mac.local:4545")
+        XCTAssertEqual(FlaccyServerLink.baseURL(from: "192.168.1.5:9000")?.absoluteString, "https://192.168.1.5:9000")
+        XCTAssertEqual(FlaccyServerLink.baseURL(from: "http://192.168.1.5")?.absoluteString, "http://192.168.1.5:4545")
+        XCTAssertEqual(FlaccyServerLink.baseURL(from: "https://192.168.1.5:4545/x")?.absoluteString, "https://192.168.1.5:4545")
+    }
 }

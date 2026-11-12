@@ -72,7 +72,7 @@ impl Dialog {
             .build();
         expander.add_row(&address_row);
         expander.add_row(&code_row);
-        let fields = adw::PreferencesGroup::new();
+        let fields = adw::PreferencesGroup::builder().description(copy::DIALOG_LEAD).build();
         fields.add(&link_row);
         fields.add(&expander);
 

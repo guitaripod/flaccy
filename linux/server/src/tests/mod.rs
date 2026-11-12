@@ -125,6 +125,8 @@ impl TestServer {
             port: 0,
             data_dir: Some(dir.path().join("data")),
             behind_proxy: false,
+            lan: false,
+            lan_name: None,
             mode: Mode::Easy,
             lastfm: Default::default(),
             hosts: Vec::new(),

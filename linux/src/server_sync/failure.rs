@@ -93,6 +93,11 @@ fn api_failure(error: &ApiError, stage: Stage, name: &str) -> Failure {
         (ApiError::ClockBehind, _) => {
             Failure::new(copy::clock_title(name), copy::CLOCK_BODY, Remedy::Ok)
         }
+        (ApiError::KeyChanged, _) => Failure::new(
+            copy::key_changed_title(name),
+            copy::key_changed_body(name),
+            Remedy::Ok,
+        ),
         (ApiError::Malformed(_) | ApiError::Refused { .. }, Stage::Probe) => Failure::new(
             copy::not_flaccy_title(name),
             copy::NOT_FLACCY_BODY,
@@ -124,12 +129,12 @@ mod tests {
     }
 
     #[test]
-    fn an_unreachable_server_asks_about_tailscale() {
+    fn an_unreachable_server_asks_about_the_wifi_and_tailscale() {
         let failure = api(ApiError::Offline("Connection Failed".into()), Stage::Probe);
         assert_eq!(failure.title, "Can't reach arch");
         assert_eq!(
             failure.body,
-            "Is Tailscale on? Open Tailscale and connect on this device and on arch, then try again."
+            "Check that arch is on and on the same Wi-Fi as this computer, or that Tailscale is on for both. Then try again."
         );
         assert_eq!(failure.remedy, Remedy::TryAgain);
     }
@@ -139,7 +144,8 @@ mod tests {
         let cause = ureq::ErrorKind::Dns.to_string();
         let failure = api(ApiError::Offline(cause), Stage::Probe);
         assert_eq!(failure.title, "Can't find arch");
-        assert!(failure.body.contains("tailscale status"));
+        assert!(failure.body.contains("address the server shows"));
+        assert!(!failure.body.contains('`'));
     }
 
     #[test]
@@ -148,12 +154,20 @@ mod tests {
         assert_eq!(failure.title, "That code didn't work");
         assert_eq!(
             failure.body,
-            "A code works once and expires after 10 minutes. On arch, run `flaccy-server enroll` for a new one."
+            "A code works once and lasts 10 minutes. Make a new one on arch and try again."
         );
         assert_ne!(
             api(ApiError::Unauthorized, Stage::Connected).title,
             failure.title
         );
+    }
+
+    #[test]
+    fn a_changed_key_says_to_add_the_server_again() {
+        let failure = api(ApiError::KeyChanged, Stage::Connected);
+        assert_eq!(failure.title, "arch has a new security key");
+        assert!(failure.body.contains("add it again with a new code"));
+        assert_eq!(failure.remedy, Remedy::Ok);
     }
 
     #[test]

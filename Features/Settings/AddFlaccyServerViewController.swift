@@ -74,6 +74,7 @@ final class AddFlaccyServerViewController: UITableViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        LocalNetworkAccess.requestIfNeeded()
         #if DEBUG
         if FlaccyServerShot.drivesConnect, model.canConnect, case .idle = model.state { connectTapped() }
         #endif

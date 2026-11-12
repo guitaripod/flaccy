@@ -6,6 +6,7 @@ import GRDB
 struct ServerSyncEnrollment: Sendable {
     var serverURL: String
     var serverName: String
+    var serverPin: String?
     var device: String
     var user: String
     var incarnation: String
@@ -89,6 +90,9 @@ final class ServerSyncStore: Sendable {
                 try SyncMeta.clearAll(db)
                 try SyncMeta.set(db, SyncMeta.serverURL, enrollment.serverURL)
                 try SyncMeta.set(db, SyncMeta.serverName, enrollment.serverName)
+                if let pin = enrollment.serverPin {
+                    try SyncMeta.set(db, SyncMeta.serverPin, pin)
+                }
                 try SyncMeta.set(db, SyncMeta.user, enrollment.user)
                 try SyncMeta.set(db, SyncMeta.instance, enrollment.instance)
                 try SyncMeta.set(db, SyncMeta.incarnation, enrollment.incarnation)

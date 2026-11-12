@@ -117,6 +117,8 @@ impl Harness {
             port: 0,
             data_dir: Some(dir.file("data")),
             behind_proxy: false,
+            lan: false,
+            lan_name: None,
             mode: Mode::Easy,
             lastfm: Default::default(),
             hosts: Vec::new(),
@@ -136,7 +138,7 @@ impl Harness {
         let (stop, stopped) = oneshot::channel::<()>();
         let task = tokio::spawn(async move {
             let limits = ConnectionLimits::new(Limits::default());
-            let _ = serve(listener, app, limits, async move {
+            let _ = serve(listener, app, limits, None, async move {
                 let _ = stopped.await;
             })
             .await;

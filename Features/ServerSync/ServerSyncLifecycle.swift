@@ -65,7 +65,7 @@ final class ServerSyncLifecycle {
         else { return }
         Task {
             do {
-                try await FlaccyServerLibrary.register(ServerSetupConnection(serverName: server.name, baseURL: server.url))
+                try await FlaccyServerLibrary.register(ServerSetupConnection(serverName: server.name, baseURL: server.url, pin: server.pin))
             } catch {
                 MidgarLog.error("Adding the music of \(server.name) failed: \(error.localizedDescription)", category: .sync)
             }
@@ -105,6 +105,7 @@ final class ServerSyncLifecycle {
         else { return }
         let channel = FlaccyServerLiveChannel(
             baseURL: server.url,
+            trust: server.trust,
             token: { ServerSyncService.deviceToken(for: server.url) },
             onPoke: { Task { await ServerSyncService.engine.serverPoked() } }
         )

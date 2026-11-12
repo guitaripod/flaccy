@@ -1,8 +1,11 @@
 //! `flaccy-server setup`: the first-run conversation of `docs/server/UX.md` section 2.
 //!
-//! It asks for the music folder, checks Tailscale, makes the owner, installs
-//! the service and prints the QR code and link that enroll the first device.
-//! Running it again keeps the configuration and only offers a new code.
+//! It asks for the music folder, decides how devices reach the server (Tailscale,
+//! this network, or both), makes the owner, installs the service and prints the
+//! QR code and link that enroll the first device. Without Tailscale the server
+//! shares on this network only. Running it again keeps the configuration and only
+//! offers a new code, turning on sharing on this network when nothing else could
+//! reach the server.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -13,6 +16,11 @@ use flaccy_library::logger;
 use crate::admin::enrollment_link;
 use crate::command::qr_text;
 use crate::config::{Config, ConfigError};
+use crate::hosting::certificate_names;
+use crate::lan_identity::LanIdentity;
+use crate::native::machine_name;
+use crate::net::lan;
+use crate::reach::{self, LocalReach};
 use crate::probe::{self, PortState};
 use crate::refresh;
 use crate::runner::{Runner, SystemRunner};
@@ -27,6 +35,8 @@ const DEFAULT_MUSIC: &str = "~/Music";
 const CODE_LIFETIME: Duration = Duration::from_secs(10 * 60);
 const READY_WAIT: Duration = Duration::from_secs(30);
 const MUSIC_ATTEMPTS: usize = 3;
+const SCAN_REPORT_EVERY: Duration = Duration::from_secs(3);
+const TAILSCALE_DOWNLOAD: &str = "tailscale.com/download";
 
 /// `flaccy-server setup ...`
 #[derive(Args, Clone, Debug, Default)]
@@ -43,6 +53,9 @@ pub struct SetupArgs {
     /// The port to listen on.
     #[arg(long)]
     pub port: Option<u16>,
+    /// Share only over Tailscale, not with devices on this network.
+    #[arg(long)]
+    pub no_lan: bool,
 }
 
 /// What setup needs from the machine it runs on.
@@ -111,31 +124,112 @@ fn short_version() -> String {
 pub async fn execute(environment: &SetupEnvironment<'_>, terminal: &mut dyn Terminal, args: SetupArgs) -> Result<(), String> {
     terminal.say(&format!("Flaccy Server {}", short_version()));
     terminal.say("");
-    let tailnet = match tailscale::detect(environment.runner) {
-        Tailscale::Running(tailnet) => tailnet,
-        Tailscale::NotInstalled | Tailscale::NotRunning(_) => return Err(NOT_RUNNING_MESSAGE.to_owned()),
+    let tailscale = tailscale::detect(environment.runner);
+    let tailnet = match &tailscale {
+        Tailscale::Running(tailnet) => Some(tailnet.clone()),
+        Tailscale::NotInstalled | Tailscale::NotRunning(_) => None,
     };
-    let config = choose_config(environment, terminal, &args).await?;
+    if tailnet.is_none() && args.no_lan {
+        return Err(NOT_RUNNING_MESSAGE.to_owned());
+    }
+    let config = choose_config(environment, terminal, &args, tailnet.is_some()).await?;
+    let (config, turned_on) = make_reachable(environment, terminal, config, tailnet.is_some(), &args)?;
     terminal.say("");
-    announce_tailscale(terminal, &tailnet);
+    announce_tailscale(terminal, &tailscale);
+    let pin = local_pin(&config)?;
+    announce_local(terminal, &config, pin.as_deref());
     let (security, owner) = choose_owner(&config, terminal, &args).await?;
-    let installed = start_server(environment, terminal, &config).await;
+    let installed = start_server(environment, terminal, &config, turned_on).await;
     keep_running(environment, terminal, installed.as_ref());
-    show_enrollment(terminal, &config, &tailnet, &security, &owner).await
+    show_enrollment(terminal, &config, tailnet.as_ref(), pin.as_deref(), &security, &owner).await
 }
 
-fn announce_tailscale(terminal: &mut dyn Terminal, tailnet: &Tailnet) {
-    let address = tailnet.primary_address().map(|ip| format!(" ({ip})")).unwrap_or_default();
-    terminal.say(&format!("Tailscale: connected as {}{address}.", tailnet.name));
+fn announce_tailscale(terminal: &mut dyn Terminal, tailscale: &Tailscale) {
+    match tailscale {
+        Tailscale::Running(tailnet) => {
+            let address = tailnet.primary_address().map(|ip| format!(" ({ip})")).unwrap_or_default();
+            terminal.say(&format!("Tailscale: connected as {}{address}.", tailnet.name));
+        }
+        Tailscale::NotInstalled => terminal.say(&format!(
+            "Tailscale: not installed. Devices on this network connect directly; add Tailscale ({TAILSCALE_DOWNLOAD}) to listen away from home."
+        )),
+        Tailscale::NotRunning(reason) => terminal.say(&format!(
+            "Tailscale: installed but not connected ({reason}). Devices on this network connect directly; sign in to Tailscale to listen away from home."
+        )),
+    }
 }
 
-async fn choose_config(environment: &SetupEnvironment<'_>, terminal: &mut dyn Terminal, args: &SetupArgs) -> Result<Config, String> {
+/// Makes sure some device can reach the server: an existing setup without Tailscale and without sharing on this
+/// network is offered sharing here. Returns the configuration and whether this run turned sharing on.
+fn make_reachable(
+    environment: &SetupEnvironment<'_>,
+    terminal: &mut dyn Terminal,
+    config: Config,
+    tailnet_up: bool,
+    args: &SetupArgs,
+) -> Result<(Config, bool), String> {
+    if config.lan || tailnet_up {
+        return Ok((config, false));
+    }
+    if args.no_lan || !terminal.confirm("Tailscale isn't running here. Share with devices on this network instead?", true) {
+        return Err(NOT_RUNNING_MESSAGE.to_owned());
+    }
+    append_lan(&environment.config_path)?;
+    let config = Config::load(&environment.config_path).map_err(|error| error.to_string())?;
+    Ok((config, true))
+}
+
+fn append_lan(path: &Path) -> Result<(), String> {
+    let existing = std::fs::read_to_string(path).map_err(|error| format!("Could not read {}: {error}.", path.display()))?;
+    let separator = if existing.is_empty() || existing.ends_with('\n') { "" } else { "\n" };
+    std::fs::write(path, format!("{existing}{separator}lan = true\n"))
+        .map_err(|error| format!("Could not write {}: {error}. Add `lan = true` to it yourself, then run this again.", path.display()))
+}
+
+/// Makes the key devices on this network pin, when the server shares here, so the link can carry its pin.
+fn local_pin(config: &Config) -> Result<Option<String>, String> {
+    if !config.lan {
+        return Ok(None);
+    }
+    let identity = LanIdentity::load_or_create(&config.data_dir(), &certificate_names(config))?;
+    Ok(Some(identity.pin().to_owned()))
+}
+
+/// How a device on this network reaches the server right now, from this machine's interfaces.
+fn current_local_reach(config: &Config, pin: &str) -> Option<LocalReach> {
+    let found = lan::discover(true).ok()?;
+    let bound: Vec<std::net::SocketAddr> = found.local.iter().map(|ip| std::net::SocketAddr::new(*ip, config.port)).collect();
+    let (name, answers) = reach::bonjour_source(config);
+    reach::local_reach(&bound, &name, answers, pin)
+}
+
+fn announce_local(terminal: &mut dyn Terminal, config: &Config, pin: Option<&str>) {
+    let Some(pin) = pin else {
+        return;
+    };
+    match current_local_reach(config, pin) {
+        Some(local) => terminal.say(&format!("This network: devices on the same Wi-Fi connect to {}.", host_of(&local.url))),
+        None => terminal.say("This network: this machine has no local network address yet; devices on Wi-Fi can connect once it joins one."),
+    }
+}
+
+fn host_of(url: &str) -> &str {
+    let rest = url.split_once("://").map_or(url, |(_, rest)| rest);
+    rest.rsplit_once(':').map_or(rest, |(host, _)| host)
+}
+
+async fn choose_config(
+    environment: &SetupEnvironment<'_>,
+    terminal: &mut dyn Terminal,
+    args: &SetupArgs,
+    tailnet_up: bool,
+) -> Result<Config, String> {
     match Config::load(&environment.config_path) {
         Ok(config) => {
             keep_existing(environment, terminal, args);
             Ok(config)
         }
-        Err(ConfigError::Missing(_)) => create_config(environment, terminal, args).await,
+        Err(ConfigError::Missing(_)) => create_config(environment, terminal, args, tailnet_up).await,
         Err(other) => Err(other.to_string()),
     }
 }
@@ -147,14 +241,29 @@ fn keep_existing(environment: &SetupEnvironment<'_>, terminal: &mut dyn Terminal
     }
 }
 
-async fn create_config(environment: &SetupEnvironment<'_>, terminal: &mut dyn Terminal, args: &SetupArgs) -> Result<Config, String> {
+async fn create_config(
+    environment: &SetupEnvironment<'_>,
+    terminal: &mut dyn Terminal,
+    args: &SetupArgs,
+    tailnet_up: bool,
+) -> Result<Config, String> {
     let music = choose_music(terminal, args)?;
     let port = args.port.unwrap_or(DEFAULT_PORT);
     check_port(environment, port).await?;
-    write_config(&environment.config_path, &music, port, environment.data_dir.as_deref())?;
+    let lan = choose_lan(terminal, args, tailnet_up);
+    write_config(&environment.config_path, &music, port, lan, environment.data_dir.as_deref())?;
     let config = Config::load(&environment.config_path).map_err(|error| error.to_string())?;
-    report_library(terminal, scan_library(config.clone()).await?);
+    let library = scan_library(config.clone(), terminal).await?;
+    report_library(terminal, library);
     Ok(config)
+}
+
+/// Shares on this network unless told not to; with Tailscale up the person is asked, defaulting to yes.
+fn choose_lan(terminal: &mut dyn Terminal, args: &SetupArgs, tailnet_up: bool) -> bool {
+    if args.no_lan {
+        return false;
+    }
+    !tailnet_up || terminal.confirm("Also share with devices on this network that don't use Tailscale?", true)
 }
 
 fn choose_music(terminal: &mut dyn Terminal, args: &SetupArgs) -> Result<PathBuf, String> {
@@ -205,11 +314,11 @@ async fn check_port(environment: &SetupEnvironment<'_>, port: u16) -> Result<(),
     }
 }
 
-fn write_config(path: &Path, music: &Path, port: u16, data_dir: Option<&Path>) -> Result<(), String> {
+fn write_config(path: &Path, music: &Path, port: u16, lan: bool, data_dir: Option<&Path>) -> Result<(), String> {
     let quoted = |path: &Path| toml::Value::String(path.display().to_string());
     let folder = quoted(music);
     let data = data_dir.map(|dir| format!("data_dir = {}\n", quoted(dir))).unwrap_or_default();
-    let text = format!("music_folder = {folder}\nport = {port}\nmode = \"easy\"\n{data}");
+    let text = format!("music_folder = {folder}\nport = {port}\nmode = \"easy\"\nlan = {lan}\n{data}");
     let write = || -> std::io::Result<()> {
         std::fs::create_dir_all(path.parent().unwrap_or(Path::new(".")))?;
         std::fs::write(path, text)
@@ -222,14 +331,27 @@ struct Library {
     albums: usize,
 }
 
-async fn scan_library(config: Config) -> Result<Library, String> {
+async fn scan_library(config: Config, terminal: &mut dyn Terminal) -> Result<Library, String> {
     logger::silence_console();
     logger::init(&config.data_dir());
     let state = AppState::open(config).await?;
     let worker = state.clone();
-    let summary = tokio::task::spawn_blocking(move || refresh::refresh_now(&worker))
-        .await
-        .map_err(|error| format!("The scan stopped unexpectedly: {error}. Run `flaccy-server setup` again."))?;
+    let mut scan = tokio::task::spawn_blocking(move || refresh::refresh_now(&worker));
+    let mut ticks = tokio::time::interval_at(tokio::time::Instant::now() + SCAN_REPORT_EVERY, SCAN_REPORT_EVERY);
+    let mut reported = 0;
+    let summary = loop {
+        tokio::select! {
+            finished = &mut scan => break finished,
+            _ = ticks.tick() => {
+                let found = state.catalog().song_count();
+                if found > reported {
+                    terminal.say(&format!("  {} so far…", counted(found, "song", "songs")));
+                    reported = found;
+                }
+            }
+        }
+    };
+    let summary = summary.map_err(|error| format!("The scan stopped unexpectedly: {error}. Run `flaccy-server setup` again."))?;
     let library = Library { songs: state.catalog().song_count(), albums: state.catalog().albums().len() };
     let _ = state.0.sync.close().await;
     let _ = state.0.security.close().await;
@@ -307,11 +429,14 @@ fn existing_owner(users: Vec<User>, wanted: Option<&str>) -> Result<User, String
     users.into_iter().nth(admin).ok_or_else(|| "This server has no users.".to_owned())
 }
 
-async fn start_server(environment: &SetupEnvironment<'_>, terminal: &mut dyn Terminal, config: &Config) -> Option<Installed> {
+async fn start_server(environment: &SetupEnvironment<'_>, terminal: &mut dyn Terminal, config: &Config, changed: bool) -> Option<Installed> {
     let port = config.port;
     terminal.write(&format!("Starting the server on port {port}... "));
     if probe::hello(port).await.is_some() {
         terminal.say("already running.");
+        if changed {
+            terminal.say("  Restart it so it shares on this network: `systemctl --user restart flaccy-server` on Linux, or quit and start `flaccy-server serve` again.");
+        }
         return None;
     }
     let spec = ServiceSpec {
@@ -386,21 +511,27 @@ fn keep_running(environment: &SetupEnvironment<'_>, terminal: &mut dyn Terminal,
 async fn show_enrollment(
     terminal: &mut dyn Terminal,
     config: &Config,
-    tailnet: &Tailnet,
+    tailnet: Option<&Tailnet>,
+    pin: Option<&str>,
     security: &security::Store,
     owner: &User,
 ) -> Result<(), String> {
+    let tailnet_url = tailnet.map(|tailnet| format!("http://{}:{}", tailnet.name, config.port));
+    let local = pin.and_then(|pin| current_local_reach(config, pin));
+    let reach = reach::device_reach(tailnet_url, local, None).ok_or_else(|| {
+        "This machine has no address on a local network and Tailscale is not up, so no device could reach it. Join a network or start Tailscale, then run `flaccy-server enroll`.".to_owned()
+    })?;
+    let name = tailnet.map_or_else(|| machine_name().to_owned(), |tailnet| tailnet.name.clone());
     let code = security.create_enrollment(&owner.id, CODE_LIFETIME).await.map_err(|error| error.to_string())?;
-    let url = format!("http://{}:{}", tailnet.name, config.port);
-    let link = enrollment_link(&url, &code, &tailnet.name);
+    let link = enrollment_link(&reach, &code, &name);
     terminal.say("");
-    terminal.say("Scan this with Flaccy on your iPhone, Mac or Linux:");
+    terminal.say("Scan this with the camera in Flaccy on your iPhone:");
     terminal.say("");
     for line in qr_text(&link)?.lines() {
         terminal.say(&format!("  {line}"));
     }
     terminal.say("");
-    terminal.say("Or open this link on a device that has Flaccy:");
+    terminal.say("On a Mac or Linux, paste this link into Flaccy's Add Flaccy Server window:");
     terminal.say(&format!("  {link}"));
     terminal.say("");
     terminal.say("The code works once and expires in 10 minutes. Make another with `flaccy-server enroll`.");

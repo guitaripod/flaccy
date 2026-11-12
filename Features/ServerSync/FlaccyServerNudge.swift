@@ -7,7 +7,7 @@ nonisolated enum FlaccyServerNudge {
     private static let key = "flaccy.server.nudgeDismissed"
 
     static var text: String {
-        String(localized: "Have a computer with your music on it? Flaccy Server shares it with your other devices, and keeps playlists, loves and history in sync. It's free: flaccy.app/server.")
+        String(localized: "Music on another computer? Flaccy Server plays it here and keeps playlists, loves and history in sync. Free: midgarcorp.cc/flaccy/server")
     }
 
     static var isDismissed: Bool {

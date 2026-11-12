@@ -14,13 +14,14 @@ public enum SyncStatus: Hashable, Sendable {
     case serverDiskFull(server: String)
     case serverClockWrong(server: String)
     case deviceRemoved(server: String)
+    case keyChanged(server: String)
     case listenOnly(server: String)
     case awaitingApproval(server: String)
 
     /// True while the person has something to do before syncing can continue.
     public var needsPerson: Bool {
         switch self {
-        case .notPro, .appNeedsUpdate, .serverNeedsUpdate, .deviceRemoved, .listenOnly, .awaitingApproval: true
+        case .notPro, .appNeedsUpdate, .serverNeedsUpdate, .deviceRemoved, .keyChanged, .listenOnly, .awaitingApproval: true
         default: false
         }
     }
@@ -43,6 +44,7 @@ public enum SyncStatus: Hashable, Sendable {
         case .diskFull: return .serverDiskFull(server: server)
         case .serverClockWrong: return .serverClockWrong(server: server)
         case .deviceRemoved: return .deviceRemoved(server: server)
+        case .keyChanged: return .keyChanged(server: server)
         case .unreachable, .nameNotFound, .tooManyTries, .codeRefused, .other: return .unreachable(server: server)
         }
     }

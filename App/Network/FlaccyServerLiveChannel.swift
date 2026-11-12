@@ -19,16 +19,18 @@ actor FlaccyServerLiveChannel {
     }
 
     private let baseURL: URL
+    private let trust: ServerKeyTrust
     private let token: @Sendable () -> String?
     private let onPoke: @Sendable () -> Void
     private let backoff: Backoff
     private var runner: Task<Void, Never>?
 
     init(
-        baseURL: URL, token: @escaping @Sendable () -> String?, backoff: @escaping Backoff = FlaccyServerLiveChannel.backoff,
-        onPoke: @escaping @Sendable () -> Void
+        baseURL: URL, trust: ServerKeyTrust = .system, token: @escaping @Sendable () -> String?,
+        backoff: @escaping Backoff = FlaccyServerLiveChannel.backoff, onPoke: @escaping @Sendable () -> Void
     ) {
         self.baseURL = baseURL
+        self.trust = trust
         self.token = token
         self.backoff = backoff
         self.onPoke = onPoke
@@ -72,7 +74,7 @@ actor FlaccyServerLiveChannel {
 
     private func connectOnce() async -> Outcome {
         guard let token = token() else { return .refused }
-        let client = FlaccyServerClient(baseURL: baseURL, token: token)
+        let client = FlaccyServerClient(baseURL: baseURL, token: token, trust: trust)
         guard let socket = try? await client.liveSocket() else { return .failed }
         socket.resume()
         defer { socket.cancel(with: .goingAway, reason: nil) }

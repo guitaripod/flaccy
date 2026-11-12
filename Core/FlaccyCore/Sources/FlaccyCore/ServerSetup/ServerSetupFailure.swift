@@ -10,6 +10,7 @@ public enum ServerSetupFailure: Hashable, Sendable {
     case serverTooOld
     case appTooOld(server: String)
     case serverClockWrong(server: String)
+    case keyChanged(server: String)
     case other(server: String)
 
     /// The row a thrown error belongs to. Anything the table does not name becomes `other`.
@@ -27,6 +28,7 @@ public enum ServerSetupFailure: Hashable, Sendable {
         case .serverTooOld: self = .serverTooOld
         case .appTooOld: self = .appTooOld(server: server)
         case .serverClockWrong: self = .serverClockWrong(server: server)
+        case .keyChanged: self = .keyChanged(server: server)
         case .diskFull, .deviceRemoved, .other:
             self = .other(server: server)
         }

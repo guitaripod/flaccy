@@ -22,12 +22,20 @@ public struct ServerSyncServer: Sendable, Equatable {
     public let url: URL
     public let name: String
     public let deviceID: String
+    /// The pin of the server's key when it is reached on the local network.
+    public let pin: String?
 
     init?(link: ServerSyncLink) {
         guard let url = URL(string: link.serverURL) else { return nil }
         self.url = url
         name = link.serverName
         deviceID = link.device
+        pin = link.serverPin
+    }
+
+    /// How a client trusts this server's key.
+    public var trust: ServerKeyTrust {
+        .forAddress(url, pin: pin)
     }
 }
 

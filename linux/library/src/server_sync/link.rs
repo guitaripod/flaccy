@@ -24,7 +24,7 @@ impl fmt::Display for LinkError {
 
 impl std::error::Error for LinkError {}
 
-/// A parsed `flaccy://server?url=&enroll=&name=` pairing link.
+/// A parsed `flaccy://server?url=&enroll=&name=&pin=&alt=` pairing link.
 #[derive(Clone, PartialEq, Eq)]
 pub struct ServerLink {
     /// The server's base URL, normalized.
@@ -33,6 +33,10 @@ pub struct ServerLink {
     pub enroll: Option<String>,
     /// The name the server offered for itself.
     pub name: Option<String>,
+    /// The pin of the key every `https` address in the link answers with.
+    pub pin: Option<String>,
+    /// The address to try when `url` cannot be reached, normalized.
+    pub alternate: Option<String>,
 }
 
 impl fmt::Debug for ServerLink {
@@ -42,6 +46,8 @@ impl fmt::Debug for ServerLink {
             .field("url", &self.url)
             .field("enroll", &self.enroll.as_ref().map(|_| "***"))
             .field("name", &self.name)
+            .field("pin", &self.pin)
+            .field("alternate", &self.alternate)
             .finish()
     }
 }
@@ -53,7 +59,21 @@ impl ServerLink {
             url: url.to_owned(),
             enroll: enroll.map(str::to_owned),
             name: name.map(str::to_owned),
+            pin: None,
+            alternate: None,
         }
+    }
+
+    /// The same link with the pin and the fallback address a local network server adds.
+    pub fn reaching(mut self, pin: Option<&str>, alternate: Option<&str>) -> Self {
+        self.pin = pin.map(str::to_owned);
+        self.alternate = alternate.map(str::to_owned);
+        self
+    }
+
+    /// The addresses to try, in order: `url`, then the fallback.
+    pub fn candidates(&self) -> Vec<String> {
+        std::iter::once(self.url.clone()).chain(self.alternate.clone()).collect()
     }
 
     /// Reads a pairing link; the old `key=` form parses too, with no enrollment code.
@@ -66,6 +86,8 @@ impl ServerLink {
         let mut url = None;
         let mut enroll = None;
         let mut name = None;
+        let mut pin = None;
+        let mut alternate = None;
         for pair in query.split('&') {
             let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
             let decoded = decode_segment(value).filter(|text| !text.is_empty());
@@ -73,13 +95,15 @@ impl ServerLink {
                 "url" => url = decoded,
                 "enroll" => enroll = decoded,
                 "name" => name = decoded,
+                "pin" => pin = decoded,
+                "alt" => alternate = decoded.and_then(|raw| normalize(&raw)),
                 _ => {}
             }
         }
         let url = url
             .and_then(|raw| normalize(&raw))
             .ok_or(LinkError::MissingUrl)?;
-        Ok(ServerLink { url, enroll, name })
+        Ok(ServerLink { url, enroll, name, pin, alternate })
     }
 }
 
@@ -95,6 +119,12 @@ impl fmt::Display for ServerLink {
         }
         if let Some(name) = &self.name {
             write!(formatter, "&name={}", encode_segment(name))?;
+        }
+        if let Some(pin) = &self.pin {
+            write!(formatter, "&pin={}", encode_segment(pin))?;
+        }
+        if let Some(alternate) = &self.alternate {
+            write!(formatter, "&alt={}", encode_segment(alternate))?;
         }
         Ok(())
     }
@@ -113,6 +143,19 @@ mod tests {
         );
         let parsed = ServerLink::parse(&link.to_string()).unwrap();
         assert_eq!(parsed, link);
+    }
+
+    #[test]
+    fn a_local_network_link_carries_its_pin_and_fallback() {
+        let parsed = ServerLink::parse(
+            "flaccy://server?url=https%3A%2F%2Farch.local%3A4545&enroll=ABC&name=arch&pin=Ab-_9&alt=https%3A%2F%2F192.168.1.5%3A4545",
+        )
+        .unwrap();
+        assert_eq!(parsed.url, "https://arch.local:4545");
+        assert_eq!(parsed.pin.as_deref(), Some("Ab-_9"));
+        assert_eq!(parsed.alternate.as_deref(), Some("https://192.168.1.5:4545"));
+        assert_eq!(parsed.candidates(), vec!["https://arch.local:4545", "https://192.168.1.5:4545"]);
+        assert_eq!(ServerLink::parse(&parsed.to_string()).unwrap(), parsed);
     }
 
     #[test]

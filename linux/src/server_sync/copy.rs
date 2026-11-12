@@ -5,11 +5,12 @@ pub const NOT_CONNECTED: &str = "Not connected";
 pub const NOT_CONNECTED_DETAIL: &str = "Add one to keep playlists, loves and history in sync.";
 pub const ADD_BUTTON: &str = "Add Flaccy Server…";
 pub const SYNC_BADGE: &str = "Sync";
-pub const NUDGE: &str = "Have a computer with your music on it? Flaccy Server shares it with your other devices, and keeps playlists, loves and history in sync. It's free: flaccy.app/server.";
+pub const NUDGE: &str = "Music on another computer? Flaccy Server plays it here and keeps playlists, loves and history in sync. Free: midgarcorp.cc/flaccy/server";
 pub const NUDGE_DISMISS: &str = "Not now";
 pub const NUDGE_DISMISS_TOOLTIP: &str = "Hide this for good";
 
 pub const DIALOG_TITLE: &str = "Add Flaccy Server";
+pub const DIALOG_LEAD: &str = "On the computer that shares its music, open Add a Device in Flaccy for Mac, or run flaccy-server setup or flaccy-server enroll. Paste the link it shows here.";
 pub const LINK_ROW_TITLE: &str = "Paste the link from your computer";
 pub const TYPE_INSTEAD: &str = "Type it instead";
 pub const ADDRESS_ROW_TITLE: &str = "Address";
@@ -30,7 +31,7 @@ pub const LINK_UNREADABLE: &str = "This is not a Flaccy Server link. Open the li
 pub const NOTHING_TO_CONNECT: &str =
     "Paste the link from your computer, or type its address and the code.";
 pub const ADDRESS_UNREADABLE: &str =
-    "That address can't be used. Type the computer's name or its Tailscale address, like arch or 100.91.211.44.";
+    "That address can't be used. Type the address the server shows, like arch.local or 192.168.1.20.";
 pub const CODE_INCOMPLETE: &str =
     "The code has 26 letters and numbers. Check it against the one on your computer.";
 pub const SERVER_NAME_FALLBACK: &str = "your computer";
@@ -211,9 +212,9 @@ pub fn offline_waiting(changes: usize, name: &str) -> String {
     }
 }
 
-/// "Can't reach arch. Is Tailscale on?"
+/// "Can't reach arch. Same Wi-Fi, or Tailscale on?"
 pub fn unreachable_line(name: &str) -> String {
-    format!("Can't reach {name}. Is Tailscale on?")
+    format!("Can't reach {name}. Same Wi-Fi, or Tailscale on?")
 }
 
 /// The line for a server whose clock is wrong.
@@ -269,9 +270,9 @@ pub fn cant_reach_title(name: &str) -> String {
     format!("Can't reach {name}")
 }
 
-/// "Is Tailscale on? Open Tailscale and connect on this device and on arch, then try again."
+/// "Check that arch is on and on the same Wi-Fi as this computer, or that Tailscale is on for both. Then try again."
 pub fn cant_reach_body(name: &str) -> String {
-    format!("Is Tailscale on? Open Tailscale and connect on this device and on {name}, then try again.")
+    format!("Check that {name} is on and on the same Wi-Fi as this computer, or that Tailscale is on for both. Then try again.")
 }
 
 /// "Can't find arch"
@@ -279,13 +280,12 @@ pub fn cant_find_title(name: &str) -> String {
     format!("Can't find {name}")
 }
 
-pub const CANT_FIND_BODY: &str =
-    "Check the name on the server with `tailscale status`, or paste the link from the server.";
+pub const CANT_FIND_BODY: &str = "Check the address the server shows, or paste its link again.";
 pub const CODE_REFUSED_TITLE: &str = "That code didn't work";
 
-/// "A code works once and expires after 10 minutes. On arch, run `flaccy-server enroll` for a new one."
+/// "A code works once and lasts 10 minutes. Make a new one on arch and try again."
 pub fn code_refused_body(name: &str) -> String {
-    format!("A code works once and expires after 10 minutes. On {name}, run `flaccy-server enroll` for a new one.")
+    format!("A code works once and lasts 10 minutes. Make a new one on {name} and try again.")
 }
 pub const TOO_MANY_TITLE: &str = "Too many tries";
 pub const TOO_MANY_BODY: &str = "Wait a minute, then try again.";
@@ -297,7 +297,7 @@ pub fn not_flaccy_title(name: &str) -> String {
 
 pub const NOT_FLACCY_BODY: &str = "It answered, but not as Flaccy Server. If it is Navidrome or another Subsonic server, add it as a regular server.";
 pub const SERVER_TOO_OLD_TITLE: &str = "Update your Flaccy Server";
-pub const SERVER_TOO_OLD_BODY: &str = "This version of Flaccy needs Flaccy Server 1.0 or newer.";
+pub const SERVER_TOO_OLD_BODY: &str = "This version of Flaccy needs Flaccy Server 1.0 or newer. Update Flaccy on the Mac that shares, or the flaccy-server package on the computer that runs it.";
 pub const APP_TOO_OLD_TITLE: &str = "Update Flaccy";
 
 /// "arch needs a newer Flaccy than this one."
@@ -310,8 +310,17 @@ pub fn clock_title(name: &str) -> String {
     format!("The clock on {name} is wrong")
 }
 
-pub const CLOCK_BODY: &str =
-    "Sync stays off until the server's date and time are right. Check it with `timedatectl`.";
+pub const CLOCK_BODY: &str = "Sync stays off until the server's date and time are right.";
+
+/// "arch has a new security key"
+pub fn key_changed_title(name: &str) -> String {
+    format!("{name} has a new security key")
+}
+
+/// Why a server whose key changed is not trusted, and what to do.
+pub fn key_changed_body(name: &str) -> String {
+    format!("It doesn't match the key from when this computer was added, so nothing was sent. If {name} was reinstalled or moved, disconnect it and add it again with a new code.")
+}
 
 /// The heading of a failure with no entry of its own in the table.
 pub fn generic_title(name: &str) -> String {
@@ -325,7 +334,7 @@ pub fn generic_body(cause: &str) -> String {
 
 /// Shown under the fields when an address answered as a Flaccy Server but no code was typed.
 pub fn code_needed(name: &str) -> String {
-    format!("{name} is a Flaccy Server. Type the code it printed, or run `flaccy-server enroll` on it for a new one.")
+    format!("{name} is a Flaccy Server. Type the code it shows, or make a new one on it.")
 }
 
 /// How a platform word from the server reads in the device list.
@@ -399,7 +408,7 @@ mod tests {
         assert_eq!(library_line(true, None, None, "arch"), "Counting songs…");
         assert_eq!(
             library_line(true, Some(3), Some(LibraryTrouble::Unreachable), "arch"),
-            "3 songs · Can't reach arch. Is Tailscale on?"
+            "3 songs · Can't reach arch. Same Wi-Fi, or Tailscale on?"
         );
         assert_eq!(
             library_line(true, Some(3), Some(LibraryTrouble::SignedOut), "arch"),

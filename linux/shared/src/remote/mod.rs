@@ -9,6 +9,7 @@
 pub mod byte_ranges;
 pub mod cache_policy;
 pub mod catalog_diff;
+pub mod local_network;
 pub mod remote_path;
 pub mod server_address;
 pub mod subsonic_request;

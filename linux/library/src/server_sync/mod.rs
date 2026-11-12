@@ -41,7 +41,7 @@ mod status;
 mod store;
 
 pub use credentials::TokenStore;
-pub use driver::{Backoff, Blocker, Driver, ServerIdentity, SyncState, SyncStatus};
+pub use driver::{Backoff, Blocker, Driver, LiveTarget, ServerIdentity, SyncState, SyncStatus};
 pub use engine::{Dirty, Engine, Enrollment, PullOutcome, PullRequest, PushFailure, PushRecovery};
 pub use error::{Incompatibility, Result, SyncError};
 pub use import::ImportReport;

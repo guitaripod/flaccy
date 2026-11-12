@@ -40,6 +40,8 @@ rpassword = "7"
 async-channel = "2"
 if-addrs = "0.13"
 ureq = { version = "2", features = ["json"] }
+rcgen = { version = "0.13", default-features = false, features = ["crypto", "ring"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12", "logging"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

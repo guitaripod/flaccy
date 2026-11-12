@@ -24,6 +24,9 @@ public struct RemoteServerRecord: Codable, FetchableRecord, PersistableRecord, I
     public var extensions: String
     public var addedAt: Date
     public var lastSyncedAt: Date?
+    /// The pin of the key a Flaccy Server on the local network answers with; its `https` address is trusted by this pin
+    /// instead of by a certificate authority. Nil for every other server.
+    public var certificatePin: String?
 
     public init(
         id: String,
@@ -35,7 +38,8 @@ public struct RemoteServerRecord: Codable, FetchableRecord, PersistableRecord, I
         serverVersion: String? = nil,
         extensionNames: [String] = [],
         addedAt: Date,
-        lastSyncedAt: Date? = nil
+        lastSyncedAt: Date? = nil,
+        certificatePin: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -47,6 +51,7 @@ public struct RemoteServerRecord: Codable, FetchableRecord, PersistableRecord, I
         self.extensions = Self.encode(extensionNames)
         self.addedAt = addedAt
         self.lastSyncedAt = lastSyncedAt
+        self.certificatePin = certificatePin
     }
 
     public var auth: RemoteAuthKind {

@@ -6,7 +6,8 @@ import MidgarCore
 
 /// Drives the whole Flaccy Server sync against a real server and logs `SERVER EXERCISE PASSED` or
 /// `SERVER EXERCISE FAILED: <step>`. Launch with `--exercise-server` and the environment variable
-/// `FLACCY_EXERCISE_SERVER=<url>|<enrollment code>` (or the same text as the argument after the flag).
+/// `FLACCY_EXERCISE_SERVER=<url>|<enrollment code>`, or the whole `flaccy://server` link a server prints (which carries the pin of
+/// a server on the local network), or the same text as the argument after the flag.
 ///
 /// Everything it creates carries a run tag in its name, so a server that already holds other data is fine.
 ///
@@ -24,6 +25,9 @@ enum ServerSyncExercise {
         let step: String
     }
 
+    /// How the helper clients trust the server's key: by the pin the link or the first connection gave.
+    private static var trust: ServerKeyTrust = .system
+
     static func runIfRequested() {
         guard CommandLine.arguments.contains(launchArgument) else { return }
         Task {
@@ -39,7 +43,8 @@ enum ServerSyncExercise {
     }
 
     private static func run() async throws {
-        let (url, code) = try arguments()
+        let link = try arguments()
+        var url = link.baseURL
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("flaccy-server-exercise-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -57,10 +62,10 @@ enum ServerSyncExercise {
         let songs = try seed(database, run: run)
         step("seeded \(songs.count) songs, a playlist, a love and two plays")
 
-        let connection = try await engine.connect(
-            link: FlaccyServerLink(baseURL: url, enrollmentCode: code, name: nil), deviceName: "Exercise"
-        )
-        step("connected to \(connection.serverName); queued \(connection.imported)")
+        let connection = try await engine.connect(link: link, deviceName: "Exercise")
+        url = connection.baseURL
+        trust = .forAddress(url, pin: connection.pin)
+        step("connected to \(connection.serverName) at \(url.absoluteString), \(connection.pin == nil ? "no pin" : "pinned"); queued \(connection.imported)")
         try expect(connection.imported.playlists == 1 && connection.imported.entries == 2, "the import queued the playlist and its two songs")
         try expect(connection.imported.loves == 1, "the import queued the love")
 
@@ -81,7 +86,7 @@ enum ServerSyncExercise {
         try expect(second.loved == 2, "the server holds the second love (\(second.loved))")
         try expect(second.listens == 3, "the server holds the third play (\(second.listens))")
         let cover = try require(second.playlists.first { $0.name == "Second \(run)" }?.coverBlob, "the server holds the cover of the second playlist")
-        let stored = try await FlaccyServerClient(baseURL: url, token: tokens.current).blob(hash: cover)
+        let stored = try await FlaccyServerClient(baseURL: url, token: tokens.current, trust: trust).blob(hash: cover)
         try expect(stored == coverImage, "the server returns the cover bytes it was given")
 
         try await editFromAnotherInstance(url: url, tokens: tokens, view: second, songs: songs, run: run)
@@ -113,17 +118,18 @@ enum ServerSyncExercise {
         #endif
     }
 
-    private static func arguments() throws -> (URL, String) {
+    private static func arguments() throws -> FlaccyServerLink {
         let arguments = CommandLine.arguments
         let flagged = arguments.firstIndex(of: launchArgument).flatMap { index in
             arguments.indices.contains(index + 1) ? arguments[index + 1] : nil
         }
         let text = ProcessInfo.processInfo.environment[environmentKey] ?? flagged ?? ""
+        if let link = FlaccyServerLink(text: text) { return link }
         let parts = text.components(separatedBy: "|")
         guard parts.count == 2, let url = FlaccyServerLink.baseURL(from: parts[0]), !parts[1].isEmpty else {
-            throw Failure(step: "the environment variable \(environmentKey) holds url|enrollment code")
+            throw Failure(step: "the environment variable \(environmentKey) holds url|enrollment code or a flaccy://server link")
         }
-        return (url, parts[1])
+        return FlaccyServerLink(baseURL: url, enrollmentCode: parts[1], name: nil)
     }
 
     private static func seed(_ database: DatabaseManager, run: String) throws -> [TrackRecord] {
@@ -187,7 +193,7 @@ enum ServerSyncExercise {
     }
 
     private static func serverView(url: URL, tokens: ExerciseTokens, run: String) async throws -> ServerView {
-        let client = FlaccyServerClient(baseURL: url, token: tokens.current)
+        let client = FlaccyServerClient(baseURL: url, token: tokens.current, trust: trust)
         let pull = try await client.pull(since: 0, limit: 5_000, instance: "exercise-view", incarnation: nil)
         var view = ServerView()
         var ours = Set<String>()
@@ -213,7 +219,7 @@ enum ServerSyncExercise {
     private static func editFromAnotherInstance(
         url: URL, tokens: ExerciseTokens, view: ServerView, songs: [TrackRecord], run: String
     ) async throws {
-        let client = FlaccyServerClient(baseURL: url, token: tokens.current)
+        let client = FlaccyServerClient(baseURL: url, token: tokens.current, trust: trust)
         let devices = try await client.devices()
         let device = try require(devices.first { $0.current }, "the server lists this device")
         let playlist = try require(view.playlists.first { $0.name == "Second \(run)" }, "the second playlist is on the server")
@@ -239,12 +245,12 @@ enum ServerSyncExercise {
 
     private static func livePoke(url: URL, tokens: ExerciseTokens, songs: [TrackRecord]) async throws {
         let pokes = PokeCounter()
-        let channel = FlaccyServerLiveChannel(baseURL: url, token: { tokens.current }, onPoke: { pokes.increment() })
+        let channel = FlaccyServerLiveChannel(baseURL: url, trust: trust, token: { tokens.current }, onPoke: { pokes.increment() })
         await channel.start()
         defer { Task { await channel.stop() } }
         try await expectWithin(10, "the live channel opened and asked for a first pull") { pokes.count >= 1 }
         let opened = pokes.count
-        let client = FlaccyServerClient(baseURL: url, token: tokens.current)
+        let client = FlaccyServerClient(baseURL: url, token: tokens.current, trust: trust)
         let device = try require(try await client.devices().first { $0.current }, "the server lists this device")
         let song = songs[3]
         let key = try ServerSongIdentity.songKey(title: song.title, artist: song.artist)

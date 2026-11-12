@@ -7,11 +7,15 @@ import Foundation
 nonisolated struct FlaccyServerSetupGateway: ServerSetupGateway {
 
     func hello(baseURL: URL) async throws -> ServerHello {
-        try await FlaccyServerClient(baseURL: baseURL, token: nil).hello()
+        try await hello(baseURL: baseURL, pin: nil)
+    }
+
+    func hello(baseURL: URL, pin: String?) async throws -> ServerHello {
+        try await FlaccyServerClient(baseURL: baseURL, token: nil, trust: .forAddress(baseURL, pin: pin)).hello()
     }
 
     func connect(link: FlaccyServerLink, deviceName: String) async throws -> ServerSetupConnection {
         let connection = try await ServerSyncService.engine.connect(link: link, deviceName: deviceName)
-        return ServerSetupConnection(serverName: connection.serverName, baseURL: link.baseURL)
+        return ServerSetupConnection(serverName: connection.serverName, baseURL: connection.baseURL, pin: connection.pin)
     }
 }

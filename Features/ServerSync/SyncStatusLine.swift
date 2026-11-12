@@ -23,7 +23,7 @@ extension SyncStatus {
                 ? String(localized: "Offline. \(pending) changes will send when \(server) is reachable.")
                 : String(localized: "Offline.")
         case .unreachable(let server):
-            String(localized: "Can't reach \(server). Is Tailscale on?")
+            String(localized: "Can't reach \(server). Same Wi-Fi, or Tailscale on?")
         case .notPro:
             String(localized: "Sync is a Flaccy Pro feature. Songs still stream.")
         case .appNeedsUpdate:
@@ -36,6 +36,8 @@ extension SyncStatus {
             String(localized: "The clock on \(server) is wrong. Sync is paused.")
         case .deviceRemoved(let server):
             String(localized: "This device was removed from \(server). Add the server again to keep syncing.")
+        case .keyChanged(let server):
+            String(localized: "\(server) has a new security key. Remove it and add it again to keep syncing.")
         case .listenOnly(let server):
             String(localized: "This account can only listen. Ask the owner of \(server) to give it access.")
         case .awaitingApproval(let server):

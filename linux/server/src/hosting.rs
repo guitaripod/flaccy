@@ -9,12 +9,14 @@ use tokio::net::TcpListener;
 use tokio::sync::oneshot;
 
 use crate::config::Config;
+use crate::lan_identity::LanIdentity;
 use crate::lastfm;
 use crate::maintenance;
 use crate::native;
 use crate::net::guard::ConnectionAddr;
-use crate::net::{self, descriptors, AllowedHosts, ConnectionLimits, EasyHandle, EasyListener, Limits, TailnetAddresses};
+use crate::net::{self, descriptors, lan, AllowedHosts, ConnectionLimits, EasyHandle, EasyListener, Limits, TailnetAddresses};
 use crate::nightly;
+use crate::reach::{self, DeviceReach, LocalReach};
 use crate::refresh;
 use crate::shutdown::{self, StopSignal};
 use crate::state::{AppState, OpenOptions};
@@ -38,6 +40,30 @@ pub(crate) struct Settings {
 pub(crate) struct Online {
     pub state: AppState,
     pub addresses: EasyHandle,
+    /// Set while the server shares on the local network.
+    pub lan: Option<LanIdentity>,
+}
+
+impl Online {
+    /// The address and pin a device on this network uses, while the server shares here and has a local address.
+    pub fn local_reach(&self) -> Option<LocalReach> {
+        let identity = self.lan.as_ref()?;
+        let (name, answers) = reach::bonjour_source(&self.state.0.config);
+        reach::local_reach(&self.addresses.local_network(), &name, answers, identity.pin())
+    }
+
+    /// What a new device is told: the tailnet first, this network next, loopback when there is nothing else.
+    pub fn device_reach(&self) -> Option<DeviceReach> {
+        let tailnet = self.addresses.tailnet_urls().into_iter().next();
+        let fallback = self.addresses.urls().into_iter().next();
+        reach::device_reach(tailnet, self.local_reach(), fallback)
+    }
+}
+
+/// The names the local network certificate lists; devices check the key, so these only keep strict TLS stacks content.
+pub(crate) fn certificate_names(config: &Config) -> Vec<String> {
+    let (name, _) = reach::bonjour_source(config);
+    std::iter::once("localhost".to_owned()).chain(lan::bonjour_name(&name)).collect()
 }
 
 /// The program that converts audio: `FLACCY_SERVER_FFMPEG`, else `ffmpeg` from the `PATH`.
@@ -86,11 +112,21 @@ async fn serve_easy(
     port_advice: &str,
 ) -> Result<(), String> {
     let port = state.0.config.port;
+    let sharing_locally = state.0.config.lan;
     logger::info(
         "server",
-        "the `address` setting is superseded by tailnet binding: the server listens on loopback and this machine's tailnet addresses; set `address` to another value to bind only that address",
+        if sharing_locally {
+            "the `address` setting is superseded by tailnet binding: the server listens on loopback, this machine's tailnet addresses and, because `lan` is on, its local network addresses over TLS"
+        } else {
+            "the `address` setting is superseded by tailnet binding: the server listens on loopback and this machine's tailnet addresses; set `address` to another value to bind only that address"
+        },
     );
-    let listener = EasyListener::bind(port).await.map_err(|err| {
+    let identity = if sharing_locally {
+        Some(LanIdentity::load_or_create(&state.0.config.data_dir(), &certificate_names(&state.0.config))?)
+    } else {
+        None
+    };
+    let listener = EasyListener::bind_with(port, sharing_locally).await.map_err(|err| {
         format!(
             "Could not listen on port {port}: {err}. Another program may be using that port; {port_advice}"
         )
@@ -98,10 +134,11 @@ async fn serve_easy(
     let addresses = listener.handle();
     let hosts = AllowedHosts::new(&state.0.config.hosts, addresses.tailnet());
     let app = native::app(state.clone(), hosts);
+    let tls = identity.as_ref().map(LanIdentity::acceptor);
     if let Some(online) = online {
-        let _ = online.send(Online { state, addresses });
+        let _ = online.send(Online { state, addresses, lan: identity });
     }
-    serve_connections(listener, app, stop).await
+    serve_connections(listener, app, stop, tls).await
 }
 
 async fn serve_on_address(state: AppState, stop: &StopSignal) -> Result<(), String> {
@@ -120,10 +157,10 @@ async fn serve_on_address(state: AppState, stop: &StopSignal) -> Result<(), Stri
     })?;
     logger::info("server", &format!("listening on http://{address}"));
     let hosts = AllowedHosts::new(&state.0.config.hosts, TailnetAddresses::default());
-    serve_connections(listener, native::app(state, hosts), stop).await
+    serve_connections(listener, native::app(state, hosts), stop, None).await
 }
 
-async fn serve_connections<L>(listener: L, app: Router, stop: &StopSignal) -> Result<(), String>
+async fn serve_connections<L>(listener: L, app: Router, stop: &StopSignal, tls: Option<tokio_rustls::TlsAcceptor>) -> Result<(), String>
 where
     L: axum::serve::Listener,
     L::Io: AsyncRead + AsyncWrite + Unpin + Send + 'static,
@@ -132,7 +169,7 @@ where
     let draining = stop.clone();
     let limits = Limits::default();
     descriptors::prepare(&limits);
-    let server = net::serve(listener, app, ConnectionLimits::new(limits), async move { draining.raised().await });
+    let server = net::serve(listener, app, ConnectionLimits::new(limits), tls, async move { draining.raised().await });
     match shutdown::run_until_stopped(server, stop, shutdown::GRACE).await {
         Some(result) => result.map_err(|err| format!("The server stopped: {err}. Start it again with `flaccy-server serve`; if this repeats, check the log in the data folder.")),
         None => {

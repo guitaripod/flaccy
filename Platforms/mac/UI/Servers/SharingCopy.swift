@@ -11,7 +11,15 @@ enum SharingCopy {
     }
 
     static var explanation: String {
-        String(localized: "Share this Mac's library with your iPhone and other devices. Flaccy reaches them through Tailscale; nothing leaves your network.")
+        String(localized: "Play this Mac's music on your iPhone and other devices, with playlists, loves and history in step. Devices on this Wi-Fi connect directly; Tailscale adds listening away from home.")
+    }
+
+    static var localNetwork: String {
+        String(localized: "Devices on this Wi-Fi connect directly")
+    }
+
+    static var awayFromHome: String {
+        String(localized: "Add Tailscale to listen away from home.")
     }
 
     static var introTitle: String {
@@ -43,7 +51,23 @@ enum SharingCopy {
     }
 
     static var tailscaleMissing: String {
-        String(localized: "Tailscale is not installed or not signed in: sharing on this Mac only")
+        String(localized: "Tailscale is off and this Wi-Fi isn't shared, so only this Mac can play it. Turn on either one.")
+    }
+
+    static var noNetwork: String {
+        String(localized: "This Mac isn't on a network, so only it can play the library. Join Wi-Fi or turn on Tailscale.")
+    }
+
+    /// Where devices connect, one line per way in: this Wi-Fi by name, and the tailnet when Tailscale is up.
+    static func reach(_ sharing: LibrarySharing.Sharing) -> String {
+        var lines: [String] = []
+        if let host = sharing.localURL?.host(percentEncoded: false) {
+            lines.append(String(localized: "On this Wi-Fi: \(host)"))
+        }
+        if let tailnet = sharing.addresses.tailnetHosts.first {
+            lines.append(String(localized: "With Tailscale: \(tailnet)"))
+        }
+        return lines.joined(separator: "\n")
     }
 
     static func statusLine(for state: LibrarySharing.State) -> String? {
@@ -62,9 +86,14 @@ enum SharingCopy {
     }
 
     private static func sharingLine(_ sharing: LibrarySharing.Sharing) -> String {
-        guard sharing.reachesTailnet else { return tailscaleMissing }
-        guard let count = sharing.songCount, count > 0 else { return String(localized: "Sharing on \(sharing.name)") }
-        return String(localized: "Sharing \(RemoteCopy.songs(count)) on \(sharing.name)")
+        guard sharing.reachesOtherDevices else { return sharing.sharesOnLocalNetwork ? noNetwork : tailscaleMissing }
+        let line: String
+        if let count = sharing.songCount, count > 0 {
+            line = String(localized: "Sharing \(RemoteCopy.songs(count)) on \(sharing.name)")
+        } else {
+            line = String(localized: "Sharing on \(sharing.name)")
+        }
+        return sharing.reachesTailnet ? line : "\(line). \(awayFromHome)"
     }
 
     static func devices(_ count: Int) -> String {

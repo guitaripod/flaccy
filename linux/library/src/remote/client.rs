@@ -3,6 +3,7 @@
 //! holds the credentials, so every message is built from the host, the failure
 //! kind and the HTTP library's own message, passed through `redact`.
 
+use super::pinned_tls::{self, PinnedTls};
 use super::redact::redact;
 use super::servers::Server;
 use flaccy_shared::remote::server_address;
@@ -24,6 +25,7 @@ pub enum RemoteError {
     BadAddress,
     Unreachable { host: String, cause: String },
     Tls { host: String, cause: String },
+    KeyChanged { host: String },
     WrongCredentials { host: String, api_key: bool },
     NotOpenSubsonic { host: String },
     Rejected { host: String, cause: String },
@@ -42,6 +44,9 @@ impl RemoteError {
             ),
             Self::Tls { host, cause } => format!(
                 "Can't make a secure connection to {host}: {cause}. Check the server's certificate, or use an http:// address on a network you trust, then try again."
+            ),
+            Self::KeyChanged { host } => format!(
+                "{host} answered with a different key than when this computer was added, so Flaccy stopped before sending anything. If the server was reinstalled or moved, remove it in Preferences and add it again with a new code."
             ),
             Self::WrongCredentials { host, api_key } => {
                 let secret = if *api_key { "API key" } else { "username or password" };
@@ -128,11 +133,14 @@ impl Client {
             .map(|(_, rest)| rest.split('/').next().unwrap_or(rest))
             .unwrap_or(&base)
             .to_string();
-        let agent = ureq::AgentBuilder::new()
+        let mut builder = ureq::AgentBuilder::new()
             .timeout_connect(CONNECT_TIMEOUT)
             .timeout_read(READ_TIMEOUT)
-            .user_agent("flaccy")
-            .build();
+            .user_agent("flaccy");
+        if let Some(pin) = server.pin.as_deref().filter(|_| base.starts_with("https://")) {
+            builder = builder.tls_config(PinnedTls::pinned(pin).config());
+        }
+        let agent = builder.build();
         Ok(Self {
             server_id: server.id.clone(),
             host,
@@ -187,6 +195,9 @@ impl Client {
                         .map(|message| format!(" ({message})"))
                         .unwrap_or_default()
                 ));
+                if pinned_tls::caused_by_key_change(&transport) {
+                    return RemoteError::KeyChanged { host };
+                }
                 let lowered = redact(&transport.to_string()).to_lowercase();
                 let secure = ["certificate", "tls", "handshake", "ssl"]
                     .iter()

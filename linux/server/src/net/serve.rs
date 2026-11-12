@@ -1,4 +1,5 @@
-//! The server's connection loop: accepts connections, applies [`Limits`] and serves each with hyper.
+//! The server's connection loop: accepts connections, applies [`Limits`] and serves each with hyper,
+//! over TLS for peers on the local network when the server shares there.
 
 use std::convert::Infallible;
 use std::future::Future;
@@ -19,12 +20,15 @@ use hyper_util::rt::TokioIo;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::sync::watch;
 use tokio::task::JoinSet;
+use tokio_rustls::TlsAcceptor;
 use tower::ServiceExt;
 
 use super::guard::{ConnectionAddr, Origin, Tagged};
+use super::lan;
 use super::limits::{Admission, ConnectionLimits, Liveness};
 
 const BUSY_RECHECK: Duration = Duration::from_secs(1);
+const HANDSHAKE_DEADLINE: Duration = Duration::from_secs(10);
 
 /// A connection's I/O, reporting every byte moved so the connection's deadlines know it is alive.
 struct Watched<T> {
@@ -125,10 +129,36 @@ where
     }
 }
 
+/// Finishes the TLS handshake with a local network peer, then serves it like any other connection.
+/// A peer that does not finish within ten seconds, or offers no TLS, is closed.
+async fn serve_tls<Io>(acceptor: TlsAcceptor, io: Io, service: Tagged, admission: Admission, draining: watch::Receiver<bool>)
+where
+    Io: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+{
+    if let Ok(Ok(stream)) = tokio::time::timeout(HANDSHAKE_DEADLINE, acceptor.accept(io)).await {
+        serve_connection(stream, service, admission, draining).await;
+    }
+}
+
+/// The acceptor for a connection from `origin`: only local network peers speak TLS.
+fn tls_for(tls: Option<&TlsAcceptor>, origin: Origin) -> Option<TlsAcceptor> {
+    match origin {
+        Origin::Tcp(peer) if lan::wants_tls(peer.ip()) => tls.cloned(),
+        _ => None,
+    }
+}
+
 /// Accepts connections from `listener` and serves `app` to each until `draining` resolves, then lets requests in
 /// flight finish. Connections beyond `limits` are closed unread, and one that is slow to send its request head or
-/// idle too long is closed. Dropping the returned future closes every connection.
-pub async fn serve<L>(listener: L, app: Router, limits: Arc<ConnectionLimits>, draining: impl Future<Output = ()>) -> io::Result<()>
+/// idle too long is closed. With `tls`, peers on the local network are served over it. Dropping the returned future
+/// closes every connection.
+pub async fn serve<L>(
+    listener: L,
+    app: Router,
+    limits: Arc<ConnectionLimits>,
+    tls: Option<TlsAcceptor>,
+    draining: impl Future<Output = ()>,
+) -> io::Result<()>
 where
     L: Listener,
     L::Io: AsyncRead + AsyncWrite + Unpin + Send + 'static,
@@ -147,7 +177,11 @@ where
                     continue;
                 };
                 let service = Tagged::new(app.clone(), origin);
-                connections.spawn(serve_connection(io, service, admission, draining_connections.clone()));
+                let draining = draining_connections.clone();
+                match tls_for(tls.as_ref(), origin) {
+                    Some(acceptor) => connections.spawn(serve_tls(acceptor, io, service, admission, draining)),
+                    None => connections.spawn(serve_connection(io, service, admission, draining)),
+                };
             }
             Some(_) = connections.join_next(), if !connections.is_empty() => {}
         }

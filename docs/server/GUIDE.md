@@ -1,11 +1,11 @@
 # Flaccy Server in ten minutes
 
-Flaccy Server keeps your playlists, loves and listening history in step across your iPhone, Mac and Linux, and shares the music on one computer with the others. It runs on a computer you own, your devices reach it through Tailscale, and nothing leaves your network. It is free and open source.
+Flaccy Server keeps your playlists, loves and listening history in step across your iPhone, Mac and Linux, and shares the music on one computer with the others. It runs on a computer you own. Devices on the same Wi-Fi connect directly, over an encrypted connection to a key they check; add Tailscale and they reach it from anywhere. Nothing leaves your network. It is free and open source.
 
 ## What you need
 
 - A computer that stays on and holds your music: a Mac, a Linux box, a Raspberry Pi, a NAS that runs Docker.
-- [Tailscale](https://tailscale.com/download) (its free personal plan is enough) signed in on that computer and on each device that will connect.
+- Your devices on the same Wi-Fi as that computer. To listen away from home, also [Tailscale](https://tailscale.com/download) (its free personal plan is enough) signed in on that computer and on each device.
 - Flaccy on the devices. Syncing playlists, loves and history across Apple devices is part of Flaccy Pro; connecting, browsing and streaming are free, and the Linux app is free.
 
 ## 1. Install the server
@@ -23,17 +23,18 @@ Flaccy Server keeps your playlists, loves and listening history in step across y
 
     flaccy-server setup
 
-It asks where your music is, scans it, starts the server in the background, keeps it running after you log out, and prints a QR code.
+It asks where your music is, scans it, starts the server in the background, keeps it running after you log out, and prints a QR code. Without Tailscale it shares on this network; with it, it asks whether devices on this network may connect directly too.
 
 ## 3. Connect a device
 
-On the iPhone: Settings → Servers → Add → **Flaccy Server**, then scan the code. On a Mac or Linux: open the link `setup` printed, or paste it. The code works once and expires in ten minutes; `flaccy-server enroll` makes another.
+On the iPhone: Settings → Servers → Add → **Flaccy Server**, then scan the code. On a Mac or Linux: open the link `setup` printed, or paste it into Add Flaccy Server. The code works once and expires in ten minutes; `flaccy-server enroll` makes another. The first time, the iPhone asks to find devices on your local network: choose Allow.
 
 Your server's music appears in your library under Servers. Playlists you already have, songs you loved and your listening history are combined with what the other devices have, and a card tells you what was merged.
 
 ## What happens when something is off
 
-- **Tailscale is off on your phone:** Flaccy keeps working; changes queue and go when the server is reachable again. The status line under the server says what to do.
+- **Your phone is away from home without Tailscale, or Tailscale is off:** Flaccy keeps working; changes queue and go when the server is reachable again. The status line under the server says what to do.
+- **The server says it has a new security key:** the server was reinstalled or its data folder lost `lan-key.der`. Remove the server on the device and add it again with a new code.
 - **The server is off:** same. Nothing is lost.
 - **You lose a device:** `flaccy-server device list`, then `flaccy-server device revoke <id>`; it stops working at its next request.
 - **You get a new phone:** add the server again. Your playlists and history come back.
