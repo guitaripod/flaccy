@@ -15,18 +15,23 @@ nonisolated final class FailureCopyTests: XCTestCase {
         let rows = [
             Row(
                 failure: .unreachable(server: "arch"), title: "Can't reach arch",
-                body: "Is Tailscale on? Open Tailscale and connect on this device and on arch, then try again.",
-                buttons: [("Open Tailscale", .openTailscale), ("Try again", .tryAgain)]
+                body: "Check that arch is on and on the same Wi-Fi as this device, or that Tailscale is on for both. Then try again.",
+                buttons: [("Try again", .tryAgain), ("Open Tailscale", .openTailscale)]
             ),
             Row(
                 failure: .nameNotFound(server: "arch"), title: "Can't find arch",
-                body: "Check the name on the server with `tailscale status`, or scan the code from the server.",
+                body: "Check the address shown on arch, or scan its code again.",
                 buttons: [("Try again", .tryAgain)]
             ),
             Row(
                 failure: .codeRefused(server: "arch"), title: "That code didn't work",
-                body: "A code works once and expires after 10 minutes. On arch, run `flaccy-server enroll` for a new one.",
+                body: "A code works once and lasts 10 minutes. Make a new one on arch and try again.",
                 buttons: [("Try again", .tryAgain)]
+            ),
+            Row(
+                failure: .keyChanged(server: "arch"), title: "arch has a new security key",
+                body: "It doesn't match the key from when this device was added, so nothing was sent. If arch was reinstalled or moved, remove it and add it again with a new code.",
+                buttons: [("OK", .dismiss)]
             ),
             Row(
                 failure: .tooManyTries, title: "Too many tries", body: "Wait a minute, then try again.",
@@ -39,7 +44,8 @@ nonisolated final class FailureCopyTests: XCTestCase {
             ),
             Row(
                 failure: .serverTooOld, title: "Update your Flaccy Server",
-                body: "This version of Flaccy needs Flaccy Server 1.0 or newer.", buttons: [("OK", .dismiss)]
+                body: "This version of Flaccy needs Flaccy Server 1.0 or newer. Update Flaccy on the Mac that shares, or the flaccy-server package on the computer that runs it.",
+                buttons: [("OK", .dismiss)]
             ),
             Row(
                 failure: .appTooOld(server: "arch"), title: "Update Flaccy",
@@ -47,7 +53,7 @@ nonisolated final class FailureCopyTests: XCTestCase {
             ),
             Row(
                 failure: .serverClockWrong(server: "arch"), title: "The clock on arch is wrong",
-                body: "Sync stays off until the server's date and time are right. Check it with `timedatectl`.",
+                body: "Sync stays off until the date and time on arch are right.",
                 buttons: [("OK", .dismiss)]
             ),
         ]
