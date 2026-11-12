@@ -101,7 +101,7 @@ public enum AudioMetadataReader {
             albumTitle: albumTitle,
             albumArtist: await albumArtistTask,
             trackNumber: await trackTask,
-            duration: duration.isNaN ? 0 : duration,
+            duration: duration.isFinite && duration > 0 ? duration : 0,
             artworkData: artwork,
             codec: format.codec,
             bitDepth: format.bitDepth,
@@ -188,7 +188,8 @@ public enum AudioMetadataReader {
         let items = AVMetadataItem.metadataItems(from: metadata, filteredByIdentifier: identifier)
         guard let item = items.first else { return nil }
         let value = try? await item.load(.stringValue)
-        return value?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else { return nil }
+        return trimmed
     }
 
     /// The `ALBUMARTIST` tag under every spelling AVFoundation exposes it.

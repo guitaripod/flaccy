@@ -52,7 +52,7 @@ public struct Track: Sendable, Hashable, Identifiable {
         self.albumTitle = albumTitle
         self.albumArtist = albumArtist
         self.trackNumber = trackNumber
-        self.duration = duration
+        self.duration = Self.playableDuration(duration)
         self.artwork = artwork
         self.dbID = dbID
         self.codec = codec
@@ -98,6 +98,12 @@ public struct Track: Sendable, Hashable, Identifiable {
             return String(format: "%.0f", khz)
         }
         return String(format: "%.1f", khz)
+    }
+
+    /// A length every reader can turn into whole seconds: AVFoundation reports an infinite or
+    /// negative length for some damaged files, and `Int(_:)` traps on anything that is not finite.
+    static func playableDuration(_ seconds: TimeInterval) -> TimeInterval {
+        seconds.isFinite && seconds > 0 ? seconds : 0
     }
 
     public static func == (lhs: Track, rhs: Track) -> Bool {
