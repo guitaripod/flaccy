@@ -332,6 +332,42 @@ extension DatabaseManager {
         }
     }
 
+    /// What the library holds by format, read in one pass over `tracks` that touches no BLOB column:
+    /// songs per codec, the hi-res lossless ones (over 16 bits or 48 kHz, the rule Home's badge uses),
+    /// total length, the bytes of the files on this device, and how many songs live on a server.
+    public func libraryOverview() throws -> LibraryOverviewTotals {
+        let codecs = Track.losslessCodecs.sorted()
+        let placeholders = codecs.map { _ in "?" }.joined(separator: ", ")
+        return try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT UPPER(COALESCE(NULLIF(TRIM(codec), ''), '?')) AS codec,
+                       COUNT(*) AS tracks,
+                       COALESCE(SUM(CASE WHEN UPPER(codec) IN (\(placeholders))
+                                          AND (COALESCE(bitDepth, 0) > 16 OR COALESCE(sampleRate, 0) > 48000)
+                                         THEN 1 ELSE 0 END), 0) AS hiRes,
+                       COALESCE(SUM(duration), 0) AS seconds,
+                       COALESCE(SUM(CASE WHEN remoteServer IS NULL THEN fileSize ELSE 0 END), 0) AS localBytes,
+                       COALESCE(SUM(CASE WHEN remoteServer IS NULL THEN 0 ELSE 1 END), 0) AS serverTracks
+                FROM tracks
+                GROUP BY 1
+                ORDER BY tracks DESC
+                """, arguments: StatementArguments(codecs))
+            var totals = LibraryOverviewTotals()
+            for row in rows {
+                let codec: String = row["codec"]
+                let count: Int = row["tracks"]
+                totals.codecs.append((codec: codec, tracks: count))
+                totals.tracks += count
+                if Track.losslessCodecs.contains(codec) { totals.lossless += count }
+                totals.hiRes += row["hiRes"] as Int
+                totals.seconds += row["seconds"] as Double
+                totals.localBytes += row["localBytes"] as Int64
+                totals.serverTracks += row["serverTracks"] as Int
+            }
+            return totals
+        }
+    }
+
     public func scrobbleCount(submittedOnly: Bool) throws -> Int {
         try dbQueue.read { db in
             let shown = ScrobbleRecord.filter(Column("suppressed") == false)
