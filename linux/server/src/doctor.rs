@@ -128,7 +128,7 @@ pub async fn report(config: &Config, environment: &DoctorEnvironment<'_>, termin
 pub async fn diagnose(config: &Config, environment: &DoctorEnvironment<'_>) -> Vec<Check> {
     let tailnet = tailscale::detect(environment.runner);
     let tailscale_check = tailscale_check(&tailnet, config.lan);
-    let interfaces: Vec<IpAddr> = if_addrs::get_if_addrs().map(|found| found.iter().map(|interface| interface.ip()).collect()).unwrap_or_default();
+    let interfaces: Vec<IpAddr> = if_addrs::get_if_addrs().map(|found| lan::reachable_addresses(&found)).unwrap_or_default();
     let bind = bind_check(config, environment, interfaces.clone()).await;
     let mut checks = vec![tailscale_check, bind];
     checks.extend(network_check(config, &interfaces));

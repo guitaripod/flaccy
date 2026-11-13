@@ -18,9 +18,10 @@ const AVAHI_SOCKETS: [&str; 2] = ["/run/avahi-daemon/socket", "/var/run/avahi-da
 const LINUX_ROUTES: &str = "/proc/net/route";
 const DEFAULT_DESTINATION: &str = "00000000";
 /// Interfaces that carry containers, virtual machines, VPNs or Apple's peer links: devices on the Wi-Fi never reach them.
-const VIRTUAL_INTERFACE_PREFIXES: [&str; 25] = [
+const VIRTUAL_INTERFACE_PREFIXES: &[&str] = &[
     "docker", "br-", "veth", "virbr", "vnet", "vmnet", "vboxnet", "cni", "flannel", "cali", "kube", "podman", "lxc", "lxd",
-    "zt", "wg", "tun", "tap", "tailscale", "utun", "bridge", "awdl", "llw", "anpi", "vmenet",
+    "incusbr", "zt", "wg", "tun", "tap", "tailscale", "utun", "ppp", "ipsec", "nordlynx", "proton", "mullvad", "cscotun",
+    "gpd", "ham", "bridge", "awdl", "llw", "anpi", "vmenet",
 ];
 
 /// What one look at the interfaces found.
@@ -32,10 +33,17 @@ pub struct Found {
 
 /// The tailnet addresses and, when `lan` is on, the bindable local network addresses of this host's real interfaces.
 pub fn discover(lan: bool) -> io::Result<Found> {
-    let interfaces = if_addrs::get_if_addrs()?;
-    let tailnet = tailnet::tailnet_only(interfaces.iter().map(|interface| interface.ip()));
-    let physical = interfaces.iter().filter(|interface| !is_virtual_interface(&interface.name)).map(|interface| interface.ip());
-    Ok(Found { tailnet, local: classify(physical, lan).local })
+    Ok(classify(reachable_addresses(&if_addrs::get_if_addrs()?), lan))
+}
+
+/// The addresses a device elsewhere could use: the tailnet's, on whatever interface Tailscale made, and every address of
+/// the real interfaces. `doctor` reads the same list, so it names the addresses the server binds.
+pub fn reachable_addresses(interfaces: &[if_addrs::Interface]) -> Vec<IpAddr> {
+    interfaces
+        .iter()
+        .filter(|interface| tailnet::is_tailnet(interface.ip()) || !is_virtual_interface(&interface.name))
+        .map(if_addrs::Interface::ip)
+        .collect()
 }
 
 /// Whether an interface name belongs to a container, virtual machine, VPN or peer link rather than the network a person is on.
