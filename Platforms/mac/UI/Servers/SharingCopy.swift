@@ -93,7 +93,7 @@ enum SharingCopy {
         } else {
             line = String(localized: "Sharing on \(sharing.name)")
         }
-        return sharing.reachesTailnet ? line : "\(line). \(awayFromHome)"
+        return sharing.reachesTailnet ? line : String(localized: "\(line). \(awayFromHome)")
     }
 
     static func devices(_ count: Int) -> String {
