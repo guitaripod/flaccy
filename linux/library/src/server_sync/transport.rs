@@ -1,6 +1,8 @@
 use super::engine::PullRequest;
 use super::listens::{ListensPage, ListensRequest};
 use crate::remote::pinned_tls::{caused_by_key_change, PinnedTls};
+use flaccy_shared::remote::local_network::is_local_host;
+use flaccy_shared::remote::server_address;
 use flaccy_server_core::wire::{Hello, PullResponse, PushRequest, PushResponse};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -213,14 +215,19 @@ impl Transport {
         }
     }
 
-    /// The same client trusting whatever key an `https` server shows first, for an address typed by hand;
-    /// [`seen_pin`](Self::seen_pin) then tells which key that was.
+    /// The same client trusting the first key an `https` server on the local network shows, for an address typed by
+    /// hand; [`seen_pin`](Self::seen_pin) then tells which key that was. Any other `https` address keeps the system's
+    /// certificate authorities, as `ServerKeyTrust.forAddress` decides on iPhone and Mac.
     pub fn first_contact(self) -> Self {
-        if self.is_https() {
+        if self.is_https() && self.is_on_local_network() {
             self.trusting(PinnedTls::first_contact())
         } else {
             self
         }
+    }
+
+    fn is_on_local_network(&self) -> bool {
+        server_address::host(&self.base).is_some_and(is_local_host)
     }
 
     /// The pin of the key the server showed, once a pinned or first-contact client has connected.
@@ -437,6 +444,16 @@ fn classify(status: u16, response: ureq::Response) -> ApiError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn first_contact_trusts_a_shown_key_only_on_the_local_network() {
+        assert!(Transport::probing("https://arch.local:4545").first_contact().tls().is_some());
+        assert!(Transport::probing("https://192.168.1.5:4545").first_contact().tls().is_some());
+        assert!(Transport::probing("https://[fd12::5]:4545").first_contact().tls().is_some());
+        assert!(Transport::probing("https://music.example.com").first_contact().tls().is_none());
+        assert!(Transport::probing("https://100.64.0.1:4545").first_contact().tls().is_none());
+        assert!(Transport::probing("http://arch.local:4545").first_contact().tls().is_none());
+    }
 
     fn answer(status: u16, body: &str) -> ApiError {
         let response = ureq::Response::new(status, "status", body).expect("a response");

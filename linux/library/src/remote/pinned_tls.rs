@@ -47,7 +47,8 @@ impl PinnedTls {
         Self::build(Some(pin.trim().to_owned()))
     }
 
-    /// Trusts whatever key the server shows and remembers its pin, for the first contact with a typed address.
+    /// Trusts the first key the server shows and remembers its pin, for the first contact with a typed address; every later
+    /// handshake through this configuration, a redirect to another host included, must show that same key.
     pub fn first_contact() -> Self {
         Self::build(None)
     }
@@ -117,13 +118,13 @@ impl ServerCertVerifier for PinVerifier {
         _now: UnixTime,
     ) -> Result<ServerCertVerified, Error> {
         let pin = pin_of_certificate(end_entity.as_ref()).ok_or(Error::InvalidCertificate(CertificateError::BadEncoding))?;
-        *self.seen.lock().unwrap_or_else(PoisonError::into_inner) = Some(pin.clone());
-        match &self.expected {
-            Some(expected) if !pins_match(expected, &pin) => {
-                Err(Error::InvalidCertificate(CertificateError::Other(OtherError(Arc::new(KeyChanged)))))
-            }
-            _ => Ok(ServerCertVerified::assertion()),
+        let mut seen = self.seen.lock().unwrap_or_else(PoisonError::into_inner);
+        let trusted = self.expected.as_deref().or(seen.as_deref());
+        if trusted.is_some_and(|trusted| !pins_match(trusted, &pin)) {
+            return Err(Error::InvalidCertificate(CertificateError::Other(OtherError(Arc::new(KeyChanged)))));
         }
+        *seen = Some(pin);
+        Ok(ServerCertVerified::assertion())
     }
 
     fn verify_tls12_signature(
@@ -157,6 +158,51 @@ mod tests {
     fn a_fresh_configuration_has_seen_no_key() {
         assert_eq!(PinnedTls::pinned("abc").seen_pin(), None);
         assert_eq!(PinnedTls::first_contact().seen_pin(), None);
+    }
+
+    #[test]
+    fn first_contact_keeps_the_first_key_it_saw() {
+        let tls = PinnedTls::first_contact();
+        let verifier = verifier_of(None, &tls);
+        let first = certificate();
+        let second = certificate();
+        assert!(check(&verifier, &first).is_ok());
+        let seen = tls.seen_pin();
+        assert!(check(&verifier, &first).is_ok());
+        let refused = check(&verifier, &second).unwrap_err();
+        assert!(caused_by_key_change(&refused));
+        assert_eq!(tls.seen_pin(), seen);
+    }
+
+    #[test]
+    fn a_pinned_configuration_refuses_any_other_key() {
+        let wanted = certificate();
+        let pin = pin_of_certificate(wanted.as_ref()).unwrap();
+        let tls = PinnedTls::pinned(&pin);
+        let verifier = verifier_of(Some(pin.clone()), &tls);
+        assert!(check(&verifier, &certificate()).is_err());
+        assert_eq!(tls.seen_pin(), None);
+        assert!(check(&verifier, &wanted).is_ok());
+        assert_eq!(tls.seen_pin(), Some(pin));
+    }
+
+    fn verifier_of(expected: Option<String>, tls: &PinnedTls) -> PinVerifier {
+        PinVerifier {
+            expected,
+            seen: tls.seen.clone(),
+            provider: Arc::new(crypto::ring::default_provider()),
+        }
+    }
+
+    fn certificate() -> CertificateDer<'static> {
+        let key = rcgen::KeyPair::generate().unwrap();
+        let params = rcgen::CertificateParams::new(vec!["flaccy.local".to_owned()]).unwrap();
+        params.self_signed(&key).unwrap().der().clone()
+    }
+
+    fn check(verifier: &PinVerifier, certificate: &CertificateDer<'_>) -> Result<ServerCertVerified, Error> {
+        let name = ServerName::try_from("flaccy.local").unwrap();
+        verifier.verify_server_cert(certificate, &[], &name, &[], UnixTime::now())
     }
 
     #[test]

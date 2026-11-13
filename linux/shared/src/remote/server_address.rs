@@ -33,6 +33,17 @@ pub fn normalize(input: &str) -> Option<String> {
     Some(format!("{scheme}://{authority}{path}"))
 }
 
+/// The host a base URL names, without the brackets of an IPv6 literal; `None` when it names none.
+pub fn host(url: &str) -> Option<&str> {
+    let rest = url.split_once("://").map_or(url, |(_, rest)| rest);
+    let authority = rest.split(['/', '?', '#']).next()?;
+    let host = match authority.strip_prefix('[') {
+        Some(inside) => inside.split(']').next()?,
+        None => authority.rsplit_once(':').map_or(authority, |(host, _)| host),
+    };
+    (!host.is_empty()).then_some(host)
+}
+
 /// Whether the host is present and any port after it is all digits.
 fn is_valid_authority(authority: &str) -> bool {
     let after_ipv6_host = authority.rfind(']').map_or(0, |bracket| bracket + 1);
@@ -59,7 +70,16 @@ fn strip_rest_suffix(path: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use super::normalize;
+    use super::{host, normalize};
+
+    #[test]
+    fn the_host_of_a_base_url_drops_scheme_port_path_and_brackets() {
+        assert_eq!(host("https://arch.local:4545"), Some("arch.local"));
+        assert_eq!(host("http://100.64.0.1:4545/rest"), Some("100.64.0.1"));
+        assert_eq!(host("https://[fd12::5]:4545"), Some("fd12::5"));
+        assert_eq!(host("https://music.example.com"), Some("music.example.com"));
+        assert_eq!(host("https://"), None);
+    }
 
     #[test]
     fn a_bare_host_gets_https() {

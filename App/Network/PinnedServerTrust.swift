@@ -3,9 +3,10 @@ import Foundation
 import Security
 
 /// Trusts a Flaccy Server on the local network by the pin of its key instead of by a certificate authority. With a pin it
-/// accepts only that key; without one (an address typed by hand) it accepts the first key it sees and remembers its pin, so
-/// enrolling can pin it from then on. A refused key cancels the challenge, which URLSession reports as `cancelled`: callers
-/// ask `refusedKey` to tell that apart from a cancelled call.
+/// accepts only that key; without one (an address typed by hand) it accepts the first key it sees, remembers its pin so
+/// enrolling can pin it from then on, and holds every later handshake (a redirect to another host included) to that key.
+/// A refused key cancels the challenge, which URLSession reports as `cancelled`: callers ask `refusedKey(explaining:)` to
+/// tell that apart from a cancelled call or a server that is simply off.
 nonisolated final class PinnedServerTrust: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
 
     private let expected: String?
@@ -31,10 +32,13 @@ nonisolated final class PinnedServerTrust: NSObject, URLSessionTaskDelegate, @un
         lock.withLock { seen }
     }
 
-    /// True once a handshake showed a key other than the pinned one.
-    var refusedKey: Bool {
-        lock.withLock { refused }
+    /// Whether `error` is the end of a handshake this trust refused, rather than a cancelled call or a network failure:
+    /// the last handshake showed another key, and URLSession ended the task the way a cancelled challenge ends it.
+    func refusedKey(explaining error: URLError) -> Bool {
+        Self.refusalCodes.contains(error.code) && lock.withLock { refused }
     }
+
+    private static let refusalCodes: Set<URLError.Code> = [.cancelled, .secureConnectionFailed]
 
     func urlSession(
         _ session: URLSession, didReceive challenge: URLAuthenticationChallenge
@@ -56,10 +60,11 @@ nonisolated final class PinnedServerTrust: NSObject, URLSessionTaskDelegate, @un
             lock.withLock { refused = true }
             return (.cancelAuthenticationChallenge, nil)
         }
-        let accepted = expected.map { CertificatePin.matches($0, pin) } ?? true
-        lock.withLock {
-            seen = pin
-            if !accepted { refused = true }
+        let accepted = lock.withLock {
+            let accepted = (expected ?? seen).map { CertificatePin.matches($0, pin) } ?? true
+            if accepted { seen = pin }
+            refused = !accepted
+            return accepted
         }
         return accepted ? (.useCredential, URLCredential(trust: trust)) : (.cancelAuthenticationChallenge, nil)
     }

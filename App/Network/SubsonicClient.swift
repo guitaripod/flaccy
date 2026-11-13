@@ -208,7 +208,7 @@ actor SubsonicClient {
         do {
             let (response, chunks, cancel) = try await streams.open(request)
             return RemoteByteStream(head: RemoteStreamHead(response: response), chunks: chunks, cancel: cancel)
-        } catch where pinning?.refusedKey == true {
+        } catch let error as URLError where pinning?.refusedKey(explaining: error) == true {
             throw RemoteFailure.keyChanged(host: host)
         } catch is CancellationError {
             throw CancellationError()
@@ -229,7 +229,7 @@ actor SubsonicClient {
                 throw RemoteFailure.httpStatus((response as? HTTPURLResponse)?.statusCode ?? 0, host: host)
             }
             return location
-        } catch is URLError where pinning?.refusedKey == true {
+        } catch let error as URLError where pinning?.refusedKey(explaining: error) == true {
             throw RemoteFailure.keyChanged(host: host)
         } catch let error as URLError {
             throw RemoteFailure(transport: error, host: host)
@@ -258,7 +258,7 @@ actor SubsonicClient {
     private func perform(_ request: URLRequest) async throws -> (Data, URLResponse) {
         do {
             return try await session.data(for: request)
-        } catch is URLError where pinning?.refusedKey == true {
+        } catch let error as URLError where pinning?.refusedKey(explaining: error) == true {
             throw RemoteFailure.keyChanged(host: host)
         } catch let error as URLError where error.code == .cancelled {
             throw CancellationError()

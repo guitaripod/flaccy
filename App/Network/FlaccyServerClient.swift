@@ -168,7 +168,7 @@ actor FlaccyServerClient: ServerSyncTransport {
         do {
             (data, response) = try await session.data(for: call)
         } catch let error as URLError {
-            if pinning?.refusedKey == true { throw ServerSyncError.keyChanged }
+            if pinning?.refusedKey(explaining: error) == true { throw ServerSyncError.keyChanged }
             throw Self.failure(of: error)
         }
         guard let http = response as? HTTPURLResponse else { throw ServerSyncError.malformed("not an HTTP answer") }
