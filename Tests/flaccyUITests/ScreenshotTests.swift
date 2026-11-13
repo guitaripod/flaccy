@@ -12,11 +12,9 @@ final class ScreenshotTests: XCTestCase {
         static let tabAlbums = "library.tab.albums"
         static let tabSongs = "library.tab.songs"
         static let tabArtists = "library.tab.artists"
-        static let tabPlaylists = "library.tab.playlists"
         static let sort = "library.sort"
         static let settings = "library.settings"
         static let homeSettings = "home.settings"
-        static let recap = "library.playlists.recap"
         static let settingsTable = "settings.table"
         static let yearInMusic = "settings.row.yearInMusic"
         static let yearInMusicClose = "yearInMusic.close"
@@ -45,6 +43,7 @@ final class ScreenshotTests: XCTestCase {
 
     @MainActor func testDarkTour() throws {
         let app = launchApp()
+        showLibrary(app)
         capture(app, wait: 8, name: "dark-01-library-grid")
 
         tap(app.buttons[ID.tabSongs], "Songs tab")
@@ -71,13 +70,12 @@ final class ScreenshotTests: XCTestCase {
         collapseNowPlaying(app)
         popToRoot(app)
 
-        tap(app.buttons[ID.tabPlaylists], "Playlists tab")
-        sleep(2)
-        tapScrolling(app.cells[ID.recap], "Recap row", in: app)
+        tap(app.tabBars.firstMatch.buttons.element(boundBy: 2), "Recap tab")
         capture(app, wait: 8, name: "dark-07-recap-charts")
         app.swipeUp(); app.swipeUp()
         capture(app, wait: 2, name: "dark-07b-recap-clock")
-        popToRoot(app)
+        app.swipeDown(); app.swipeDown()
+        showLibrary(app)
 
         openSettings(app)
         capture(app, wait: 3, name: "dark-10-settings")
@@ -197,6 +195,7 @@ final class ScreenshotTests: XCTestCase {
         sleep(1)
         app.terminate()
         app.launch()
+        showLibrary(app)
         capture(app, wait: 8, name: "light-01-library-grid")
 
         tap(app.buttons[ID.tabSongs], "Songs tab")
@@ -323,6 +322,13 @@ final class ScreenshotTests: XCTestCase {
             "Did not get back to the library root",
             file: file, line: line
         )
+    }
+
+    /// Switches to the Library tab, which the app no longer opens on: it starts on Home. Tabs
+    /// are addressed by position because their labels are localized.
+    @MainActor private func showLibrary(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        tap(app.tabBars.firstMatch.buttons.element(boundBy: 1), "Library tab", file: file, line: line)
+        sleep(1)
     }
 
     @MainActor private func openSettings(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
