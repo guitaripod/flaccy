@@ -39,6 +39,7 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 base="https://github.com/$REPO/releases/latest/download"
+command -v bash >/dev/null 2>&1 || fail "bash is required"
 echo "Downloading $ASSET (latest release)..."
 curl -fsSL -o "$tmp/$ASSET" "$base/$ASSET" || fail "download failed — check https://github.com/$REPO/releases"
 curl -fsSL -o "$tmp/$ASSET.sha256" "$base/$ASSET.sha256" || fail "checksum download failed"
@@ -53,7 +54,7 @@ dir="$tmp/flaccy-linux-x86_64"
 [ -x "$dir/install.sh" ] || fail "tarball layout unexpected: install.sh missing"
 
 echo "Installing to ~/.local (no sudo)..."
-sh "$dir/install.sh"
+bash "$dir/install.sh"
 
 bin="$HOME/.local/bin/flaccy"
 missing="$(ldd "$bin" 2>/dev/null | awk '/not found/{print $1}')" || true
