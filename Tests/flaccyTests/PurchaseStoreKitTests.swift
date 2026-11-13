@@ -113,6 +113,7 @@ struct PurchaseStoreKitTests {
     @Test func aPurchaseMadeBeforeTheStoreIsFoundAtLaunchAndByRestore() async throws {
         let harness = try makeHarness()
         try harness.session.buyProduct(productIdentifier: FlaccyProducts.lifetime)
+        #expect(await eventually { await Self.isEntitled(to: FlaccyProducts.lifetime) })
         let relaunched = PurchaseManager(store: harness.store)
 
         await relaunched.refresh()
@@ -183,6 +184,15 @@ struct PurchaseStoreKitTests {
 
     /// Polls `condition` until it holds or `timeout` passes, for the StoreKit changes that reach the store a moment
     /// after the session makes them.
+    /// Whether StoreKit lists `productID` among the current entitlements yet: a test session's purchase reaches them a
+    /// moment after `buyProduct` returns, so a store that looks at once can miss a purchase that is already made.
+    private static func isEntitled(to productID: String) async -> Bool {
+        for await result in Transaction.currentEntitlements where result.unsafePayloadValue.productID == productID {
+            return true
+        }
+        return false
+    }
+
     private func eventually(timeout: Duration = .seconds(10), _ condition: () async -> Bool) async -> Bool {
         let clock = ContinuousClock()
         let deadline = clock.now.advanced(by: timeout)
