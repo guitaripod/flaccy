@@ -1,6 +1,6 @@
 use crate::app::AppCore;
 use crate::config;
-use crate::events::AppEvent;
+use crate::events::{AppEvent, ScanFailure};
 use crate::load_progress::LoadPhase;
 use crate::ui::{self, Ui};
 use adw::prelude::*;
@@ -470,7 +470,8 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
                 overlay.add_toast(new_mix_toast(&toast_core, rel_path, title));
             }
             if let AppEvent::ScanFinished { added, removed, failure } = event {
-                if let Some(toast) = scan_toast(*added, *removed, failure.as_deref(), toast_core.library.borrow().tracks.is_empty()) {
+                let library_empty = toast_core.library.borrow().tracks.is_empty();
+                if let Some(toast) = scan_toast(*added, *removed, failure.as_ref(), library_empty, &toast_core.music_root()) {
                     overlay.add_toast(toast);
                 }
             }
@@ -2145,17 +2146,29 @@ fn demo_window_size() -> Option<(i32, i32)> {
     }
 }
 
-/// What the end of a scan says: a failure with its cause, the counts when something changed, nothing for an empty library
-/// (its page already says where the music goes), and a short "up to date" otherwise.
-fn scan_toast(added: usize, removed: usize, failure: Option<&str>, library_empty: bool) -> Option<adw::Toast> {
-    let (text, seconds) = if let Some(cause) = failure {
-        (format!("Couldn't read the music folder: {cause}. Choose another one in Preferences."), 8)
-    } else if added > 0 || removed > 0 {
-        (format!("Library updated · {added} added · {removed} removed"), 4)
-    } else if library_empty {
-        return None;
-    } else {
-        ("Library up to date".to_owned(), 2)
+/// What the end of a scan says: a failure with its cause and the fix, the counts when something changed, nothing for an
+/// empty library (its page already says where the music goes), a missing folder (an unplugged drive) by name, and a short
+/// "up to date" otherwise.
+fn scan_toast(
+    added: usize,
+    removed: usize,
+    failure: Option<&ScanFailure>,
+    library_empty: bool,
+    folder: &std::path::Path,
+) -> Option<adw::Toast> {
+    let (text, seconds) = match failure {
+        Some(ScanFailure::Folder(cause)) => (format!("Couldn't read the music folder: {cause}. Choose another one in Preferences."), 8),
+        Some(ScanFailure::Library(cause)) => (format!("Couldn't update the library: {cause}. Restart Flaccy to try again."), 8),
+        None if added > 0 || removed > 0 => (format!("Library updated · {added} added · {removed} removed"), 4),
+        None if library_empty => return None,
+        None if !folder.is_dir() => (
+            format!(
+                "Can't find {}. Reconnect its drive, or choose another music folder in Preferences.",
+                crate::ui::albums::shown_path(folder)
+            ),
+            8,
+        ),
+        None => ("Library up to date".to_owned(), 2),
     };
     let toast = adw::Toast::new(&text);
     toast.set_timeout(seconds);

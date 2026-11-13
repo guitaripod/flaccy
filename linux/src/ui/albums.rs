@@ -1,4 +1,4 @@
-use crate::events::AppEvent;
+use crate::events::{AppEvent, ScanFailure};
 use crate::filters::{self, LibraryFilter};
 use crate::library::{Album, Library};
 use crate::ui::album_layouts::AlbumBody;
@@ -639,7 +639,10 @@ fn attach_scan_status(ui: &Rc<Ui>, empty: &adw::StatusPage, actions: &gtk::Box) 
                 empty.set_icon_name(idle_icon.as_deref());
                 empty.set_title(&idle_title);
                 let description = match failure {
-                    Some(cause) => format!("Flaccy couldn't read {}: {cause}. Choose another folder.", shown_path(&core.music_root())),
+                    Some(ScanFailure::Folder(cause)) => {
+                        format!("Flaccy couldn't read {}: {cause}. Choose another folder.", shown_path(&core.music_root()))
+                    }
+                    Some(ScanFailure::Library(cause)) => format!("Flaccy couldn't open its library: {cause}. Restart Flaccy to try again."),
                     None => welcome_description(&core.music_root()),
                 };
                 empty.set_description(Some(&description));
@@ -660,7 +663,7 @@ fn welcome_description(folder: &std::path::Path) -> String {
 }
 
 /// A folder as a person reads it: under the home folder it starts with `~`.
-fn shown_path(folder: &std::path::Path) -> String {
+pub(crate) fn shown_path(folder: &std::path::Path) -> String {
     match dirs::home_dir().and_then(|home| folder.strip_prefix(&home).ok().map(std::path::Path::to_path_buf)) {
         Some(rest) if rest.as_os_str().is_empty() => "~".to_owned(),
         Some(rest) => format!("~/{}", rest.display()),

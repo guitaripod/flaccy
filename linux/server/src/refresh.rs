@@ -101,6 +101,12 @@ fn refresh_with(state: &AppState, options: ScanOptions) -> ScanSummary {
                     state.music_root().display()
                 ));
             }
+            ScanEvent::FolderUnreadable(message) => {
+                summary.failure = Some(format!(
+                    "the music folder {} can't be read: {message}. Check that the user running the server may read it, then touch a file in it to scan again",
+                    state.music_root().display()
+                ));
+            }
             ScanEvent::Progress(progress) => reporter.observe(state, &progress),
             ScanEvent::CoversHoisted(_) => {}
         }

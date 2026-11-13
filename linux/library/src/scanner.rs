@@ -19,6 +19,7 @@ static REVISION_PASS: Mutex<()> = Mutex::new(());
 
 pub const SUPPORTED_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "wav", "aiff", "aif"];
 
+#[derive(Debug)]
 pub enum ScanEvent {
     Progress(LoadProgress),
     /// Albums whose embedded cover this chunk just wrote into `albumInfo`,
@@ -35,7 +36,10 @@ pub enum ScanEvent {
     /// Sent after `Done` when the revision pass re-read tags that changed on
     /// files whose audio did not, so the views reload.
     Retagged,
+    /// The library database could not be opened or written; the cause from SQLite.
     Failed(String),
+    /// The music folder is there but cannot be read; the cause from the system.
+    FolderUnreadable(String),
 }
 
 /// What the revision pass decided about the files it had to look at.
@@ -74,8 +78,8 @@ pub fn spawn_scan_with(root: PathBuf, db_path: PathBuf, tx: async_channel::Sende
                     });
                     announce_revisions(&root, &db_path, &outcome.files, &tx, &options);
                 }
-                Err(message) => {
-                    let _ = tx.send_blocking(ScanEvent::Failed(message));
+                Err(stop) => {
+                    let _ = tx.send_blocking(stop);
                 }
             }
         })
@@ -196,12 +200,16 @@ pub(crate) fn run_revision_pass_until(root: &Path, db: &Db, files: &[PathBuf], d
     report
 }
 
+/// Scans `root` into the database; a scan that stops short returns the event that says why.
 fn run_scan(
     root: &Path,
     db_path: &Path,
     tx: &async_channel::Sender<ScanEvent>,
-) -> Result<ScanOutcome, String> {
-    let db = Db::open(db_path).map_err(|e| format!("db open failed: {e}"))?;
+) -> Result<ScanOutcome, ScanEvent> {
+    if let Some(cause) = unreadable_folder(root) {
+        return Err(ScanEvent::FolderUnreadable(cause));
+    }
+    let db = Db::open(db_path).map_err(|e| ScanEvent::Failed(format!("db open failed: {e}")))?;
     let mut progress = LoadProgress::new(LoadPhase::FindingFiles);
     let _ = tx.send_blocking(ScanEvent::Progress(progress));
 
@@ -279,7 +287,7 @@ fn run_scan(
 
     let removed = db
         .delete_tracks_not_in(&disk_paths)
-        .map_err(|e| format!("prune failed: {e}"))?;
+        .map_err(|e| ScanEvent::Failed(format!("prune failed: {e}")))?;
     crate::logger::info(
         "library",
         &format!(
@@ -397,6 +405,16 @@ impl<'a> InsertBatch<'a> {
                 crate::logger::error("library", &format!("batch commit failed: {err}"));
             }
         }
+    }
+}
+
+/// Why a music folder that exists cannot be listed, or `None` when it can be or is not there at all: a missing folder is
+/// an unmounted drive or a first run, which the guard against an empty root and the welcome already speak to.
+fn unreadable_folder(root: &Path) -> Option<String> {
+    match std::fs::read_dir(root) {
+        Ok(_) => None,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => Some(error.to_string()),
     }
 }
 
@@ -653,6 +671,24 @@ pub fn parse_filename(filename: &str) -> ParsedFilename {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn a_folder_that_cannot_be_listed_says_why_and_a_missing_one_does_not() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("flaccy-unreadable-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        assert_eq!(unreadable_folder(&root), None);
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o000)).unwrap();
+        let listable_anyway = std::fs::read_dir(&root).is_ok();
+        let cause = unreadable_folder(&root);
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::remove_dir_all(&root).unwrap();
+        if !listable_anyway {
+            assert!(cause.is_some_and(|cause| cause.contains("ermission")));
+        }
+        assert_eq!(unreadable_folder(&root), None);
+    }
 
     #[test]
     fn leading_track_number_with_dash() {

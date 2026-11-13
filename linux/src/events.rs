@@ -6,6 +6,15 @@ use std::cell::RefCell;
 use std::panic::Location;
 use std::rc::Rc;
 
+/// Why a scan stopped short, so the toast and the empty library name the right thing to fix.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ScanFailure {
+    /// The music folder is there but cannot be read; the cause from the system.
+    Folder(String),
+    /// The library's own database could not be opened or written; the cause from SQLite.
+    Library(String),
+}
+
 #[allow(dead_code)]
 pub enum AppEvent {
     LibraryReloaded,
@@ -14,8 +23,8 @@ pub enum AppEvent {
     ScanFinished {
         added: usize,
         removed: usize,
-        /// Why the scan could not read the music folder, when it could not.
-        failure: Option<String>,
+        /// Why the scan stopped short, when it did.
+        failure: Option<ScanFailure>,
     },
     TrackChanged(Option<Track>),
     NaturalEnd(Track),

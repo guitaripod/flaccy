@@ -1,7 +1,7 @@
 use crate::config::{self, Config, Session};
 use crate::db::Db;
 use crate::eq::EqEngine;
-use crate::events::{AppEvent, EventHub};
+use crate::events::{AppEvent, EventHub, ScanFailure};
 use crate::home_state::{self, SavedSession, SavedTrack};
 use crate::library::{self, Library, Track};
 use crate::load_progress::{LoadPhase, LoadProgress};
@@ -389,6 +389,9 @@ impl AppCore {
             let received = rx.recv().await;
             core.reload_in_flight.set(false);
             let Ok((library, weights)) = received else {
+                crate::logger::error("library", "reload failed: the library database could not be opened");
+                core.building_albums.set(false);
+                core.hub.emit(&AppEvent::ScanProgress(LoadProgress::new(LoadPhase::Idle)));
                 core.give_up_first_load();
                 return;
             };
@@ -786,21 +789,25 @@ impl AppCore {
                     ScanEvent::Revised(rel_paths) => core.note_new_versions(&rel_paths),
                     ScanEvent::Retagged => core.reload_library(),
                     ScanEvent::Failed(message) => {
-                        crate::logger::error("library", &format!("scan failed: {message}"));
-                        core.end_listing_scan();
-                        core.scanning.set(false);
-                        core.hub.emit(&AppEvent::ScanProgress(LoadProgress::new(LoadPhase::Idle)));
-                        crate::enrichment::request_background_pass(&core);
-                        core.hub.emit(&AppEvent::ScanFinished {
-                            added: 0,
-                            removed: 0,
-                            failure: Some(message),
-                        });
+                        core.finish_failed_scan(ScanFailure::Library(message));
+                        break;
+                    }
+                    ScanEvent::FolderUnreadable(message) => {
+                        core.finish_failed_scan(ScanFailure::Folder(message));
                         break;
                     }
                 }
             }
         });
+    }
+
+    fn finish_failed_scan(self: &Rc<Self>, failure: ScanFailure) {
+        crate::logger::error("library", &format!("scan failed: {failure:?}"));
+        self.end_listing_scan();
+        self.scanning.set(false);
+        self.hub.emit(&AppEvent::ScanProgress(LoadProgress::new(LoadPhase::Idle)));
+        crate::enrichment::request_background_pass(self);
+        self.hub.emit(&AppEvent::ScanFinished { added: 0, removed: 0, failure: Some(failure) });
     }
 
     /// Plays `tracks` from `start`, naming what they were started from by
