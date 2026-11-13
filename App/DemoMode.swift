@@ -661,6 +661,9 @@ enum DemoRouter {
                     (navigation?.viewControllers.first as? LyricsMeaningViewController)?.revealEndForScreenshot()
                 }
             }
+        case "make-playlist":
+            tabs.library.select(segment: .playlists)
+            PlaylistMakerViewController.present(from: tabs, request: env["FLACCY_PLAYLIST_REQUEST"])
         case "paywall": PaywallViewController.presentSheet(from: tabs)
         case "equalizer", "equalizer-advanced", "equalizer-presets", "equalizer-outputs", "equalizer-import", "equalizer-preview", "equalizer-preview-cancel":
             player.expand()
