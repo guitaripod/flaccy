@@ -197,7 +197,7 @@ final class SettingsHeaderView: UIView {
             statusControl.configure(
                 symbolName: "crown.fill",
                 title: String(localized: "Lifetime member"),
-                subtitle: String(localized: "Thanks for supporting flaccy"),
+                subtitle: String(localized: "Everything in Flaccy, yours for good"),
                 tint: .systemYellow,
                 interactive: false
             )
@@ -205,7 +205,7 @@ final class SettingsHeaderView: UIView {
             statusControl.configure(
                 symbolName: "checkmark.seal.fill",
                 title: String(localized: "Flaccy Pro"),
-                subtitle: String(localized: "Yearly · thanks for supporting flaccy"),
+                subtitle: String(localized: "Yearly · everything in Flaccy is open"),
                 tint: .systemYellow,
                 interactive: false
             )
