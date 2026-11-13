@@ -17,6 +17,16 @@ extension SettingsViewController {
         if case .midgarEntry = row {
             return tableView.dequeueReusableCell(withIdentifier: MidgarEntryCell.reuseID, for: indexPath)
         }
+        if case .signalPath(let path) = row,
+           let cell = tableView.dequeueReusableCell(withIdentifier: SignalPathCell.reuseID, for: indexPath) as? SignalPathCell {
+            cell.configure(path)
+            return cell
+        }
+        if case .libraryOverview(let overview) = row,
+           let cell = tableView.dequeueReusableCell(withIdentifier: LibraryOverviewCell.reuseID, for: indexPath) as? LibraryOverviewCell {
+            cell.configure(overview)
+            return cell
+        }
         if case .plan(let summary) = row,
            let cell = tableView.dequeueReusableCell(withIdentifier: SettingsPlanCell.reuseID, for: indexPath) as? SettingsPlanCell {
             cell.configure(summary)
@@ -35,8 +45,62 @@ extension SettingsViewController {
         var content = Self.baseContent(for: row)
 
         switch row {
-        case .appearance, .accent, .midgarEntry, .plan:
+        case .appearance, .accent, .midgarEntry, .plan, .signalPath, .libraryOverview:
             break
+
+        case .guideCard(_, let title, let symbolName):
+            content.image = RowIcon.image(systemName: symbolName, tint: .systemCyan)
+            content.text = title
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = title
+            cell.accessibilityHint = String(localized: "Opens this card of the Listening Guide")
+
+        case .listeningGuide:
+            content.image = RowIcon.image(systemName: "book.fill", tint: .systemCyan)
+            content.text = String(localized: "Listening Guide")
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = String(localized: "Listening Guide")
+            cell.accessibilityIdentifier = "settings.row.listeningGuide"
+
+        case .songVolumes(let count):
+            content.image = RowIcon.image(systemName: "speaker.wave.2.fill", tint: .systemOrange)
+            content.text = String(localized: "Song Volumes")
+            content.secondaryText = count == 0 ? String(localized: "None") : count.formatted()
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = String(localized: "Song Volumes")
+            cell.accessibilityValue = content.secondaryText
+            cell.accessibilityIdentifier = "settings.row.songVolumes"
+
+        case .homeScreen(let visibleSections):
+            content.image = RowIcon.image(systemName: "house.fill", tint: .systemOrange)
+            content.text = String(localized: "Home Screen")
+            content.secondaryText = String(localized: "\(visibleSections) sections")
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = String(localized: "Home Screen")
+            cell.accessibilityValue = content.secondaryText
+            cell.accessibilityIdentifier = "settings.row.homeScreen"
+
+        case .playerButtons(let isCustom):
+            content.image = RowIcon.image(systemName: "circle.grid.3x3.fill", tint: .systemPink)
+            content.text = String(localized: "Player Buttons")
+            content.secondaryText = isCustom ? String(localized: "Reset") : String(localized: "Original Order")
+            if isCustom {
+                content.secondaryTextProperties.color = .tintColor
+            } else {
+                cell.selectionStyle = .none
+            }
+            cell.accessibilityLabel = String(localized: "Player Buttons")
+            cell.accessibilityValue = isCustom ? String(localized: "Custom order") : String(localized: "Original Order")
+            cell.accessibilityHint = isCustom ? String(localized: "Puts the buttons under Now Playing back in their original order") : nil
+
+        case .scrobbled(let count):
+            content.image = RowIcon.image(systemName: "chart.bar.fill", tint: .systemRed)
+            content.text = String(localized: "Plays")
+            content.secondaryText = count.formatted()
+            cell.selectionStyle = .none
+            cell.accessibilityTraits = .staticText
+            cell.accessibilityLabel = String(localized: "Plays")
+            cell.accessibilityValue = content.secondaryText
 
         case .page(let page, let value):
             content.image = RowIcon.image(systemName: page.symbolName, tint: page.tint)

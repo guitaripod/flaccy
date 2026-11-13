@@ -35,6 +35,25 @@ final class SongVolumeStore {
         return key(for: track).flatMap { levels[$0] } ?? 0
     }
 
+    /// How many songs have a volume of their own.
+    var adjustedCount: Int {
+        loadIfNeeded()
+        return levels.count
+    }
+
+    /// The songs of `tracks` that have a volume of their own, one copy per song, by title.
+    func adjustedSongs(in tracks: [Track]) -> [(track: Track, tenths: Int)] {
+        loadIfNeeded()
+        guard !levels.isEmpty else { return [] }
+        var seen = Set<String>()
+        var songs: [(track: Track, tenths: Int)] = []
+        for track in tracks {
+            guard let key = key(for: track), let tenths = levels[key], seen.insert(key).inserted else { continue }
+            songs.append((track, tenths))
+        }
+        return songs.sorted { $0.track.title.localizedStandardCompare($1.track.title) == .orderedAscending }
+    }
+
     /// Plays the song at `tenths` without saving it, while a control is still moving.
     func preview(_ tenths: Int, for track: Track) {
         guard let key = key(for: track) else { return }

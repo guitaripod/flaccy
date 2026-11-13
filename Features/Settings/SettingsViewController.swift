@@ -42,6 +42,8 @@ final class SettingsViewController: UITableViewController {
     /// Every sub-page on screen, so a change refreshes the page someone is looking at as well
     /// as the root's summaries.
     let livePages = NSHashTable<SettingsPageViewController>.weakObjects()
+    var soundObservers: [NSObjectProtocol] = []
+    var libraryOverview = LibraryOverviewSummary.empty
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -69,6 +71,8 @@ final class SettingsViewController: UITableViewController {
         observeMetadata()
         observeServers()
         observeHistorySync()
+        observeSound()
+        refreshLibraryOverview()
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(purchaseStateChanged),
@@ -86,6 +90,8 @@ final class SettingsViewController: UITableViewController {
         tableView.register(AccentCell.self, forCellReuseIdentifier: AccentCell.reuseID)
         tableView.register(MidgarEntryCell.self, forCellReuseIdentifier: MidgarEntryCell.reuseID)
         tableView.register(SettingsPlanCell.self, forCellReuseIdentifier: SettingsPlanCell.reuseID)
+        tableView.register(SignalPathCell.self, forCellReuseIdentifier: SignalPathCell.reuseID)
+        tableView.register(LibraryOverviewCell.self, forCellReuseIdentifier: LibraryOverviewCell.reuseID)
     }
 
     /// The Metadata row and the report it pushes read the same view model, so a
@@ -267,11 +273,17 @@ final class SettingsViewController: UITableViewController {
         switch page {
         case .root: rootSections()
         case .plan: []
-        case .appearance: [(.appearance, [.appearance(AppAppearance.current), .accent(AppAccent.current)])]
+        case .appearance: [(.appearance, [
+            .appearance(AppAppearance.current),
+            .accent(AppAccent.current),
+            .homeScreen(visibleSections: HomeLayoutStore.shared.layout.order.filter { !HomeLayoutStore.shared.layout.hidden.contains($0) }.count),
+        ])]
         case .notifications: notificationSections()
+        case .sound: soundSections()
         case .playback: [
             (.playback, [.gaplessPlayback, .autoplaySimilar]),
             (.stations, [.libraryRadio, .crateDig]),
+            (.playerButtons, [.playerButtons(isCustom: PlayerActionOrderStore.shared.order != .standard)]),
         ]
         case .library: librarySections()
         case .servers: [
@@ -303,6 +315,7 @@ final class SettingsViewController: UITableViewController {
                 .page(.notifications, value: nil),
             ]),
             (.rootListening, [
+                .page(.sound, value: EqualizerEngine.shared.output?.name),
                 .equalizer(summary: EqualizerCopy.settingsSummary),
                 .page(.playback, value: nil),
                 .yearInMusic,
@@ -324,6 +337,9 @@ final class SettingsViewController: UITableViewController {
     func lastFMRows() -> [Row] {
         let authenticated = LastFMService.shared.isAuthenticated
         var rows: [Row] = [.lastFMAccount(username: authenticated ? LastFMService.shared.username : nil)]
+        if authenticated, let playsCount {
+            rows.append(.scrobbled(count: playsCount))
+        }
         if authenticated {
             let pending = pendingScrobbleCount
             if pending > 0 {
@@ -344,14 +360,12 @@ final class SettingsViewController: UITableViewController {
             details.append(.findMissingArtwork(count: counts.inProgress))
         }
         details.append(.appleMusicArtwork(AppleMusicArtworkSetting.isEnabled))
-        var overview: [Row] = [
-            .libraryStats(albums: Library.shared.albums.count, tracks: Library.shared.allTracks.count),
-            .storage(used: storageUsed ?? "…"),
-        ]
+        var overview: [Row] = [.storage(used: storageUsed ?? "…")]
         if libraryDebut != nil {
             overview.append(.libraryDebutSummary)
         }
         return [
+            (.libraryHeadline, [.libraryOverview(libraryOverview)]),
             (.libraryAdd, [.importFiles, .rescanLibrary]),
             (.libraryOrganize, [.groupAlbumEditions, .hideDuplicateSongs]),
             (.libraryDetails, details),
@@ -397,6 +411,11 @@ final class SettingsViewController: UITableViewController {
             Entry(Page.appearance.title, in: .appearance),
             Entry(String(localized: "Accent"), in: .appearance),
             Entry(Page.notifications.title, in: .notifications),
+            Entry(Page.sound.title, in: .sound),
+            Entry(String(localized: "Listening Guide"), in: .sound),
+            Entry(String(localized: "Song Volumes"), in: .sound),
+            Entry(String(localized: "Home Screen"), in: .appearance),
+            Entry(String(localized: "Player Buttons"), in: .playback),
             Entry(String(localized: "Trial reminders"), in: .notifications),
             Entry(String(localized: "Recap Notifications"), in: .notifications),
             Entry(EqualizerCopy.title, symbolName: "slider.vertical.3", tint: .systemPink, row: .equalizer(summary: EqualizerCopy.settingsSummary)),
@@ -520,8 +539,9 @@ final class SettingsViewController: UITableViewController {
         switch row {
         case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
-             .cacheLimit, .cacheUsage, .version:
+             .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
             return false
+        case .playerButtons(let isCustom): return isCustom
         case .server(let server): return server.flaccy != nil
         case .historySync: return !ListenHistorySync.shared.status.isBusy
         case .rescanLibrary: return !isRescanning
@@ -533,6 +553,11 @@ final class SettingsViewController: UITableViewController {
         switch row {
         case .plan: open(.plan)
         case .page(let page, _): open(page)
+        case .guideCard(let index, _, _): handleGuideCardTap(index)
+        case .listeningGuide: handleGuideCardTap(nil)
+        case .songVolumes: handleSongVolumesTap()
+        case .homeScreen: handleHomeScreenTap()
+        case .playerButtons: handlePlayerButtonsTap()
         case .lastFMAccount: handleLastFMTap()
         case .pendingScrobbles: handleRetryScrobbles()
         case .historySync: handleHistorySync()
@@ -557,7 +582,7 @@ final class SettingsViewController: UITableViewController {
         case .clearCache: handleClearCacheTap()
         case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
-             .cacheLimit, .cacheUsage, .version:
+             .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
             break
         }
     }

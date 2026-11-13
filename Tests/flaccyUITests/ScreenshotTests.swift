@@ -23,6 +23,9 @@ final class ScreenshotTests: XCTestCase {
         static let unlockLifetime = "unlockLifetime"
         static let planRow = "settings.row.plan"
         static let appearancePage = "settings.page.appearance"
+        static let soundPage = "settings.page.sound"
+        static let listeningGuideRow = "settings.row.listeningGuide"
+        static let listeningGuide = "listeningGuide.scroll"
         static let playerExpand = "player.expand"
         static let playerCollapse = "player.collapse"
         static let playerLyrics = "player.lyrics"
@@ -82,6 +85,10 @@ final class ScreenshotTests: XCTestCase {
         tapScrolling(app.cells[ID.yearInMusic], "Your Year in Music row", in: app)
         capture(app, wait: 6, name: "dark-08-year-in-music")
         tap(app.buttons[ID.yearInMusicClose], "Year in Music close button")
+        sleep(1)
+
+        openListeningGuide(app)
+        capture(app, wait: 4, name: "dark-09-listening-guide")
     }
 
     @MainActor func testSongsListShot() throws {
@@ -139,6 +146,31 @@ final class ScreenshotTests: XCTestCase {
         capture(app, wait: 2, name: "settings-06-library")
     }
 
+    /// Settings → Sound shows the signal path and opens the Listening Guide from its last row.
+    @MainActor func testSoundPageOpensTheListeningGuide() throws {
+        let app = launchApp()
+        sleep(6)
+        openSettings(app)
+        openListeningGuide(app, capturingSoundPageAs: "settings-07-sound")
+        capture(app, wait: 1, name: "settings-08-guide")
+    }
+
+    /// From the Settings root, opens Sound and then the Listening Guide at its last row.
+    @MainActor private func openListeningGuide(
+        _ app: XCUIApplication, capturingSoundPageAs soundShot: String? = nil,
+        file: StaticString = #filePath, line: UInt = #line
+    ) {
+        tapScrolling(app.cells[ID.soundPage], "Sound row", in: app, file: file, line: line)
+        let page = app.tables[ID.soundPage]
+        XCTAssertTrue(page.waitForExistence(timeout: 5), "The Sound row did not open the Sound page", file: file, line: line)
+        if let soundShot { capture(app, wait: 1, name: soundShot) }
+        tapScrolling(page.cells[ID.listeningGuideRow], "Listening Guide row", in: app, file: file, line: line)
+        XCTAssertTrue(
+            app.scrollViews[ID.listeningGuide].waitForExistence(timeout: 5),
+            "The Listening Guide did not open", file: file, line: line
+        )
+    }
+
     @MainActor func testSortSanity() throws {
         let app = launchApp()
         sleep(6)
@@ -171,6 +203,10 @@ final class ScreenshotTests: XCTestCase {
         capture(app, wait: 6, name: "light-02-library-songs")
 
         tap(app.buttons[ID.tabAlbums], "Albums tab")
+        sleep(1)
+        openSettings(app)
+        openListeningGuide(app)
+        capture(app, wait: 4, name: "light-09-listening-guide")
     }
 
     @MainActor private func openSortMenuAndPick(

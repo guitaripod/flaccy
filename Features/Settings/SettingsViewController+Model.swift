@@ -14,6 +14,7 @@ extension SettingsViewController {
         case plan
         case appearance
         case notifications
+        case sound
         case playback
         case library
         case servers
@@ -26,6 +27,7 @@ extension SettingsViewController {
             case .plan: String(localized: "Flaccy Pro")
             case .appearance: String(localized: "Appearance")
             case .notifications: String(localized: "Notifications")
+            case .sound: String(localized: "Sound")
             case .playback: String(localized: "Playback")
             case .library: String(localized: "Library")
             case .servers: String(localized: "Servers")
@@ -39,6 +41,7 @@ extension SettingsViewController {
             case .root, .plan: "sparkles"
             case .appearance: "circle.lefthalf.filled"
             case .notifications: "bell.badge.fill"
+            case .sound: "waveform"
             case .playback: "play.fill"
             case .library: "music.note.house.fill"
             case .servers: "server.rack"
@@ -52,6 +55,7 @@ extension SettingsViewController {
             case .root, .plan: .systemPurple
             case .appearance: .systemBlue
             case .notifications: .systemRed
+            case .sound: .systemCyan
             case .playback: .systemPurple
             case .library: .systemOrange
             case .servers: .systemTeal
@@ -74,11 +78,17 @@ extension SettingsViewController {
         case appearance
         case trial
         case recap
+        case signalPath
+        case thisOutput
+        case soundControls
+        case listeningGuide
         case playback
         case stations
+        case playerButtons
         case lastFM
         case servers
         case serverCache
+        case libraryHeadline
         case libraryAdd
         case libraryOrganize
         case libraryDetails
@@ -91,10 +101,11 @@ extension SettingsViewController {
             case .rootPlan, .rootGeneral, .rootListening, .rootLibrary, .rootServices, .rootSupport, .midgar: .root
             case .appearance: .appearance
             case .trial, .recap: .notifications
-            case .playback, .stations: .playback
+            case .signalPath, .thisOutput, .soundControls, .listeningGuide: .sound
+            case .playback, .stations, .playerButtons: .playback
             case .lastFM: .lastFM
             case .servers, .serverCache: .servers
-            case .libraryAdd, .libraryOrganize, .libraryDetails, .libraryOverview: .library
+            case .libraryHeadline, .libraryAdd, .libraryOrganize, .libraryDetails, .libraryOverview: .library
             case .aboutVersion, .aboutLegal: .about
             }
         }
@@ -104,6 +115,7 @@ extension SettingsViewController {
             case .trial: String(localized: "Trial")
             case .recap: String(localized: "Year in Music")
             case .stations: String(localized: "Stations")
+            case .thisOutput: String(localized: "About This Output")
             case .serverCache: String(localized: "Server Cache")
             case .libraryAdd: String(localized: "Music")
             case .libraryOrganize: String(localized: "Organize")
@@ -117,6 +129,10 @@ extension SettingsViewController {
         var footer: String? {
             switch self {
             case .trial: String(localized: "Two reminders before your trial ends, and one if an offer opens.")
+            case .signalPath: String(localized: "Flaccy sees the file, its own processing and the kind of output. What the device does after that is up to the device.")
+            case .listeningGuide: String(localized: "How Bluetooth, AAC, and lossless files really affect what you hear.")
+            case .playerButtons: String(localized: "Touch and hold the buttons under Now Playing to rearrange them.")
+            case .aboutLegal: String(localized: "Built with GRDB (SQLite), lyrics from lrclib.net, universal links by Songlink/Odesli, and scrobbling via the Last.fm API.")
             case .playback: String(localized: "Gapless is exact on lossless files. MP3 and AAC files can keep tiny encoder gaps.")
             case .servers: String(localized: "Stream from Flaccy Server, Navidrome or another Subsonic server.")
             case .serverCache: RemoteCopy.cacheFooter
@@ -133,6 +149,14 @@ extension SettingsViewController {
 
     nonisolated enum Row: Hashable {
         case plan(PlanSummary)
+        case signalPath(SignalPathSummary)
+        case guideCard(index: Int, title: String, symbolName: String)
+        case listeningGuide
+        case songVolumes(count: Int)
+        case libraryOverview(LibraryOverviewSummary)
+        case homeScreen(visibleSections: Int)
+        case playerButtons(isCustom: Bool)
+        case scrobbled(count: Int)
         case page(Page, value: String?)
         case appearance(AppAppearance)
         case accent(AccentChoice)

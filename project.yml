@@ -312,6 +312,9 @@ targets:
           - Settings/SettingsViewController.swift
           - Settings/SettingsPageViewController.swift
           - Settings/SettingsSearchResultsController.swift
+          - Settings/SettingsSoundCells.swift
+          - Settings/SettingsViewController+Sound.swift
+          - Settings/SongVolumesViewController.swift
           - Sharing/SonglinkShareable.swift
           - Sharing/StreamingLinksViewController.swift
           - Wantlist/WantlistViewController.swift
