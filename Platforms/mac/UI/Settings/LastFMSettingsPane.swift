@@ -15,6 +15,7 @@ final class LastFMSettingsPane: SettingsPane {
     let profileButton = NSButton(title: String(localized: "View Profile"), target: nil, action: nil)
     let disconnectButton = NSButton(title: String(localized: "Disconnect"), target: nil, action: nil)
     let pendingLabel = NSTextField(labelWithString: "")
+    let playsLabel = NSTextField(labelWithString: "")
     let retryButton = NSButton(title: String(localized: "Retry Now"), target: nil, action: nil)
     let syncButton = NSButton(title: String(localized: "Sync Now"), target: nil, action: nil)
     let syncStatusLabel = NSTextField(labelWithString: "")
@@ -43,6 +44,9 @@ final class LastFMSettingsPane: SettingsPane {
         retryButton.controlSize = .small
         retryButton.target = self
         retryButton.action = #selector(retryTapped)
+        playsLabel.font = .systemFont(ofSize: 13)
+        playsLabel.isHidden = true
+        formStack.addArrangedSubview(playsLabel)
         addRow([pendingLabel, retryButton], spacing: 10)
         formStack.addArrangedSubview(separator())
 
@@ -96,6 +100,23 @@ final class LastFMSettingsPane: SettingsPane {
             ? String(localized: "No pending scrobbles")
             : String(localized: "\(pending) scrobbles waiting to submit")
         retryButton.isHidden = pending == 0
+        refreshPlays(authenticated: authenticated)
+    }
+
+    /// Counts every play in the listening history off the main thread, shown while connected.
+    func refreshPlays(authenticated: Bool) {
+        guard authenticated else {
+            playsLabel.isHidden = true
+            return
+        }
+        Task.detached(priority: .utility) { [weak self] in
+            let plays = (try? DatabaseManager.shared.scrobbleCountInRange(from: .distantPast, to: .distantFuture)) ?? 0
+            await MainActor.run { [weak self] in
+                guard let self, LastFMService.shared.isAuthenticated else { return }
+                self.playsLabel.stringValue = String(localized: "Plays: \(plays.formatted())")
+                self.playsLabel.isHidden = false
+            }
+        }
     }
 
     func renderSyncStatus(_ status: ListenHistoryStatus) {

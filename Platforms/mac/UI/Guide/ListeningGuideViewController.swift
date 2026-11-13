@@ -1,7 +1,7 @@
 import AppKit
 import MidgarCore
 
-/// The audio-quality explainer rebuilt for desktop: the five fact cards from
+/// The audio-quality explainer rebuilt for desktop: the six fact cards from
 /// the shared ListeningGuideContent in a scrollable glass layout, reordered so
 /// the wired-DAC card leads — on a Mac the wired-lossless story is the pitch,
 /// not the caveat. Source links open in the browser.
@@ -11,6 +11,8 @@ final class ListeningGuideViewController: NSViewController {
     private let scrollView = NSScrollView()
     private let documentView = FlippedView()
     private let contentStack = NSStackView()
+    private var cardViews: [Int: NSView] = [:]
+    private var focusObserver: NSObjectProtocol?
 
     override func loadView() {
         let root = NSView()
@@ -61,6 +63,33 @@ final class ListeningGuideViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         backdrop.apply(ArtworkPaletteExtractor.fallbackPalette(seed: "listening-guide"), animated: false)
+        focusObserver = NotificationCenter.default.addObserver(
+            forName: ListeningGuideFocus.didRequest, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.scrollToPendingCard() }
+        }
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        scrollToPendingCard()
+    }
+
+    /// Scrolls to the top or to the card Settings asked for, if it asked, and forgets the request.
+    private func scrollToPendingCard() {
+        guard view.window != nil, let request = ListeningGuideFocus.pending else { return }
+        ListeningGuideFocus.pending = nil
+        view.layoutSubtreeIfNeeded()
+        let clip = scrollView.contentView
+        let insets = clip.contentInsets
+        let minY = -insets.top
+        let maxY = max(minY, documentView.frame.height - clip.bounds.height + insets.bottom)
+        var target = minY
+        if case .card(let index) = request, let card = cardViews[index] {
+            target = card.convert(card.bounds, to: documentView).minY - insets.top - 16
+        }
+        clip.scroll(to: NSPoint(x: 0, y: min(max(target, minY), maxY)))
+        scrollView.reflectScrolledClipView(clip)
     }
 
     deinit {
@@ -88,8 +117,10 @@ final class ListeningGuideViewController: NSViewController {
         intro.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
         contentStack.setCustomSpacing(22, after: intro)
 
-        for card in desktopOrderedCards() {
-            let view = makeCard(card)
+        let cards = ListeningGuideContent.cards
+        for index in desktopCardOrder() {
+            let view = makeCard(cards[index])
+            cardViews[index] = view
             contentStack.addArrangedSubview(view)
             view.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
         }
@@ -97,15 +128,15 @@ final class ListeningGuideViewController: NSViewController {
 
     /// Desktop reorder: lead with "When FLAC is worth it" — the wired-DAC
     /// story is the reason this app exists on a Mac.
-    private func desktopOrderedCards() -> [ListeningGuideCard] {
+    private func desktopCardOrder() -> [Int] {
         let cards = ListeningGuideContent.cards
+        var order = Array(cards.indices)
         guard let wiredIndex = cards.firstIndex(where: { $0.symbolName == "cable.connector" }) else {
-            return cards
+            return order
         }
-        var reordered = cards
-        let wired = reordered.remove(at: wiredIndex)
-        reordered.insert(wired, at: 0)
-        return reordered
+        order.remove(at: wiredIndex)
+        order.insert(wiredIndex, at: 0)
+        return order
     }
 
     private func makeCard(_ card: ListeningGuideCard) -> NSView {
@@ -186,5 +217,31 @@ final class ListeningGuideViewController: NSViewController {
         guard let url = objc_getAssociatedObject(sender, &Self.sourceURLKey) as? URL else { return }
         NSWorkspace.shared.open(url)
         MidgarLog.info("Listening guide source opened: \(url.absoluteString)", category: .ui)
+    }
+}
+
+/// How Settings opens the guide at one card: it leaves the card's index here, brings the guide
+/// up in the main window and asks it to scroll, so the request lands whether the guide was
+/// already showing or is built for it.
+@MainActor
+enum ListeningGuideFocus {
+    enum Request {
+        case top
+        case card(Int)
+    }
+
+    static let didRequest = Notification.Name("flaccy.mac.focusGuideCard")
+    static var pending: Request?
+
+    /// Shows the guide in the main window, scrolled to `card` (an index into
+    /// `ListeningGuideContent.cards`) or at its top when nil.
+    static func open(card: Int?) {
+        pending = card.map(Request.card) ?? .top
+        (NSApp.delegate as? MacAppDelegate)?.showMainWindow()
+        NotificationCenter.default.post(
+            name: .flaccyShowSection, object: nil,
+            userInfo: [SectionNotificationKey.section: SidebarSection.listeningGuide.rawValue]
+        )
+        NotificationCenter.default.post(name: didRequest, object: nil)
     }
 }

@@ -60,28 +60,18 @@ final class SignalPathCell: UITableViewCell {
             symbol: "waveform", tint: .systemCyan, caption: String(localized: "File"),
             title: path.source, detail: path.sourceDetail
         )
-        let untouched = path.processingDetail == nil
+        let untouched = path.isUntouched
         flaccyStage.configure(
             symbol: untouched ? "checkmark" : "slider.vertical.3", tint: untouched ? .systemGreen : .systemBlue,
             caption: "Flaccy", title: path.processing, detail: path.processingDetail
         )
         outputStage.configure(
-            symbol: Self.symbol(for: path.outputKind), tint: .systemIndigo, caption: String(localized: "Output"),
+            symbol: SignalPathSummary.symbolName(for: path.outputKind), tint: .systemIndigo, caption: String(localized: "Output"),
             title: path.output, detail: path.outputDetail
         )
         verdictDot.backgroundColor = Self.color(for: path.verdict)
-        verdictLabel.text = Self.sentence(for: path.verdict)
+        verdictLabel.text = SignalPathSummary.sentence(for: path.verdict)
         accessibilityElements = [fileStage, flaccyStage, outputStage, verdictLabel]
-    }
-
-    static func sentence(for verdict: SignalPathVerdict) -> String {
-        switch verdict {
-        case .idle: String(localized: "Play a song to see how it reaches you.")
-        case .untouched: String(localized: "Flaccy passes every sample through untouched.")
-        case .shaped: String(localized: "Your equalizer or song volume shapes the sound before it plays.")
-        case .reencodedForBluetooth: String(localized: "Bluetooth re-encodes the sound to AAC on its way to your headphones.")
-        case .lossySource: String(localized: "This file is lossy. Flaccy plays it as it is.")
-        }
     }
 
     private static func color(for verdict: SignalPathVerdict) -> UIColor {
@@ -91,19 +81,6 @@ final class SignalPathCell: UITableViewCell {
         case .shaped: .systemBlue
         case .reencodedForBluetooth: .systemOrange
         case .lossySource: .systemGray
-        }
-    }
-
-    private static func symbol(for kind: SignalOutputKind?) -> String {
-        switch kind {
-        case .speaker: "speaker.wave.2.fill"
-        case .headphones: "headphones"
-        case .bluetooth: "airpods"
-        case .airPlay: "airplayaudio"
-        case .usb: "cable.connector"
-        case .display: "tv"
-        case .car: "car.fill"
-        case .other, nil: "hifispeaker.fill"
         }
     }
 
@@ -228,7 +205,7 @@ final class LibraryOverviewCell: UITableViewCell {
             numbers.addArrangedSubview(Self.number(value, caption: caption))
         }
 
-        let shares = Self.shares(of: overview.formats, total: overview.songs)
+        let shares = overview.formatShares
         bar.segments = shares.map { (fraction: $0.fraction, color: Self.color(for: $0.codec)) }
         bar.isHidden = shares.isEmpty
         legend.attributedText = Self.legend(for: shares)
@@ -240,6 +217,9 @@ final class LibraryOverviewCell: UITableViewCell {
             if overview.hiRes > 0 {
                 tags.addArrangedSubview(Self.tag(String(localized: "\(overview.hiRes.formatted()) hi-res"), color: .systemPurple))
             }
+            if overview.serverSongs > 0 {
+                tags.addArrangedSubview(Self.tag(String(localized: "\(overview.serverSongs) from servers"), color: .systemTeal))
+            }
             if overview.musicBytes > 0 {
                 tags.addArrangedSubview(Self.tag(ByteCountFormatter.string(fromByteCount: overview.musicBytes, countStyle: .file), color: .systemGray))
             }
@@ -249,10 +229,7 @@ final class LibraryOverviewCell: UITableViewCell {
 
         isAccessibilityElement = true
         accessibilityLabel = String(localized: "Library overview")
-        accessibilityValue = [
-            String(localized: "\(overview.songs) songs"), String(localized: "\(overview.albums) albums"),
-            String(localized: "\(overview.losslessPercent)% lossless"), legend.text,
-        ].compactMap { $0 }.joined(separator: ", ")
+        accessibilityValue = overview.accessibilitySummary
     }
 
     private static func number(_ value: String, caption: String) -> UIView {
@@ -275,16 +252,6 @@ final class LibraryOverviewCell: UITableViewCell {
         stack.axis = .vertical
         stack.spacing = 2
         return stack
-    }
-
-    /// The four biggest formats and the rest folded into one, each as a fraction of the library.
-    private static func shares(of formats: [LibraryOverviewSummary.Format], total: Int) -> [(codec: String, fraction: Double)] {
-        guard total > 0 else { return [] }
-        let sorted = formats.sorted { $0.songs > $1.songs }
-        var shares = sorted.prefix(4).map { (codec: $0.codec, fraction: Double($0.songs) / Double(total)) }
-        let rest = sorted.dropFirst(4).reduce(0) { $0 + $1.songs }
-        if rest > 0 { shares.append((codec: String(localized: "Other"), fraction: Double(rest) / Double(total))) }
-        return shares
     }
 
     private static func legend(for shares: [(codec: String, fraction: Double)]) -> NSAttributedString {

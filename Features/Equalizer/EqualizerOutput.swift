@@ -61,6 +61,21 @@ final class EqualizerOutputWatcher {
         onChange(output)
     }
 
+    /// Posted on the main queue when the Mac's output device changes its rate without the device
+    /// itself changing, such as a new rate chosen in Audio MIDI Setup.
+    nonisolated static let sampleRateDidChange = Notification.Name("flaccy.equalizer.outputSampleRateDidChange")
+
+    /// The rate the current output runs at, in hertz, or nil when the system does not say.
+    static func outputSampleRate() -> Double? {
+        #if os(iOS)
+        let rate = AVAudioSession.sharedInstance().sampleRate
+        #else
+        guard let device = defaultOutputDevice() else { return nil }
+        let rate = float64Property(device, kAudioDevicePropertyNominalSampleRate)
+        #endif
+        return rate > 0 ? rate : nil
+    }
+
     #if os(iOS)
     private static func read() -> EqualizerOutput? {
         guard let port = AVAudioSession.sharedInstance().currentRoute.outputs.first else { return nil }
@@ -96,6 +111,7 @@ final class EqualizerOutputWatcher {
     }
     #else
     private var listenerBlock: AudioObjectPropertyListenerBlock?
+    private var rateListenerBlock: AudioObjectPropertyListenerBlock?
     private var observedDevice: AudioObjectID = AudioObjectID(kAudioObjectUnknown)
 
     private static func read() -> EqualizerOutput? {
@@ -144,14 +160,38 @@ final class EqualizerOutputWatcher {
 
     private func observeCurrentDevice() {
         guard let block = listenerBlock, let device = Self.defaultOutputDevice(), device != observedDevice else { return }
+        if observedDevice != AudioObjectID(kAudioObjectUnknown) {
+            var dataSource = Self.dataSourceAddress
+            AudioObjectRemovePropertyListenerBlock(observedDevice, &dataSource, .main, block)
+            if let rateBlock = rateListenerBlock {
+                var rate = Self.sampleRateAddress
+                AudioObjectRemovePropertyListenerBlock(observedDevice, &rate, .main, rateBlock)
+            }
+        }
         observedDevice = device
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyDataSource,
-            mScope: kAudioDevicePropertyScopeOutput,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        AudioObjectAddPropertyListenerBlock(device, &address, .main, block)
+        var dataSource = Self.dataSourceAddress
+        AudioObjectAddPropertyListenerBlock(device, &dataSource, .main, block)
+        let rateBlock: AudioObjectPropertyListenerBlock = rateListenerBlock ?? { _, _ in
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: EqualizerOutputWatcher.sampleRateDidChange, object: nil)
+            }
+        }
+        rateListenerBlock = rateBlock
+        var rate = Self.sampleRateAddress
+        AudioObjectAddPropertyListenerBlock(device, &rate, .main, rateBlock)
     }
+
+    private static let dataSourceAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyDataSource,
+        mScope: kAudioDevicePropertyScopeOutput,
+        mElement: kAudioObjectPropertyElementMain
+    )
+
+    private static let sampleRateAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyNominalSampleRate,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain
+    )
 
     private static func defaultOutputDevice() -> AudioObjectID? {
         var address = AudioObjectPropertyAddress(
@@ -185,6 +225,18 @@ final class EqualizerOutputWatcher {
         var address = AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: kAudioObjectPropertyElementMain)
         var value: UInt32 = 0
         var size = UInt32(MemoryLayout<UInt32>.size)
+        let status = AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value)
+        return status == noErr ? value : 0
+    }
+
+    private static func float64Property(_ device: AudioObjectID, _ selector: AudioObjectPropertySelector) -> Double {
+        var address = AudioObjectPropertyAddress(
+            mSelector: selector,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var value: Float64 = 0
+        var size = UInt32(MemoryLayout<Float64>.size)
         let status = AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value)
         return status == noErr ? value : 0
     }

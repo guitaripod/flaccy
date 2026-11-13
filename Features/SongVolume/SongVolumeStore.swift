@@ -35,12 +35,6 @@ final class SongVolumeStore {
         return key(for: track).flatMap { levels[$0] } ?? 0
     }
 
-    /// How many songs have a volume of their own.
-    var adjustedCount: Int {
-        loadIfNeeded()
-        return levels.count
-    }
-
     /// The songs of `tracks` that have a volume of their own, one copy per song, by title.
     func adjustedSongs(in tracks: [Track]) -> [(track: Track, tenths: Int)] {
         loadIfNeeded()

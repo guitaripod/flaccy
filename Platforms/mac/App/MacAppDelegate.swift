@@ -115,6 +115,13 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
+    /// Brings the main window forward, reopening it when it was closed, for Settings links that
+    /// show something in it.
+    func showMainWindow() {
+        mainWindowController?.showWindow(nil)
+        mainWindowController?.window?.makeKeyAndOrderFront(nil)
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if mainWindow?.isVisible != true {
             mainWindowController?.showWindow(nil)

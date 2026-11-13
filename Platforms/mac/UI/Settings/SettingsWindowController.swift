@@ -1,7 +1,7 @@
 import AppKit
 
 /// The standard macOS Settings window (⌘,): toolbar-style tabs hosting the
-/// General, Last.fm, Recap & Notifications, Library, and About panes.
+/// General, Sound, Last.fm, Recap & Notifications, Library, Servers and About panes.
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     var onClose: (() -> Void)?
@@ -45,6 +45,7 @@ final class SettingsTabViewController: NSTabViewController {
         tabStyle = .toolbar
 
         addPane(GeneralSettingsPane(), title: String(localized: "General"), symbol: "gearshape")
+        addPane(SoundSettingsPane(), title: String(localized: "Sound"), symbol: "waveform")
         addPane(LastFMSettingsPane(), title: "Last.fm", symbol: "dot.radiowaves.left.and.right")
         addPane(NotificationsSettingsPane(), title: String(localized: "Recap"), symbol: "bell.badge")
         addPane(LibrarySettingsPane(), title: String(localized: "Library"), symbol: "folder")

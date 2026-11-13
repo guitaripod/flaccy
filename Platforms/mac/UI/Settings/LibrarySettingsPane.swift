@@ -12,7 +12,8 @@ import UserNotifications
 final class LibrarySettingsPane: SettingsPane {
 
     let rootLabel = NSTextField(labelWithString: "")
-    let statsLabel = NSTextField(labelWithString: "")
+    let overviewView = MacLibraryOverviewView()
+    var overview = LibraryOverviewSummary.empty
     let storageLabel = NSTextField(labelWithString: String(localized: "Storage: …"))
     let rescanButton = NSButton(title: String(localized: "Rescan Library"), target: nil, action: nil)
     let analyzeButton = NSButton(title: String(localized: "Re-analyze with AI…"), target: nil, action: nil)
@@ -50,9 +51,9 @@ final class LibrarySettingsPane: SettingsPane {
         formStack.addArrangedSubview(separator())
 
         formStack.addArrangedSubview(sectionLabel(String(localized: "Library")))
-        statsLabel.font = .systemFont(ofSize: 13)
         storageLabel.font = .systemFont(ofSize: 13)
-        formStack.addArrangedSubview(statsLabel)
+        overviewView.configure(overview)
+        addFullWidth(overviewView)
         formStack.addArrangedSubview(storageLabel)
 
         rescanButton.bezelStyle = .rounded
@@ -210,10 +211,19 @@ final class LibrarySettingsPane: SettingsPane {
     func refresh() {
         rootLabel.stringValue = LibraryRoot.current.path
         rootLabel.toolTip = LibraryRoot.current.path
-        let albums = Library.shared.albums.count
-        let tracks = Library.shared.allTracks.count
-        statsLabel.stringValue = String(localized: "\(albums) albums · \(tracks) tracks")
+        refreshOverview()
         refreshStorage()
+    }
+
+    /// Reads the overview off the main thread and draws it once it lands.
+    func refreshOverview() {
+        let albums = Library.shared.albums
+        Task { [weak self] in
+            guard let summary = await LibraryOverviewSummary.load(albums: albums),
+                  let self, summary != self.overview else { return }
+            self.overview = summary
+            self.overviewView.configure(summary)
+        }
     }
 
     func renderActivity() {

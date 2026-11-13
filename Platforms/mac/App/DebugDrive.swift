@@ -99,6 +99,7 @@ enum DebugDrive {
         case songs(SongsTableViewModel.Filter, ChartPeriod?)
         case home(String)
         case songVolume
+        case guideCard(Int)
     }
 
     static func plannedShot() -> Shot? {
@@ -121,6 +122,7 @@ enum DebugDrive {
             return .songs(filter, value(after: "--songs-range").flatMap(ChartPeriod.init(rawValue:)))
         }
         if let pane = value(after: "--shot-settings") { return .settings(paneIndex: Int(pane) ?? 0) }
+        if let card = value(after: "--shot-guide-card") { return .guideCard(Int(card) ?? 0) }
         if let name = value(after: "--shot-section") {
             let section: SidebarSection? = switch name {
             case "albums": .albums
@@ -203,6 +205,10 @@ enum DebugDrive {
                 userInfo: [SectionNotificationKey.section: section.rawValue]
             )
             name = "flaccy-shot-\(section.title.lowercased().replacingOccurrences(of: " ", with: "-"))"
+        case .guideCard(let card):
+            ListeningGuideFocus.open(card: card)
+            try? await Task.sleep(for: .seconds(2))
+            name = "flaccy-shot-guide-card-\(card)"
         case .album(let title):
             startHeroPlayback()
             try? await Task.sleep(for: .seconds(2))
@@ -268,6 +274,11 @@ enum DebugDrive {
             NotificationCenter.default.post(name: .flaccyToggleQueue, object: nil)
             name = deep ? "flaccy-shot-queue-deep" : "flaccy-shot-queue"
         case .settings(let paneIndex):
+            if CommandLine.arguments.contains("--seed-song-volumes") {
+                for (track, tenths) in zip(Library.shared.allTracks.prefix(3), [35, -20, 10]) {
+                    _ = try? SongVolumeStore.shared.set(tenths, for: track)
+                }
+            }
             NSApp.delegate?.perform(NSSelectorFromString("showSettings:"), with: nil)
             try? await Task.sleep(for: .seconds(2))
             let settingsWindow = NSApp.windows.first {

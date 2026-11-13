@@ -107,7 +107,9 @@ final class GeneralSettingsPane: SettingsPane {
         launchPopUp.setAccessibilityLabel(HomeCopy.openAtLaunch)
         let launchTitle = NSTextField(labelWithString: HomeCopy.openAtLaunch)
         launchTitle.font = .systemFont(ofSize: 13)
-        addRow([launchTitle, launchPopUp], spacing: 8)
+        let customizeHomeButton = NSButton(title: HomeCopy.customizeHomeMenu, target: self, action: #selector(customizeHomeTapped))
+        customizeHomeButton.bezelStyle = .rounded
+        addRow([launchTitle, launchPopUp, customizeHomeButton], spacing: 8)
         loginCheckbox.target = self
         loginCheckbox.action = #selector(loginToggled)
         formStack.addArrangedSubview(loginCheckbox)
@@ -154,6 +156,11 @@ final class GeneralSettingsPane: SettingsPane {
     override func viewWillDisappear() {
         super.viewWillDisappear()
         NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc func customizeHomeTapped() {
+        guard presentedViewControllers?.isEmpty ?? true else { return }
+        presentAsSheet(MacHomeCustomizeViewController())
     }
 
     @objc func entitlementChanged() {

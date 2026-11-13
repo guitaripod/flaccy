@@ -44,6 +44,7 @@ final class SettingsViewController: UITableViewController {
     let livePages = NSHashTable<SettingsPageViewController>.weakObjects()
     var soundObservers: [NSObjectProtocol] = []
     var libraryOverview = LibraryOverviewSummary.empty
+    var songVolumeCount = 0
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -73,6 +74,7 @@ final class SettingsViewController: UITableViewController {
         observeHistorySync()
         observeSound()
         refreshLibraryOverview()
+        refreshSongVolumeCount()
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(purchaseStateChanged),
