@@ -8,6 +8,7 @@
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use chrono::{Datelike, Duration, Utc};
@@ -79,8 +80,11 @@ fn load_or_create_key(data_dir: &Path) -> Result<KeyPair, String> {
         return read_key(&path);
     }
     let key = KeyPair::generate().map_err(|error| format!("Could not make the key for sharing on this network: {error}."))?;
-    write_private(&path, &key.serialize_der())?;
-    Ok(key)
+    match write_private(&path, &key.serialize_der()) {
+        Ok(()) => Ok(key),
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => read_key(&path),
+        Err(error) => Err(format!("Could not save the key for sharing on this network to {}: {error}.", path.display())),
+    }
 }
 
 fn read_key(path: &Path) -> Result<KeyPair, String> {
@@ -95,20 +99,23 @@ fn read_key(path: &Path) -> Result<KeyPair, String> {
     })
 }
 
-/// Writes `bytes` to `path` readable only by its owner, replacing nothing that exists.
-fn write_private(path: &Path, bytes: &[u8]) -> Result<(), String> {
+/// Writes `bytes` to `path` readable only by its owner, replacing nothing that exists: when another start made the key
+/// first, this fails with `AlreadyExists` and that key is the one to use. Each call writes a temporary file of its own
+/// (process and sequence), so two first starts never write into one file.
+fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
     let folder = path.parent().unwrap_or(Path::new("."));
-    fs::create_dir_all(folder).map_err(|error| format!("Could not create {}: {error}.", folder.display()))?;
-    let temporary = path.with_extension("der.part");
-    let written = open_private(&temporary).and_then(|mut file| {
-        file.write_all(bytes)?;
-        file.sync_all()
-    });
-    written
-        .and_then(|()| fs::hard_link(&temporary, path))
-        .map_err(|error| format!("Could not save the key for sharing on this network to {}: {error}.", path.display()))?;
+    fs::create_dir_all(folder)?;
+    let sequence = SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let temporary = path.with_extension(format!("der.{}.{sequence}.part", std::process::id()));
+    let published = open_private(&temporary)
+        .and_then(|mut file| {
+            file.write_all(bytes)?;
+            file.sync_all()
+        })
+        .and_then(|()| fs::hard_link(&temporary, path));
     let _ = fs::remove_file(&temporary);
-    Ok(())
+    published
 }
 
 #[cfg(unix)]
@@ -176,7 +183,19 @@ mod tests {
         LanIdentity::load_or_create(&dir, &[]).unwrap();
         let mode = fs::metadata(dir.join(KEY_FILE)).unwrap().permissions().mode() & 0o777;
         assert_eq!(mode, 0o600);
-        assert!(!dir.join("lan-key.der.part").exists());
+        assert_eq!(fs::read_dir(&dir).unwrap().count(), 1, "only the key is left in the folder");
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn many_first_starts_at_once_all_end_up_with_the_key_on_disk() {
+        let dir = folder("race");
+        let pins: Vec<String> = std::thread::scope(|scope| {
+            let starts: Vec<_> = (0..8).map(|_| scope.spawn(|| LanIdentity::load_or_create(&dir, &[]).unwrap().pin().to_owned())).collect();
+            starts.into_iter().map(|start| start.join().unwrap()).collect()
+        });
+        let on_disk = LanIdentity::read_pin(&dir).unwrap().unwrap();
+        assert!(pins.iter().all(|pin| *pin == on_disk), "{pins:?} vs {on_disk}");
         fs::remove_dir_all(dir).unwrap();
     }
 
