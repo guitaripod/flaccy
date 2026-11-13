@@ -22,6 +22,8 @@ pub const OK_BUTTON: &str = "OK";
 pub const TRY_AGAIN_BUTTON: &str = "Try again";
 pub const ADD_AS_REGULAR_BUTTON: &str = "Add as regular server";
 pub const CONNECTED_BODY: &str = "Your playlists, loves and history now sync with this server. Its music is in your library under Servers.";
+pub const APPLE_APPS_NOTE: &str = "Flaccy for iPhone and Mac connect to this server too and play its music. With Flaccy Pro there, your playlists, loves and plays stay in step with this computer.";
+pub const GET_APPLE_APPS_BUTTON: &str = "Get Flaccy for iPhone and Mac";
 
 /// The Connected body when the server's music could not join the library.
 pub fn connected_body_no_library(name: &str) -> String {

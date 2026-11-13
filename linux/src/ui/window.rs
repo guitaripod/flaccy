@@ -1438,6 +1438,7 @@ fn present_about(window: &adw::ApplicationWindow) {
              </ul>",
         )
         .build();
+    dialog.add_link("Flaccy for iPhone and Mac", crate::apple_apps::APP_STORE_URL);
     dialog.present(Some(window));
 }
 

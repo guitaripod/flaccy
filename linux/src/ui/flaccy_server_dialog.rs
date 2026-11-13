@@ -100,11 +100,15 @@ impl Dialog {
         let connected_body = body_label(copy::CONNECTED_BODY);
         let done = gtk::Button::with_label(copy::DONE_BUTTON);
         done.add_css_class("suggested-action");
+        let apple_apps_note = body_label(copy::APPLE_APPS_NOTE);
+        let connected_actions = button_row(&[&apple_apps_button(), &done]);
+        connected_actions.set_halign(gtk::Align::Center);
         let connected = centered(&[
             icon("emblem-ok-symbolic", "success").upcast_ref(),
             connected_title.upcast_ref(),
             connected_body.upcast_ref(),
-            done.upcast_ref(),
+            apple_apps_note.upcast_ref(),
+            connected_actions.upcast_ref(),
         ]);
 
         let failed_title = heading_label();
@@ -405,6 +409,20 @@ fn centered(children: &[&gtk::Widget]) -> gtk::Box {
     page.set_margin_top(28);
     page.set_margin_bottom(28);
     page
+}
+
+/// Opens the App Store page of Flaccy for iPhone and Mac, which connect to the same Flaccy Server.
+fn apple_apps_button() -> gtk::Button {
+    let button = gtk::Button::with_label(copy::GET_APPLE_APPS_BUTTON);
+    button.connect_clicked(|button| {
+        let window = button.root().and_downcast::<gtk::Window>();
+        gtk::UriLauncher::new(crate::apple_apps::APP_STORE_URL).launch(
+            window.as_ref(),
+            None::<&gtk::gio::Cancellable>,
+            |_| {},
+        );
+    });
+    button
 }
 
 fn button_row(buttons: &[&gtk::Button]) -> gtk::Box {

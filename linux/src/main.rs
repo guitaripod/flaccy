@@ -1,4 +1,5 @@
 mod app;
+mod apple_apps;
 mod artwork_image;
 mod artwork_search;
 mod local_artwork;
