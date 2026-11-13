@@ -63,6 +63,10 @@ curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-
 
 (or `./install.sh --uninstall` from a source checkout / extracted tarball; `pacman -R flaccy-bin` for the AUR package)
 
+## How it's built
+
+I build Flaccy with agentic engineering: I design and direct every part of it, and much of the code is generated under that direction. A change ships only after the Swift and Rust test suites and scripted drills that drive the real app (gapless hand-offs, the equalizer, server sync) pass, and Flaccy Server also has to get through a long soak test.
+
 ## License
 
 GPL-3.0-only. See [LICENSE](LICENSE).
