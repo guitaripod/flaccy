@@ -19,7 +19,7 @@ Lossless music player: GTK4/libadwaita, gapless GStreamer playback, MPRIS, Last.
 curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-flaccy.sh | sh
 ```
 
-Installs to `~/.local` (no sudo). x86_64, glibc ≥ 2.39 (Ubuntu 24.04+, Fedora 40+, Debian 13+, current Arch). On older or musl-based distros, use the AUR package (Arch) or build from source. Requires system GTK4, libadwaita, and GStreamer:
+Installs to `~/.local` (no sudo). x86_64, glibc ≥ 2.39, GTK ≥ 4.18 and libadwaita ≥ 1.7: Ubuntu 25.04+, Fedora 42+, Debian 13+, current Arch. Ubuntu 24.04 LTS, Linux Mint 22, Pop!_OS 24.04 and Fedora 41 ship an older libadwaita that Flaccy cannot start on, and the installer stops there instead of installing. On musl-based distros, build from source. Requires system GTK4, libadwaita, and GStreamer:
 
 - Arch: `sudo pacman -S gtk4 libadwaita gstreamer gst-plugins-base gst-plugins-good gst-libav`
 - Debian/Ubuntu: `sudo apt install libgtk-4-1 libadwaita-1-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav`

@@ -10,6 +10,19 @@ fail() {
   exit 1
 }
 
+refuse_older_toolkit() {
+  command -v ldd >/dev/null 2>&1 || return 0
+  unresolved_libs="$(ldd "$1" 2>/dev/null | awk '/not found/{print $1}')" || true
+  [ -z "${unresolved_libs:-}" ] || return 0
+  absent="$(ldd -r "$1" 2>&1 | awk '/undefined symbol/{sub(",", "", $3); print $3}' | sort -u)" || true
+  [ -n "${absent:-}" ] || return 0
+  echo "error: this system's GTK4 or libadwaita is older than Flaccy needs, so it would not start." >&2
+  echo "  Flaccy needs GTK 4.18 and libadwaita 1.7 or newer: Ubuntu 25.04+, Fedora 42+, Debian 13+, current Arch." >&2
+  echo "  Ubuntu 24.04 LTS, Linux Mint 22, Pop!_OS 24.04 and Fedora 41 ship older ones." >&2
+  echo "  Missing here: $(echo "$absent" | head -3 | tr '\n' ' ')" >&2
+  exit 1
+}
+
 if [ "${1:-}" = "--uninstall" ]; then
   rm -f "$HOME/.local/bin/flaccy" "$HOME/.local/share/applications/$APP_ID.desktop"
   for size in 16 32 48 64 128 256 512; do
@@ -26,6 +39,7 @@ arch="$(uname -m)"
 
 command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v tar >/dev/null 2>&1 || fail "tar is required"
+command -v bash >/dev/null 2>&1 || fail "bash is required"
 
 if command -v sha256sum >/dev/null 2>&1; then
   SHA_CMD="sha256sum"
@@ -39,7 +53,6 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 base="https://github.com/$REPO/releases/latest/download"
-command -v bash >/dev/null 2>&1 || fail "bash is required"
 echo "Downloading $ASSET (latest release)..."
 curl -fsSL -o "$tmp/$ASSET" "$base/$ASSET" || fail "download failed — check https://github.com/$REPO/releases"
 curl -fsSL -o "$tmp/$ASSET.sha256" "$base/$ASSET.sha256" || fail "checksum download failed"
@@ -52,6 +65,7 @@ actual="$($SHA_CMD "$tmp/$ASSET" | awk '{print $1}')"
 tar -xzf "$tmp/$ASSET" -C "$tmp"
 dir="$tmp/flaccy-linux-x86_64"
 [ -x "$dir/install.sh" ] || fail "tarball layout unexpected: install.sh missing"
+refuse_older_toolkit "$dir/flaccy"
 
 echo "Installing to ~/.local (no sudo)..."
 bash "$dir/install.sh"
