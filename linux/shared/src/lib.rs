@@ -30,5 +30,6 @@ pub mod meaning;
 pub mod playlist_cover;
 pub mod precache;
 pub mod remote;
+pub mod signal_path;
 pub mod track_page_layout;
 pub mod track_revision;

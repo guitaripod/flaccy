@@ -43,10 +43,12 @@ const ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL: &str = "
     WHERE albumInfo.coverArtData IS NULL";
 
 mod listens;
+mod overview;
 mod remote;
 mod video_cache;
 
 pub use listens::{ListenTally, PulledListen};
+pub use overview::LibraryOverviewTotals;
 pub use remote::{ApplyReport, MissingCover, RemoteSongMeta};
 pub use video_cache::{VideoCacheRow, STATE_FAILED, STATE_PART, STATE_READY};
 
