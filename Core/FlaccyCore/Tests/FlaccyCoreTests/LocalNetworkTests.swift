@@ -26,6 +26,20 @@ final class LocalNetworkTests: XCTestCase {
         XCTAssertFalse(LocalNetwork.isLocalNetwork("::ffff:100.64.0.1"))
     }
 
+    func testLiteralsReadExactlyAsTheRustParserReadsThem() {
+        XCTAssertTrue(LocalNetwork.isLocalNetwork("::ffff:c0a8:105"))
+        XCTAssertFalse(LocalNetwork.isLocalNetwork("192.168.001.5"))
+        XCTAssertFalse(LocalNetwork.isLocalNetwork("+10.0.0.1"))
+        XCTAssertFalse(LocalNetwork.isLocalNetwork("10.0.0"))
+        XCTAssertTrue(LocalNetwork.isLocalHost("[fe80::1%en0]"))
+        XCTAssertTrue(LocalNetwork.isLocalHost("fd12::5"))
+        XCTAssertFalse(LocalNetwork.isLocalHost("010.0.0.1"))
+        XCTAssertFalse(LocalNetwork.isLocalHost("::ffff:192.168.001.5"))
+        XCTAssertFalse(LocalNetwork.isLocalHost("192.168.1.256"))
+        XCTAssertTrue(LocalNetwork.isIPv6Literal("fd12::5"))
+        XCTAssertFalse(LocalNetwork.isIPv6Literal("arch.local"))
+    }
+
     func testLocalHostsAreLocalIPsAndBonjourNames() {
         XCTAssertTrue(LocalNetwork.isLocalHost("192.168.1.5"))
         XCTAssertTrue(LocalNetwork.isLocalHost("[fd12::5]"))

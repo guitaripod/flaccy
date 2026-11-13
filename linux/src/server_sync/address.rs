@@ -53,11 +53,14 @@ pub fn cursor_after_format(typed: &str, cursor: usize) -> usize {
 
 /// The base URL for an address the person typed: `arch`, `arch.tailnet.ts.net`, `arch.local` or an IP, with or without
 /// a scheme and a port. A bare host gets port 4545, and `https` when it is on the local network (where a Flaccy Server
-/// answers over TLS) or `http` otherwise.
+/// answers over TLS) or `http` otherwise. A bare IPv6 address is put in brackets.
 pub fn typed_address(typed: &str) -> Option<String> {
     let trimmed = typed.trim();
     if trimmed.is_empty() {
         return None;
+    }
+    if trimmed.parse::<std::net::Ipv6Addr>().is_ok() {
+        return typed_address(&format!("[{trimmed}]"));
     }
     if trimmed.contains("://") {
         return normalize(trimmed).map(|url| with_default_port(url, "http"));
@@ -183,6 +186,8 @@ mod tests {
         assert_eq!(typed_address("Marcuss-Mac.local").as_deref(), Some("https://Marcuss-Mac.local:4545"));
         assert_eq!(typed_address("192.168.1.5:9000").as_deref(), Some("https://192.168.1.5:9000"));
         assert_eq!(typed_address("[fd12::5]").as_deref(), Some("https://[fd12::5]:4545"));
+        assert_eq!(typed_address("fd12::5").as_deref(), Some("https://[fd12::5]:4545"));
+        assert_eq!(typed_address("2001:db8::1").as_deref(), Some("http://[2001:db8::1]:4545"));
         assert_eq!(typed_address("http://192.168.1.5").as_deref(), Some("http://192.168.1.5:4545"));
     }
 

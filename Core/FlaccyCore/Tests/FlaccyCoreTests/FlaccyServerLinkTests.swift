@@ -17,6 +17,8 @@ final class FlaccyServerLinkTests: XCTestCase {
         XCTAssertEqual(FlaccyServerLink.baseURL(from: "100.91.211.44")?.absoluteString, "http://100.91.211.44:4545")
         XCTAssertEqual(FlaccyServerLink.baseURL(from: "arch.tail1234.ts.net")?.absoluteString, "http://arch.tail1234.ts.net:4545")
         XCTAssertEqual(FlaccyServerLink.baseURL(from: "http://arch:8080/")?.absoluteString, "http://arch:8080")
+        XCTAssertEqual(FlaccyServerLink.baseURL(from: "fd12::5")?.absoluteString, "https://[fd12::5]:4545")
+        XCTAssertEqual(FlaccyServerLink.baseURL(from: "2001:db8::1")?.absoluteString, "http://[2001:db8::1]:4545")
         XCTAssertEqual(FlaccyServerLink.baseURL(from: "https://arch.example/path?x=1#y")?.absoluteString, "https://arch.example")
         XCTAssertNil(FlaccyServerLink.baseURL(from: "ftp://arch"))
         XCTAssertNil(FlaccyServerLink.baseURL(from: "  "))

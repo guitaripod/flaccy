@@ -92,10 +92,11 @@ public struct FlaccyServerLink: Sendable, Equatable, CustomStringConvertible {
 
     /// The base URL for what a person types or a link carries: `arch`, `arch.tail1234.ts.net`, `arch.local`, an IP, with
     /// or without a scheme and a port. A bare host gets port 4545, and `https` on the local network (where a Flaccy Server
-    /// answers over TLS) or plain HTTP otherwise; a path and a query are dropped.
+    /// answers over TLS) or plain HTTP otherwise; a path and a query are dropped. A bare IPv6 address is put in brackets.
     public static func baseURL(from input: String) -> URL? {
-        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
+        let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !typed.isEmpty else { return nil }
+        let trimmed = LocalNetwork.isIPv6Literal(typed) ? "[\(typed)]" : typed
         let typedScheme = trimmed.contains("://")
         guard let probe = URLComponents(string: typedScheme ? trimmed : "http://" + trimmed), let probeHost = probe.host else {
             return nil

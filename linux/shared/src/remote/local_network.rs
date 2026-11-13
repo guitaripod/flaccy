@@ -29,11 +29,12 @@ pub fn is_bindable_local_network(ip: IpAddr) -> bool {
 }
 
 /// Whether a host as typed names a machine on the local network: a local IP
-/// literal (IPv6 with or without brackets) or a `.local` Bonjour name.
+/// literal (IPv6 with or without brackets and zone) or a `.local` Bonjour name.
 pub fn is_local_host(host: &str) -> bool {
     let trimmed = host.trim().trim_end_matches('.');
     let unbracketed = trimmed.trim_start_matches('[').trim_end_matches(']');
-    if let Ok(ip) = unbracketed.parse::<IpAddr>() {
+    let unzoned = unbracketed.split('%').next().unwrap_or(unbracketed);
+    if let Ok(ip) = unzoned.parse::<IpAddr>() {
         return is_local_network(ip);
     }
     let lowered = trimmed.to_ascii_lowercase();
@@ -101,6 +102,19 @@ mod tests {
         assert!(!is_bindable_local_network(ip("169.254.1.1")));
         assert!(!is_bindable_local_network(ip("fe80::1")));
         assert!(!is_bindable_local_network(ip("fd7a:115c:a1e0::5")));
+    }
+
+    #[test]
+    fn literals_read_exactly_as_the_swift_parser_reads_them() {
+        assert!(is_local_host("::ffff:c0a8:105"));
+        assert!(!is_local_host("192.168.001.5"));
+        assert!(!is_local_host("+10.0.0.1"));
+        assert!(!is_local_host("10.0.0"));
+        assert!(is_local_host("[fe80::1%en0]"));
+        assert!(is_local_host("fd12::5"));
+        assert!(!is_local_host("010.0.0.1"));
+        assert!(!is_local_host("::ffff:192.168.001.5"));
+        assert!(!is_local_host("192.168.1.256"));
     }
 
     #[test]
