@@ -181,9 +181,40 @@ fn make_reachable(
 
 fn append_lan(path: &Path) -> Result<(), String> {
     let existing = std::fs::read_to_string(path).map_err(|error| format!("Could not read {}: {error}.", path.display()))?;
-    let separator = if existing.is_empty() || existing.ends_with('\n') { "" } else { "\n" };
-    std::fs::write(path, format!("{existing}{separator}lan = true\n"))
+    std::fs::write(path, with_lan_on(&existing))
         .map_err(|error| format!("Could not write {}: {error}. Add `lan = true` to it yourself, then run this again.", path.display()))
+}
+
+/// The configuration text with `lan = true`: an existing top-level `lan` line is replaced, since TOML refuses a key set
+/// twice, and a new line goes before the first table so it does not land inside `[lastfm]` or another section.
+fn with_lan_on(existing: &str) -> String {
+    let mut lines: Vec<&str> = Vec::new();
+    let mut first_table = None;
+    let mut replaced = false;
+    for line in existing.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with('[') && first_table.is_none() {
+            first_table = Some(lines.len());
+        }
+        if first_table.is_none() && !replaced && is_lan_line(trimmed) {
+            lines.push(LAN_ON);
+            replaced = true;
+            continue;
+        }
+        lines.push(line);
+    }
+    if !replaced {
+        lines.insert(first_table.unwrap_or(lines.len()), LAN_ON);
+    }
+    let mut text = lines.join("\n");
+    text.push('\n');
+    text
+}
+
+const LAN_ON: &str = "lan = true";
+
+fn is_lan_line(line: &str) -> bool {
+    line.strip_prefix("lan").is_some_and(|rest| rest.trim_start().starts_with('='))
 }
 
 /// Makes the key devices on this network pin, when the server shares here, so the link can carry its pin.

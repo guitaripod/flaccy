@@ -98,7 +98,20 @@ async fn an_existing_setup_without_any_reach_is_offered_this_network() {
     write_config(&environment.config_path, &sandbox.root.join("music"), port, false, environment.data_dir.as_deref()).unwrap();
     let mut terminal = ScriptedTerminal::silent();
     let _ = execute(&environment, &mut terminal, sandbox.args(port)).await;
-    assert!(std::fs::read_to_string(&environment.config_path).unwrap().ends_with("lan = true\n"));
+    let text = std::fs::read_to_string(&environment.config_path).unwrap();
+    assert_eq!(text.lines().filter(|line| line.trim_start().starts_with("lan ")).collect::<Vec<_>>(), vec!["lan = true"], "{text}");
+    assert!(Config::load(&environment.config_path).unwrap().lan);
+}
+
+#[test]
+fn turning_sharing_on_replaces_the_lan_line_and_stays_out_of_tables() {
+    assert_eq!(super::with_lan_on("music_folder = \"/m\"\nlan = false\n"), "music_folder = \"/m\"\nlan = true\n");
+    assert_eq!(
+        super::with_lan_on("music_folder = \"/m\"\nlan_name = \"den\"\n\n[lastfm]\nlan = false\n"),
+        "music_folder = \"/m\"\nlan_name = \"den\"\n\nlan = true\n[lastfm]\nlan = false\n"
+    );
+    assert_eq!(super::with_lan_on("port = 4545"), "port = 4545\nlan = true\n");
+    assert_eq!(super::with_lan_on(""), "lan = true\n");
 }
 
 #[tokio::test]
