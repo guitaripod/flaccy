@@ -90,20 +90,28 @@ impl ServerLink {
         let mut alternates = Vec::new();
         for pair in query.split('&') {
             let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
-            let decoded = decode_segment(value).filter(|text| !text.is_empty());
+            let decoded = decode_segment(value).map(|text| text.trim().to_owned()).filter(|text| !text.is_empty());
             match key {
-                "url" => url = decoded,
-                "enroll" => enroll = decoded,
-                "name" => name = decoded,
-                "pin" => pin = decoded,
+                "url" => keep_first(&mut url, decoded),
+                "enroll" => keep_first(&mut enroll, decoded),
+                "name" => keep_first(&mut name, decoded),
+                "pin" => keep_first(&mut pin, decoded),
                 "alt" => alternates.extend(decoded.and_then(|raw| normalize(&raw))),
                 _ => {}
             }
         }
         let url = url
+            .flatten()
             .and_then(|raw| normalize(&raw))
             .ok_or(LinkError::MissingUrl)?;
-        Ok(ServerLink { url, enroll, name, pin, alternates })
+        Ok(ServerLink { url, enroll: enroll.flatten(), name: name.flatten(), pin: pin.flatten(), alternates })
+    }
+}
+
+/// Keeps the first value a link gives for a key, empty or not, and ignores repeats, as the iPhone and Mac read links.
+fn keep_first(slot: &mut Option<Option<String>>, value: Option<String>) {
+    if slot.is_none() {
+        *slot = Some(value);
     }
 }
 
@@ -133,6 +141,21 @@ impl fmt::Display for ServerLink {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_first_value_of_a_repeated_key_wins_as_on_the_iphone() {
+        let link = ServerLink::parse(
+            "flaccy://server?url=https%3A%2F%2Fa.local%3A4545&url=https%3A%2F%2Fb.local%3A4545&enroll=ABC&enroll=XYZ&pin=one&pin=two",
+        )
+        .unwrap();
+        assert_eq!(link.url, "https://a.local:4545");
+        assert_eq!(link.enroll.as_deref(), Some("ABC"));
+        assert_eq!(link.pin.as_deref(), Some("one"));
+        assert_eq!(
+            ServerLink::parse("flaccy://server?url=&url=https%3A%2F%2Farch.local%3A4545&enroll=ABC"),
+            Err(LinkError::MissingUrl)
+        );
+    }
 
     #[test]
     fn a_link_round_trips_with_its_code_and_name() {
