@@ -2000,3 +2000,96 @@ button.artist-sticky-play {
   min-height: 40px;
   padding: 0;
 }
+
+/* ---- preferences: sound and library overview ---------------------------- */
+/* The Sound page's signal path and the Library group's overview, after the
+   iPhone's Settings: coloured tiles lead each stage and row, the verdict and
+   the format legend use the same tints. */
+.sound-tile {
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 8px;
+  color: #ffffff;
+}
+
+.sound-tint-cyan   { background-color: #32ade6; }
+.sound-tint-green  { background-color: #30b158; }
+.sound-tint-blue   { background-color: #0a84ff; }
+.sound-tint-indigo { background-color: #5e5ce6; }
+.sound-tint-orange { background-color: #ff9f0a; }
+.sound-tint-gray   { background-color: #8e8e93; }
+.sound-tint-pink   { background-color: #ff375f; }
+.sound-tint-purple { background-color: #bf5af2; }
+.sound-tint-teal   { background-color: #30b0c7; }
+.sound-tint-faint  { background-color: alpha(@window_fg_color, 0.28); }
+
+.sound-path {
+  padding: 16px 18px 14px 18px;
+}
+
+.sound-connector {
+  min-width: 2px;
+  min-height: 10px;
+  margin: 3px 0 3px 14px;
+  border-radius: 1px;
+  background-color: alpha(@window_fg_color, 0.16);
+}
+
+.sound-path-separator {
+  margin: 14px 0 12px 0;
+}
+
+.sound-caption {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.55;
+}
+
+.sound-verdict {
+  font-weight: 600;
+}
+
+.sound-verdict-dot {
+  min-width: 10px;
+  min-height: 10px;
+  border-radius: 9999px;
+}
+
+.sound-level-raised {
+  color: #ff9f0a;
+  font-weight: 600;
+}
+
+.library-overview {
+  padding: 18px 18px 16px 18px;
+}
+
+.format-flac  { background-color: rgb(50, 173, 230); }
+.format-alac  { background-color: rgb(48, 176, 199); }
+.format-wav   { background-color: rgb(94, 92, 230); }
+.format-aiff  { background-color: rgb(191, 90, 242); }
+.format-mp3   { background-color: rgb(255, 159, 10); }
+.format-aac   { background-color: rgb(255, 55, 95); }
+.format-other { background-color: rgb(142, 142, 147); }
+
+.overview-tag {
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.overview-tag-lossless {
+  color: @accent_color;
+  background-color: alpha(@accent_bg_color, 0.16);
+}
+
+.overview-tag-hires {
+  color: #bf5af2;
+  background-color: alpha(#bf5af2, 0.16);
+}
+
+.overview-tag-plain {
+  background-color: alpha(@window_fg_color, 0.08);
+}

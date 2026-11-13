@@ -1989,6 +1989,12 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
             ui::now_playing::present(&ui);
         });
     }
+    if let Ok(position) = std::env::var("FLACCY_DEMO_GUIDE") {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(3000), move || {
+            ui::guide::show(&ui, position.parse().ok());
+        });
+    }
     if std::env::var_os("FLACCY_DEMO_PREFS").is_some() {
         let ui = Rc::clone(ui);
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {

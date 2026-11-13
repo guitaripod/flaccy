@@ -39,6 +39,7 @@ pub mod playlist_cover;
 pub mod playlist_cover_demo;
 pub mod playlists;
 pub mod prefs;
+pub mod prefs_sound;
 pub mod queue_panel;
 pub mod resize;
 pub mod screen;

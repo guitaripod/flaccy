@@ -141,6 +141,33 @@ pub fn read_default_output() -> Option<Output> {
     }))
 }
 
+/// The rate the sink called `id` runs at, as `pactl` reports it, or `None`
+/// when `pactl` is missing or does not say. It runs a process, so call it off
+/// the main thread.
+pub fn sink_sample_rate(id: &str) -> Option<u32> {
+    let text = pactl(&["--format=json", "list", "sinks"])?;
+    sample_rate_from_sinks_json(&text, id)
+}
+
+fn sample_rate_from_sinks_json(text: &str, id: &str) -> Option<u32> {
+    let sinks: Value = serde_json::from_str(text).ok()?;
+    let specification = sinks
+        .as_array()?
+        .iter()
+        .find(|sink| sink.get("name").and_then(Value::as_str) == Some(id))?
+        .get("sample_specification")?
+        .as_str()?;
+    sample_rate_from_specification(specification)
+}
+
+/// The rate in a sample specification such as "s32le 2ch 48000Hz".
+fn sample_rate_from_specification(specification: &str) -> Option<u32> {
+    specification
+        .split_whitespace()
+        .find_map(|part| part.strip_suffix("Hz")?.parse().ok())
+        .filter(|rate| *rate > 0)
+}
+
 fn parse_sinks_json(text: &str, default: &str) -> Option<Output> {
     let sinks: Value = serde_json::from_str(text).ok()?;
     let sink = sinks
@@ -272,6 +299,20 @@ mod tests {
         let output = parse_sinks_text(text, "bluez_output.X").expect("found");
         assert_eq!(output.name, "AirPods");
         assert_eq!(output.kind, OutputKind::Bluetooth);
+    }
+
+    #[test]
+    fn the_sample_rate_comes_from_the_named_sinks_specification() {
+        let json = r#"[
+            {"name": "hdmi", "sample_specification": "s16le 2ch 44100Hz"},
+            {"name": "usb", "sample_specification": "s32le 2ch 96000Hz"},
+            {"name": "odd", "sample_specification": "unknown"}
+        ]"#;
+        assert_eq!(sample_rate_from_sinks_json(json, "usb"), Some(96_000));
+        assert_eq!(sample_rate_from_sinks_json(json, "hdmi"), Some(44_100));
+        assert_eq!(sample_rate_from_sinks_json(json, "odd"), None);
+        assert_eq!(sample_rate_from_sinks_json(json, "missing"), None);
+        assert_eq!(sample_rate_from_specification("float32le 2ch 0Hz"), None);
     }
 
     #[test]

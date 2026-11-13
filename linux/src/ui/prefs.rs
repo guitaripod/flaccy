@@ -38,10 +38,22 @@ pub fn present(ui: &Rc<Ui>) {
     page.add(&about_group());
 
     dialog.add(&page);
+    let sound_page = crate::ui::prefs_sound::page(ui, &dialog);
+    dialog.add(&sound_page);
     let servers_page = crate::ui::servers::page(ui);
     dialog.add(&servers_page);
-    if std::env::var("FLACCY_DEMO_PREFS").as_deref() == Ok("servers") {
-        dialog.set_visible_page(&servers_page);
+    match std::env::var("FLACCY_DEMO_PREFS").as_deref() {
+        Ok("servers") => dialog.set_visible_page(&servers_page),
+        Ok("sound") => dialog.set_visible_page(&sound_page),
+        Ok("song-volumes") => {
+            crate::ui::prefs_sound::seed_demo_song_volumes(ui);
+            dialog.set_visible_page(&sound_page);
+            let (ui, dialog) = (Rc::clone(ui), dialog.clone());
+            glib::timeout_add_local_once(std::time::Duration::from_millis(600), move || {
+                crate::ui::prefs_sound::push_song_volumes(&ui, &dialog);
+            });
+        }
+        _ => {}
     }
     dialog.present(Some(&ui.window));
     republish_job_progress(ui);
@@ -289,6 +301,7 @@ fn appearance_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     group.add(&row);
     group.add(&theme_row(ui));
     group.add(&ui_scale_row(ui));
+    group.add(&crate::ui::prefs_sound::home_screen_row(ui));
     group
 }
 
@@ -832,6 +845,7 @@ pub(crate) fn choose_music_folder(ui: &Rc<Ui>, chosen: impl Fn(&std::path::Path)
 
 fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder().title("Library").build();
+    group.add(&crate::ui::prefs_sound::library_overview_row(ui));
 
     let folder_row = adw::ActionRow::builder()
         .title("Music Folder")

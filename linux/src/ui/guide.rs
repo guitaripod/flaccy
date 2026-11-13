@@ -1,8 +1,13 @@
 use crate::ui::Ui;
 use adw::prelude::*;
+use gtk::glib;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 struct Card {
+    /// Where the card sits in the Apple guide, the numbering
+    /// `SignalPathVerdict::guide_cards` speaks in.
+    position: usize,
     title: &'static str,
     icon: &'static str,
     body: &'static str,
@@ -14,11 +19,12 @@ struct Card {
     source_url: Option<&'static str>,
 }
 
-/// The five iOS ListeningGuideContent fact cards, with the wired-DAC card
+/// The six iOS ListeningGuideContent fact cards, with the wired-DAC card
 /// first — on a desktop the DAC is usually wired, so it argues FOR the
 /// platform (the iOS port note suggests exactly this reorder).
-const CARDS: [Card; 5] = [
+const CARDS: [Card; 6] = [
     Card {
+        position: 3,
         title: "When FLAC is worth it",
         icon: "audio-card-symbolic",
         body: "For true lossless, go wired: a desktop or home rig with a wired DAC is exactly where FLAC shines. On iPhone, the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz.",
@@ -30,6 +36,7 @@ const CARDS: [Card; 5] = [
         source_url: None,
     },
     Card {
+        position: 0,
         title: "Bluetooth & AAC",
         icon: "bluetooth-active-symbolic",
         body: "AirPods receive audio over Bluetooth using Apple's AAC codec at up to roughly 256 kbps. The rate is adaptive — it can drop when the wireless link degrades.",
@@ -41,6 +48,7 @@ const CARDS: [Card; 5] = [
         source_url: None,
     },
     Card {
+        position: 1,
         title: "Why lossless can't reach AirPods",
         icon: "audio-headphones-symbolic",
         body: "Apple confirms Bluetooth connections aren't lossless. Playing a FLAC or ALAC file to AirPods delivers, at best, ~256 kbps AAC at your ear. AirPods Pro 3's spec sheet lists \u{201c}No Lossless Audio\u{201d}.",
@@ -55,6 +63,7 @@ const CARDS: [Card; 5] = [
         source_url: Some("https://support.apple.com/en-us/118295"),
     },
     Card {
+        position: 2,
         title: "What happens to your files",
         icon: "media-playlist-repeat-symbolic",
         body: "iOS mixes all audio — your music plus system sounds — into one stream and re-encodes it to AAC for Bluetooth, so even a 256 kbps AAC file is decoded and encoded again on its way to your AirPods. This is how the audio pipeline works: engineering consensus, as Apple doesn't document passthrough. One extra generation of high-bitrate AAC is essentially inaudible — the loss is real on paper, tiny in practice.",
@@ -66,6 +75,23 @@ const CARDS: [Card; 5] = [
         source_url: None,
     },
     Card {
+        position: 4,
+        title: "Why some albums still click",
+        icon: "media-playlist-consecutive-symbolic",
+        body: "Gapless is always on in Flaccy — the next track is decoded and waiting before the current one ends, so a continuous album runs as one piece. What you hear at the seam depends on the file. Lossless formats store exactly the samples the master had, so there is nothing between tracks to remove. MP3 and AAC encode in fixed blocks and pad every file with a fraction of a second of silence at each end, and that padding lives inside the file.",
+        bullets_caption: Some("What this means for your library"),
+        bullets: &[
+            "FLAC, ALAC, WAV and AIFF albums are gapless with no caveat.",
+            "MP3 and AAC rips of live albums, DJ mixes and segued records can click between tracks — the padding is baked in, not something a player setting can undo.",
+            "Re-ripping the album to FLAC removes the seam for good.",
+        ],
+        takeaway_caption: Some("Practical takeaway"),
+        takeaway: Some("If one album gaps and the rest don't, check its format before blaming the player."),
+        source_label: None,
+        source_url: None,
+    },
+    Card {
+        position: 5,
         title: "Can you hear the difference?",
         icon: "audio-volume-high-symbolic",
         body: "In published blind tests — the largest public one put 580 participants on CD versus 256 kbps AAC — most listeners cannot reliably tell 256 kbps AAC from lossless. Only a small minority succeed, on specific tracks, under ideal conditions, on revealing gear. Apple itself calls the difference \u{201c}virtually indistinguishable\u{201d}.",
@@ -77,6 +103,72 @@ const CARDS: [Card; 5] = [
         source_url: None,
     },
 ];
+
+/// The built Guide page, kept so another screen can open it at one card.
+struct BuiltGuide {
+    scroll: glib::WeakRef<gtk::ScrolledWindow>,
+    cards: Vec<(usize, glib::WeakRef<gtk::Widget>)>,
+}
+
+thread_local! {
+    static BUILT: RefCell<Option<BuiltGuide>> = const { RefCell::new(None) };
+}
+
+/// The title and icon of the card at `position` in the Apple guide's
+/// numbering, `None` for a card this guide does not carry.
+pub fn card_heading(position: usize) -> Option<(&'static str, &'static str)> {
+    CARDS
+        .iter()
+        .find(|card| card.position == position)
+        .map(|card| (card.title, card.icon))
+}
+
+/// Shows the Guide page, scrolled to the card at `position` when one is given
+/// and to the top otherwise.
+pub fn show(ui: &Rc<Ui>, position: Option<usize>) {
+    WidgetExt::activate_action(&ui.window, "win.show-page", Some(&"guide".to_variant())).ok();
+    scroll_when_laid_out(position, 0);
+}
+
+/// How many frames to wait for the Guide page to be laid out after it is shown.
+const SCROLL_ATTEMPTS: u32 = 30;
+
+/// Scrolls once the page has a size; a page that was just switched to is laid
+/// out a frame or two later.
+fn scroll_when_laid_out(position: Option<usize>, attempt: u32) {
+    let ready = BUILT.with(|built| {
+        let built = built.borrow();
+        let Some(built) = built.as_ref() else {
+            return true;
+        };
+        let Some(scroll) = built.scroll.upgrade() else {
+            return true;
+        };
+        if !scroll.is_mapped() || scroll.height() == 0 {
+            return false;
+        }
+        let card = position.and_then(|position| {
+            built
+                .cards
+                .iter()
+                .find(|(card_position, _)| *card_position == position)
+                .and_then(|(_, card)| card.upgrade())
+        });
+        let adjustment = scroll.vadjustment();
+        let top = card
+            .and_then(|card| card.compute_point(&scroll, &gtk::graphene::Point::new(0.0, 0.0)))
+            .map(|point| adjustment.value() + f64::from(point.y()) - 12.0)
+            .unwrap_or(0.0);
+        let highest = (adjustment.upper() - adjustment.page_size()).max(0.0);
+        adjustment.set_value(top.clamp(0.0, highest));
+        true
+    });
+    if !ready && attempt < SCROLL_ATTEMPTS {
+        glib::timeout_add_local_once(std::time::Duration::from_millis(16), move || {
+            scroll_when_laid_out(position, attempt + 1);
+        });
+    }
+}
 
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let content = gtk::Box::builder()
@@ -110,8 +202,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     intro.add_css_class("dim");
     content.append(&intro);
 
+    let mut cards = Vec::with_capacity(CARDS.len());
     for card in &CARDS {
-        content.append(&card_widget(ui, card));
+        let widget = card_widget(ui, card);
+        cards.push((card.position, widget.downgrade()));
+        content.append(&widget);
     }
 
     let scroll = gtk::ScrolledWindow::builder()
@@ -124,6 +219,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         )
         .build();
     ui.register_scroller(&scroll);
+    BUILT.with(|built| {
+        *built.borrow_mut() = Some(BuiltGuide {
+            scroll: scroll.downgrade(),
+            cards,
+        });
+    });
     scroll.upcast()
 }
 
