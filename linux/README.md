@@ -13,6 +13,8 @@ Lossless music player: GTK4/libadwaita, gapless GStreamer playback, MPRIS, Last.
 - **Downloads** (Ctrl+D): paste a YouTube, SoundCloud or Bandcamp link and get tagged audio in your library. Needs `yt-dlp` and `ffmpeg`.
 - **Adaptive theme** that retints the app to what is playing, or one of seven palettes.
 
+Flaccy for Linux is free. The same Flaccy runs on iPhone, Apple Watch and Mac ([App Store](https://apps.apple.com/app/id6787493695)); connect them all to Flaccy Server and your playlists, loves and plays follow you between this computer and your phone (on the Apple side that sync is part of Flaccy Pro).
+
 ## Install
 
 ```sh
