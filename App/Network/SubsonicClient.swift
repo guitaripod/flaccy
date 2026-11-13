@@ -102,6 +102,7 @@ actor SubsonicClient {
 
     deinit {
         session.invalidateAndCancel()
+        streams.invalidate()
     }
 
     func ping() async throws -> SubsonicResponse.Envelope {
@@ -314,7 +315,9 @@ nonisolated final class SubsonicStreamSession: NSObject, URLSessionDataDelegate,
         session = URLSession(configuration: configuration, delegate: self, delegateQueue: queue)
     }
 
-    deinit {
+    /// Cancels every stream and lets the session go. A URLSession holds its delegate, this object, until it is
+    /// invalidated, so the client that owns this session calls it when it goes away.
+    func invalidate() {
         session.invalidateAndCancel()
     }
 
