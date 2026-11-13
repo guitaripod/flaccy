@@ -78,6 +78,7 @@ pub struct AppCore {
     building_albums: Cell<bool>,
     reload_in_flight: Cell<bool>,
     reload_pending: Cell<bool>,
+    rescan_requested: Cell<bool>,
     /// Set while a scan that started from an empty library reads tags, the
     /// window in which `list_while_scanning` shows the songs read so far.
     listing_pace: RefCell<Option<LiveListingPace>>,
@@ -202,6 +203,7 @@ impl AppCore {
             building_albums: Cell::new(false),
             reload_in_flight: Cell::new(false),
             reload_pending: Cell::new(false),
+            rescan_requested: Cell::new(false),
             listing_pace: RefCell::new(None),
             listing_in_flight: Cell::new(false),
             listing_generation: Cell::new(0),
@@ -742,8 +744,11 @@ impl AppCore {
         });
     }
 
+    /// Scans the music folder. A call made while a scan runs is remembered and replayed when that scan ends, since the
+    /// running scan listed its files before a newly chosen folder or a dropped album existed.
     pub fn rescan(self: &Rc<Self>) {
         if self.scanning.get() {
+            self.rescan_requested.set(true);
             return;
         }
         self.scanning.set(true);
@@ -785,6 +790,7 @@ impl AppCore {
                         }
                         crate::enrichment::request_background_pass(&core);
                         core.hub.emit(&AppEvent::ScanFinished { added, removed, failure: None });
+                        core.replay_requested_rescan();
                     }
                     ScanEvent::Revised(rel_paths) => core.note_new_versions(&rel_paths),
                     ScanEvent::Retagged => core.reload_library(),
@@ -808,6 +814,13 @@ impl AppCore {
         self.hub.emit(&AppEvent::ScanProgress(LoadProgress::new(LoadPhase::Idle)));
         crate::enrichment::request_background_pass(self);
         self.hub.emit(&AppEvent::ScanFinished { added: 0, removed: 0, failure: Some(failure) });
+        self.replay_requested_rescan();
+    }
+
+    fn replay_requested_rescan(self: &Rc<Self>) {
+        if self.rescan_requested.replace(false) {
+            self.rescan();
+        }
     }
 
     /// Plays `tracks` from `start`, naming what they were started from by
