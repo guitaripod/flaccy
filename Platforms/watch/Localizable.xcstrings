@@ -2295,6 +2295,34 @@
             }
           }
         },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg album"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg albums"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
@@ -2438,45 +2466,13 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$#@arg1@"
-          },
-          "substitutions": {
-            "arg1": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg 枚のアルバム"
-                    }
-                  }
-                }
-              }
-            }
+            "value": "%lld枚のアルバム"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$#@arg1@"
-          },
-          "substitutions": {
-            "arg1": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg개 앨범"
-                    }
-                  }
-                }
-              }
-            }
+            "value": "앨범 %lld장"
           }
         },
         "nb": {
@@ -2606,45 +2602,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$#@arg1@"
-          },
-          "substitutions": {
-            "arg1": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg 张专辑"
-                    }
-                  }
-                }
-              }
-            }
+            "value": "%lld 张专辑"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$#@arg1@"
-          },
-          "substitutions": {
-            "arg1": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg 張專輯"
-                    }
-                  }
-                }
-              }
-            }
+            "value": "%lld 張專輯"
           }
         }
       }
@@ -3888,49 +3852,231 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld sange"
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg sang"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg sange"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld Titel"
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Titel"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Titel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld pistas"
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg pista"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg pistas"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld kappaletta"
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg kappale"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg kappaletta"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld morceaux"
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg morceau"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg morceaux"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "is": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld lög"
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg lag"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg lög"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld brani"
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg brano"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg brani"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 曲"
+            "value": "%lldトラック"
           }
         },
         "ko": {
@@ -3942,7 +4088,29 @@
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld sanger"
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg sang"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg sanger"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "pl": {
@@ -3988,25 +4156,69 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld faixas"
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg faixa"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg faixas"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld låtar"
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg låt"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg låtar"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 首"
+            "value": "%lld 首曲目"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 首"
+            "value": "%lld 首曲目"
           }
         }
       }
