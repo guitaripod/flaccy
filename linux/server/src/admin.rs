@@ -200,15 +200,16 @@ pub async fn enroll(config: &Config, args: EnrollArgs) -> Result<(), String> {
 /// Where `enroll` sends a device: `--url` when given, otherwise the tailnet by this machine's name and, with
 /// `lan = true`, this network's address with the pin of the key the server made when it first shared here.
 fn command_line_reach(config: &Config, url: Option<String>) -> Result<DeviceReach, String> {
-    let pin = if config.lan { LanIdentity::read_pin(&config.data_dir())? } else { None };
-    if config.lan && pin.is_none() {
+    let sharing_locally = config.shares_on_local_network();
+    let pin = if sharing_locally { LanIdentity::read_pin(&config.data_dir())? } else { None };
+    if sharing_locally && pin.is_none() {
         return Err("This server has not shared on this network yet. Start it once with `lan = true` (`flaccy-server serve`, or restart its service), then make the code again.".to_owned());
     }
     if let Some(url) = url {
         return Ok(DeviceReach { url, alternates: Vec::new(), pin });
     }
     let tailnet_up = tailnet::addresses().map(|found| !found.is_empty()).unwrap_or(false);
-    let tailnet = (tailnet_up || !config.lan).then(|| format!("http://{}:{}", machine_name(), config.port));
+    let tailnet = (tailnet_up || !sharing_locally).then(|| format!("http://{}:{}", machine_name(), config.port));
     let local = pin.as_deref().and_then(|pin| {
         let found = lan::discover(true).ok()?;
         let bound: Vec<std::net::SocketAddr> = found.local.iter().map(|ip| std::net::SocketAddr::new(*ip, config.port)).collect();

@@ -228,7 +228,7 @@ pub async fn bind_check(config: &Config, environment: &DoctorEnvironment<'_>, in
 
 /// With `lan = true`, the address devices on this network are given, or why there is none.
 fn network_check(config: &Config, interfaces: &[IpAddr]) -> Option<Check> {
-    if !config.lan || config.address != "127.0.0.1" {
+    if !config.shares_on_local_network() {
         return None;
     }
     let pin = match LanIdentity::read_pin(&config.data_dir()) {

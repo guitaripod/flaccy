@@ -219,7 +219,7 @@ fn is_lan_line(line: &str) -> bool {
 
 /// Makes the key devices on this network pin, when the server shares here, so the link can carry its pin.
 fn local_pin(config: &Config) -> Result<Option<String>, String> {
-    if !config.lan {
+    if !config.shares_on_local_network() {
         return Ok(None);
     }
     let identity = LanIdentity::load_or_create(&config.data_dir(), &certificate_names(config))?;

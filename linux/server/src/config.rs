@@ -178,6 +178,12 @@ impl Config {
         self.data_dir().join("covers")
     }
 
+    /// Whether the server shares on the local network: `lan` is on and `address` is left at loopback, where the server
+    /// picks its own addresses. A server bound to one `address` serves only that address, over plain HTTP.
+    pub fn shares_on_local_network(&self) -> bool {
+        self.lan && self.address == DEFAULT_ADDRESS
+    }
+
     /// `address:port` as the listener binds it.
     pub fn listen_address(&self) -> String {
         if self.address.contains(':') && !self.address.starts_with('[') {

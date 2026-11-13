@@ -112,7 +112,8 @@ async fn serve_easy(
     port_advice: &str,
 ) -> Result<(), String> {
     let port = state.0.config.port;
-    let sharing_locally = state.0.config.lan;
+    let identity = local_identity(&state.0.config);
+    let sharing_locally = identity.is_some();
     logger::info(
         "server",
         if sharing_locally {
@@ -121,11 +122,6 @@ async fn serve_easy(
             "the `address` setting is superseded by tailnet binding: the server listens on loopback and this machine's tailnet addresses; set `address` to another value to bind only that address"
         },
     );
-    let identity = if sharing_locally {
-        Some(LanIdentity::load_or_create(&state.0.config.data_dir(), &certificate_names(&state.0.config))?)
-    } else {
-        None
-    };
     let listener = EasyListener::bind_with(port, sharing_locally).await.map_err(|err| {
         format!(
             "Could not listen on port {port}: {err}. Another program may be using that port; {port_advice}"
@@ -139,6 +135,21 @@ async fn serve_easy(
         let _ = online.send(Online { state, addresses, lan: identity });
     }
     serve_connections(listener, app, stop, tls).await
+}
+
+/// The key and certificate devices on this network pin, when `lan` is on. A key that cannot be read or made stops
+/// sharing on this network only: the tailnet and loopback still serve, and `doctor` names the key file.
+fn local_identity(config: &Config) -> Option<LanIdentity> {
+    if !config.shares_on_local_network() {
+        return None;
+    }
+    match LanIdentity::load_or_create(&config.data_dir(), &certificate_names(config)) {
+        Ok(identity) => Some(identity),
+        Err(message) => {
+            logger::error("server", &format!("not sharing on this network: {message}"));
+            None
+        }
+    }
 }
 
 async fn serve_on_address(state: AppState, stop: &StopSignal) -> Result<(), String> {
