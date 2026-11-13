@@ -47277,6 +47277,194 @@
         }
       }
     },
+    "Change": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ændr"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiar"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muuta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Breyta"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambia"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수정"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endre"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zmień"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterar"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändra"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改"
+          }
+        }
+      }
+    },
+    "Change It": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ændr den"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anpassen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiarla"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muuta sitä"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Breyta þessu"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更を依頼"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수정하기"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endre den"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zmień ją"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustar"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändra spellistan"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改"
+          }
+        }
+      }
+    },
     "Change year": {
       "localizations": {
         "da": {
@@ -49755,6 +49943,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定 flaccy 提醒你查看回顧的頻率"
+          }
+        }
+      }
+    },
+    "Choosing the songs…": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælger sangene…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Songs werden ausgewählt …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eligiendo las canciones…"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valitaan kappaleita…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choix des morceaux…"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vel lögin…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scelgo i brani…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲を選んでいます…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "곡을 고르는 중…"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velger sangene…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybieram utwory…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolhendo as músicas…"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Väljer låtarna…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在挑选歌曲…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在挑選歌曲…"
           }
         }
       }
@@ -59585,6 +59867,288 @@
         }
       }
     },
+    "Couldn't make the playlist because Flaccy's AI couldn't be reached. Check your connection and try again.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan ikke lave spillelisten, fordi Flaccys AI ikke kunne nås. Kontrollér forbindelsen, og prøv igen."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlist nicht möglich, weil Flaccys KI nicht erreichbar war. Prüfe deine Verbindung und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo crear la playlist porque no se pudo conectar con la IA de Flaccy. Comprueba tu conexión e inténtalo de nuevo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soittolistaa ei voitu tehdä, koska Flaccyn tekoälyyn ei saatu yhteyttä. Tarkista yhteys ja yritä uudelleen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de créer la playlist, car l’IA de Flaccy est injoignable. Vérifiez votre connexion et réessayez."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekki tókst að búa til spilunarlistann því ekki náðist samband við gervigreind Flaccy. Athugaðu tenginguna og reyndu aftur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile creare la playlist perché l’IA di Flaccy non è raggiungibile. Controlla la connessione e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FlaccyのAIに接続できなかったため、プレイリストを作成できませんでした。接続を確認して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy의 AI에 연결할 수 없어 재생목록을 만들지 못했습니다. 연결을 확인하고 다시 시도하세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke lage spillelisten fordi Flaccys KI ikke kunne nås. Sjekk tilkoblingen og prøv igjen."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się utworzyć playlisty, bo nie można połączyć się z AI Flaccy. Sprawdź połączenie i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível criar a playlist porque a IA do Flaccy não pôde ser acessada. Verifique sua conexão e tente novamente."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det gick inte att skapa spellistan eftersom Flaccys AI inte kunde nås. Kontrollera anslutningen och försök igen."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法制作播放列表，因为连接不上 Flaccy 的 AI。请检查网络连接后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法製作播放列表，因為連不上 Flaccy 的 AI。請檢查網路連線後再試一次。"
+          }
+        }
+      }
+    },
+    "Couldn't make the playlist because Flaccy's AI is unavailable right now. Try again in a few minutes.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan ikke lave spillelisten, fordi Flaccys AI ikke er tilgængelig lige nu. Prøv igen om nogle minutter."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlist nicht möglich, weil Flaccys KI gerade nicht verfügbar ist. Versuche es in ein paar Minuten erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo crear la playlist porque la IA de Flaccy no está disponible ahora mismo. Inténtalo de nuevo en unos minutos."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soittolistaa ei voitu tehdä, koska Flaccyn tekoäly ei ole käytettävissä juuri nyt. Yritä muutaman minuutin kuluttua uudelleen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de créer la playlist, car l’IA de Flaccy est indisponible pour le moment. Réessayez dans quelques minutes."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekki tókst að búa til spilunarlistann því gervigreind Flaccy er ekki tiltæk sem stendur. Reyndu aftur eftir nokkrar mínútur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile creare la playlist perché l’IA di Flaccy non è disponibile al momento. Riprova tra qualche minuto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FlaccyのAIが現在利用できないため、プレイリストを作成できませんでした。数分後にもう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy의 AI를 지금 사용할 수 없어 재생목록을 만들지 못했습니다. 몇 분 후 다시 시도하세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke lage spillelisten fordi Flaccys KI er utilgjengelig akkurat nå. Prøv igjen om noen minutter."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się utworzyć playlisty, bo AI Flaccy jest teraz niedostępna. Spróbuj ponownie za kilka minut."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível criar a playlist porque a IA do Flaccy está indisponível no momento. Tente novamente em alguns minutos."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det gick inte att skapa spellistan eftersom Flaccys AI inte är tillgänglig just nu. Försök igen om några minuter."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法制作播放列表，因为 Flaccy 的 AI 暂时不可用。请几分钟后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法製作播放列表，因為 Flaccy 的 AI 目前無法使用。請幾分鐘後再試一次。"
+          }
+        }
+      }
+    },
+    "Couldn't make the playlist because today's AI allowance is used up. It comes back at %@.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan ikke lave spillelisten, fordi dagens AI-kvote er opbrugt. Den kommer tilbage ved %@."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlist nicht möglich, weil das heutige KI-Kontingent aufgebraucht ist. Es steht ab %@ wieder zur Verfügung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo crear la playlist porque la cuota de IA de hoy se ha agotado. Vuelve a estar disponible a las %@."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soittolistaa ei voitu tehdä, koska tämän päivän tekoälykäyttö on käytetty loppuun. Se palautuu %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de créer la playlist, car le quota d’IA du jour est épuisé. Il revient à %@."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekki tókst að búa til spilunarlistann því dagskvóti gervigreindarinnar er uppurinn. Hann endurnýjast kl. %@."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile creare la playlist perché la quota di IA di oggi è esaurita. Torna disponibile alle %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日のAI利用枠を使い切ったため、プレイリストを作成できませんでした。%@に再び使えるようになります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘의 AI 사용량을 모두 써서 재생목록을 만들지 못했습니다. %@에 다시 사용할 수 있습니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke lage spillelisten fordi dagens KI-kvote er brukt opp. Den fornyes %@."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się utworzyć playlisty, bo dzisiejszy limit AI się wyczerpał. Wróci o %@."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível criar a playlist porque a cota de IA de hoje acabou. Ela volta às %@."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det gick inte att skapa spellistan eftersom dagens AI-kvot är slut. Den är tillgänglig igen från %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法制作播放列表，因为今天的 AI 额度已用完。将于 %@ 恢复。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法製作播放列表，因為今天的 AI 額度已用完。將於 %@ 恢復。"
+          }
+        }
+      }
+    },
     "Couldn't make the video (%@). Try again, or share an image instead.": {
       "localizations": {
         "da": {
@@ -62331,6 +62895,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法儲存封面。請再試一次。"
+          }
+        }
+      }
+    },
+    "Couldn't save the playlist because the library database couldn't be written. Check free space and try again.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan ikke gemme spillelisten, fordi biblioteksdatabasen ikke kunne skrives. Kontrollér den ledige lagerplads, og prøv igen."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern nicht möglich, weil die Mediathek-Datenbank nicht geschrieben werden konnte. Prüfe den freien Speicher und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo guardar la playlist porque no se pudo escribir en la base de datos de la biblioteca. Comprueba el espacio libre e inténtalo de nuevo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soittolistaa ei voitu tallentaa, koska kirjastotietokantaan ei voitu kirjoittaa. Tarkista vapaa tila ja yritä uudelleen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’enregistrer la playlist, car la base de données de la bibliothèque n’a pas pu être écrite. Vérifiez l’espace disponible, puis réessayez."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekki tókst að vista spilunarlistann því ekki var hægt að skrifa í gagnagrunn safnsins. Athugaðu hvort pláss sé laust og reyndu aftur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile salvare la playlist perché non è possibile scrivere nel database della libreria. Controlla lo spazio libero e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブラリのデータベースに書き込めなかったため、プレイリストを保存できませんでした。空き容量を確認して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관함 데이터베이스에 쓸 수 없어 재생목록을 저장하지 못했습니다. 저장 공간을 확인하고 다시 시도하세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke lagre spillelisten fordi biblioteksdatabasen ikke kunne skrives til. Sjekk ledig plass og prøv igjen."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się zapisać playlisty, bo nie można zapisać bazy biblioteki. Sprawdź wolne miejsce i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível salvar a playlist porque o banco de dados da biblioteca não pôde ser gravado. Verifique o espaço livre e tente novamente."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det gick inte att spara spellistan eftersom databasen för biblioteket inte kunde skrivas. Kontrollera ledigt utrymme och försök igen."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存播放列表，因为无法写入资料库数据库。请检查可用空间后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法儲存播放列表，因為無法寫入資料庫。請檢查可用空間後再試一次。"
           }
         }
       }
@@ -73964,6 +74622,100 @@
         }
       }
     },
+    "Everything in Flaccy, yours for good": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alt i Flaccy, dit for altid"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles in Flaccy, für immer deins"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo Flaccy, tuyo para siempre"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaikki Flaccyssa, pysyvästi sinun"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout Flaccy, à vous pour de bon"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allt í Flaccy, þitt til frambúðar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutto Flaccy, tuo per sempre"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccyのすべてを、ずっとあなたのものに"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy의 모든 기능을 평생 소장"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alt i Flaccy, ditt for godt"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Całe Flaccy, twoje na zawsze"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tudo no Flaccy, seu para sempre"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allt i Flaccy, ditt för alltid"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 的全部功能，永久归你"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 的全部功能，永久歸你"
+          }
+        }
+      }
+    },
     "Everything is indexed on this device — this only takes a moment the first time.": {
       "localizations": {
         "da": {
@@ -78197,6 +78949,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在尋找連結…"
+          }
+        }
+      }
+    },
+    "Finding the artists that fit…": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder de kunstnere, der passer…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passende Künstler werden gesucht …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscando los artistas que encajan…"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etsitään sopivia artisteja…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche des artistes qui conviennent…"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finn listamennina sem passa…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerco gli artisti adatti…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合うアーティストを探しています…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어울리는 아티스트를 찾는 중…"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finner artistene som passer…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukam pasujących wykonawców…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Procurando os artistas que combinam…"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letar efter passande artister…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在找合适的艺人…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在找符合的藝人…"
           }
         }
       }
@@ -97553,6 +98399,100 @@
         }
       }
     },
+    "Late night, quiet": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sen aften, roligt"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spätnachts, ruhig"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Madrugada tranquila"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Myöhäinen ilta, rauhallista"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tard le soir, calme"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seint um kvöld, rólegt"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notte fonda, tranquilla"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "夜遅く、静かな曲"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "늦은 밤, 조용한 곡"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent på kvelden, stille"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Późna noc, spokojnie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Madrugada, tranquila"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sen kväll, lugnt"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深夜，安静一点"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深夜，安靜"
+          }
+        }
+      }
+    },
     "Layout: %@. Double tap to change.": {
       "localizations": {
         "da": {
@@ -104611,6 +105551,382 @@
         }
       }
     },
+    "Make Playlist": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lav spilleliste"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstellen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear playlist"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tee soittolista"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Créer la playlist"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búa til spilunarlista"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea playlist"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作成"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생목록 만들기"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lag spilleliste"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwórz playlistę"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criar playlist"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skapa spellista"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "制作播放列表"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "製作播放列表"
+          }
+        }
+      }
+    },
+    "Make a Playlist": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lav en spilleliste"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlist erstellen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear playlist"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tee soittolista"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Créer une playlist"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búa til spilunarlista"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea una playlist"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイリストを作成"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생목록 만들기"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lag en spilleliste"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwórz playlistę"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criar playlist"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skapa en spellista"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "制作播放列表"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "製作播放列表"
+          }
+        }
+      }
+    },
+    "Make a Playlist…": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lav en spilleliste…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlist erstellen…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear playlist…"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tee soittolista…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Créer une playlist…"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búa til spilunarlista…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea una playlist…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイリストを作成…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생목록 만들기…"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lag en spilleliste…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwórz playlistę…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criar playlist…"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skapa en spellista…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "制作播放列表…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "製作播放列表…"
+          }
+        }
+      }
+    },
+    "Making playlists uses Flaccy's AI, which comes with Flaccy Lifetime.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At lave spillelister bruger Flaccys AI, som følger med Flaccy Lifetime."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlists erstellen nutzt Flaccys KI, die in Flaccy Lifetime enthalten ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear playlists usa la IA de Flaccy, que viene con Flaccy Lifetime."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soittolistojen tekeminen käyttää Flaccyn tekoälyä, joka sisältyy Flaccy Lifetimeen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La création de playlists utilise l’IA de Flaccy, incluse avec Flaccy à vie."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerð spilunarlista notar gervigreind Flaccy, sem fylgir Flaccy Lifetime."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creare playlist usa l’IA di Flaccy, inclusa in Flaccy Lifetime."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイリストの作成にはFlaccyのAIを使用します。このAIはFlaccy Lifetimeに含まれています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생목록 만들기에는 Flaccy의 AI가 쓰이며, AI는 Flaccy Lifetime에 포함됩니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Å lage spillelister bruker Flaccys KI, som følger med Flaccy Lifetime."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tworzenie playlist korzysta z AI Flaccy, która jest częścią Flaccy Lifetime."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criar playlists usa a IA do Flaccy, que vem com o Flaccy Lifetime."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Att skapa spellistor använder Flaccys AI, som ingår i Flaccy Lifetime."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "制作播放列表要用到 Flaccy 的 AI，它包含在 Flaccy Lifetime 中。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "製作播放列表要用到 Flaccy 的 AI，它包含在 Flaccy Lifetime 中。"
+          }
+        }
+      }
+    },
     "Making your video…": {
       "localizations": {
         "da": {
@@ -107355,6 +108671,100 @@
         }
       }
     },
+    "More upbeat, fewer film scores": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mere energisk, mindre filmmusik"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schwungvoller, weniger Filmmusik"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más animada, menos bandas sonoras"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rivakampi, vähemmän elokuvamusiikkia"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus dynamique, moins de musiques de film"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fjörugra, minna af kvikmyndatónlist"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più ritmo, meno colonne sonore"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もっと明るく、映画音楽は少なめに"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 신나게, 영화 음악은 적게"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mer oppløftende, færre filmmusikklåter"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bardziej energicznie, mniej muzyki filmowej"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mais animada, menos trilhas sonoras de filme"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Piggare, mindre filmmusik"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更欢快一些，少来点电影配乐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更有活力，少一些電影配樂"
+          }
+        }
+      }
+    },
     "Most Played": {
       "localizations": {
         "da": {
@@ -109437,6 +110847,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "靜音"
+          }
+        }
+      }
+    },
+    "My favourites from the 90s": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mine yndlingssange fra 90'erne"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meine Favoriten aus den 90ern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mis favoritas de los 90"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suosikkejani 90-luvulta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mes préférés des années 90"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uppáhalds frá tíunda áratugnum"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I miei preferiti degli anni ’90"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "90年代のお気に入り"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "90년대 좋아하는 노래"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mine favoritter fra 90-tallet"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moje ulubione z lat 90."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meus favoritos dos anos 90"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mina favoriter från 90-talet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "90 年代的经典老歌"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的 90 年代最愛"
           }
         }
       }
@@ -117715,6 +119219,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "這裡還沒有內容"
+          }
+        }
+      }
+    },
+    "Nothing in your library fits that. Try describing it another way.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intet i dit bibliotek passer til det. Prøv at beskrive det på en anden måde."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts in deiner Mediathek passt dazu. Versuche, es anders zu beschreiben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada de tu biblioteca encaja con eso. Prueba a describirlo de otra forma."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kirjastostasi ei löydy siihen sopivaa. Kokeile kuvata sitä toisin sanoin."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun morceau de votre bibliothèque ne correspond. Essayez de le décrire autrement."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekkert í safninu passar við það. Reyndu að lýsa því á annan hátt."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nella tua libreria non c’è nulla di adatto. Prova a descriverlo in un altro modo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブラリにその条件に合う曲がありません。別の言葉で伝えてみてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관함에서 그에 맞는 곡을 찾지 못했습니다. 다르게 표현해 보세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingenting i biblioteket ditt passer til det. Prøv å beskrive det på en annen måte."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nic w bibliotece do tego nie pasuje. Spróbuj opisać to inaczej."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada na sua biblioteca combina com isso. Tente descrever de outra forma."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inget i ditt bibliotek passar in på det. Försök beskriva det på ett annat sätt."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "资料库中没有符合的音乐。请换个方式描述。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的資料庫中沒有符合的音樂。請換個方式描述看看。"
           }
         }
       }
@@ -140224,6 +141822,100 @@
         }
       }
     },
+    "Rainy Sunday morning, calm, about 40 minutes": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regnfuld søndag morgen, roligt, omkring 40 minutter"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regnerischer Sonntagmorgen, ruhig, etwa 40 Minuten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domingo lluvioso por la mañana, tranquilo, unos 40 minutos"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rauhallinen sateinen sunnuntaiaamu, noin 40 minuuttia"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dimanche matin pluvieux, calme, environ 40 minutes"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rigningarlegur sunnudagsmorgunn, rólegt, um 40 mínútur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domenica mattina piovosa, tranquilla, circa 40 minuti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "雨の日曜日の朝、落ち着いた曲、40分くらい"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비 오는 일요일 아침, 차분하게, 40분쯤"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regnfull søndagsmorgen, rolig, omtrent 40 minutter"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deszczowy poranek w niedzielę, spokojnie, około 40 minut"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manhã chuvosa de domingo, tranquila, uns 40 minutos"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regnig söndagsmorgon, lugnt, cirka 40 minuter"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下雨的周日早晨，安静一点，40 分钟左右"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下雨的週日早上，安靜放鬆，約 40 分鐘"
+          }
+        }
+      }
+    },
     "Raise 0.5 dB": {
       "localizations": {
         "da": {
@@ -142006,6 +143698,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在檢查已有的內容。"
+          }
+        }
+      }
+    },
+    "Reading your library…": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Læser dit bibliotek…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mediathek wird gelesen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leyendo tu biblioteca…"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luetaan kirjastoasi…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture de votre bibliothèque…"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les safnið…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leggo la tua libreria…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブラリを読み込んでいます…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관함을 읽는 중…"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leser biblioteket ditt…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czytam bibliotekę…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lendo sua biblioteca…"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Läser ditt bibliotek…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在读取你的资料库…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在讀取你的資料庫…"
           }
         }
       }
@@ -153110,6 +154896,194 @@
         }
       }
     },
+    "Saved": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemt"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespeichert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardada"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tallennettu"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrée"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vistað"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvata"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장됨"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lagret"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zapisano"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sparad"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已儲存"
+          }
+        }
+      }
+    },
+    "Saved as %@": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemt som %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespeichert als %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardada como %@"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tallennettu nimellä %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrée sous %@"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vistað sem %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvata come %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@として保存しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” 저장됨"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lagret som %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zapisano jako %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva como %@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sparad som %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存为 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已儲存為 %@"
+          }
+        }
+      }
+    },
     "Saved “%@”": {
       "localizations": {
         "da": {
@@ -153294,6 +155268,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "儲存…"
+          }
+        }
+      }
+    },
+    "Say what you want to hear and Flaccy makes a playlist from the music you own. Your words and the names of your artists and songs go to Flaccy's AI to choose them. Nothing else leaves this device.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skriv, hvad du har lyst til at høre, så laver Flaccy en spilleliste ud fra den musik, du ejer. Dine ord og navnene på dine kunstnere og sange sendes til Flaccys AI, som vælger dem. Intet andet forlader denne enhed."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sag, was du hören möchtest, und Flaccy erstellt daraus eine Playlist aus deiner eigenen Musik. Deine Worte sowie die Namen deiner Künstler und Songs gehen an Flaccys KI, die sie auswählt. Sonst verlässt nichts dieses Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Di qué quieres escuchar y Flaccy crea una playlist con la música que tienes. Tus palabras y los nombres de tus artistas y canciones se envían a la IA de Flaccy para elegirlas. Nada más sale de este dispositivo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kerro, mitä haluat kuunnella, niin Flaccy tekee soittolistan omasta musiikistasi. Sanasi sekä artistien ja kappaleiden nimet lähetetään Flaccyn tekoälylle, joka valitsee kappaleet. Mikään muu ei poistu tältä laitteelta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dites ce que vous voulez écouter et Flaccy crée une playlist à partir de la musique que vous possédez. Vos mots ainsi que les noms de vos artistes et de vos morceaux sont envoyés à l’IA de Flaccy pour les choisir. Rien d’autre ne quitte cet appareil."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lýstu því sem þú vilt heyra og Flaccy býr til spilunarlista úr tónlistinni sem þú átt. Orðin þín og nöfn listamanna og laga fara til gervigreindar Flaccy sem velur lögin. Ekkert annað fer úr þessu tæki."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dì che musica vuoi ascoltare e Flaccy crea una playlist con la musica che possiedi. Le tue parole e i nomi dei tuoi artisti e delle tue canzoni vanno all’IA di Flaccy per sceglierli. Nient’altro lascia questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聴きたい曲を伝えると、Flaccyが手持ちの音楽からプレイリストを作成します。入力した言葉と、アーティスト名や曲名は、選曲のためにFlaccyのAIに送られます。ほかのデータがこの端末から外に出ることはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "듣고 싶은 음악을 말하면 Flaccy가 보유한 음악으로 재생목록을 만들어 드립니다. 입력한 말과 아티스트 및 곡 이름은 Flaccy의 AI에 전달되어 곡을 고릅니다. 그 밖의 정보는 이 기기를 벗어나지 않습니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si hva du har lyst til å høre, så lager Flaccy en spilleliste av musikken du eier. Ordene dine og navnene på artistene og sangene dine sendes til Flaccys KI for å velge dem. Ingenting annet forlater denne enheten."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Napisz, czego chcesz posłuchać, a Flaccy utworzy playlistę z muzyki, którą masz. Twoje słowa oraz nazwy wykonawców i utworów trafią do AI Flaccy, która je wybierze. Nic więcej nie opuszcza tego urządzenia."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diga o que quer ouvir e o Flaccy cria uma playlist com a música que você tem. Suas palavras e os nomes dos seus artistas e músicas vão para a IA do Flaccy escolher as faixas. Nada mais sai deste dispositivo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Säg vad du vill höra, så skapar Flaccy en spellista av musiken du äger. Dina ord och namnen på dina artister och låtar skickas till Flaccys AI för att välja ut dem. Inget annat lämnar den här enheten."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说出你想听的音乐，Flaccy 会从你拥有的音乐中制作播放列表。你输入的文字，以及你的艺人和歌曲名称，会发送给 Flaccy 的 AI 来挑选歌曲。除此之外，没有任何内容会离开这台设备。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "說出你想聽的音樂，Flaccy 就會從你擁有的音樂中製作播放列表。你的文字，以及你的藝人和歌曲名稱，會傳送給 Flaccy 的 AI 來挑選歌曲。除此之外，沒有任何資料會離開這台裝置。"
           }
         }
       }
@@ -166365,6 +168433,100 @@
         }
       }
     },
+    "Something I haven't played in a while": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noget jeg ikke har hørt i lang tid"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwas, das ich lange nicht mehr gehört habe"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algo que no escucho desde hace tiempo"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jotain, mitä en ole kuunnellut vähään aikaan"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelque chose que je n’ai pas écouté depuis un moment"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eitthvað sem ég hef ekki spilað lengi"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualcosa che non ascolto da un po’"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "しばらく聴いてない曲"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한동안 안 들었던 노래"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noe jeg ikke har spilt på en stund"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coś dawno niesłuchanego"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algo que não ouço há um tempo"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Något jag inte har spelat på länge"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "很久没听过的音乐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好久沒聽的歌"
+          }
+        }
+      }
+    },
     "Something unexpected went wrong. Try again, and if it keeps happening, check that %@ is running Flaccy Server.": {
       "localizations": {
         "da": {
@@ -177659,100 +179821,6 @@
         }
       }
     },
-    "Everything in Flaccy, yours for good": {
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alt i Flaccy, dit for altid"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alles in Flaccy, für immer deins"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Todo Flaccy, tuyo para siempre"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kaikki Flaccyssa, pysyvästi sinun"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tout Flaccy, à vous pour de bon"
-          }
-        },
-        "is": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allt í Flaccy, þitt til frambúðar"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tutto Flaccy, tuo per sempre"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccyのすべてを、ずっとあなたのものに"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy의 모든 기능을 평생 소장"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alt i Flaccy, ditt for godt"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Całe Flaccy, twoje na zawsze"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tudo no Flaccy, seu para sempre"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allt i Flaccy, ditt för alltid"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy 的全部功能，永久归你"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy 的全部功能，永久歸你"
-          }
-        }
-      }
-    },
     "That code didn't work": {
       "localizations": {
         "da": {
@@ -177943,6 +180011,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "此碼不是 Flaccy Server 連結。請掃描 flaccy-server key add --url 印出的 QR 碼。"
+          }
+        }
+      }
+    },
+    "That couldn't be made into a playlist. Describe the music you want to hear.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det kan ikke laves til en spilleliste. Beskriv den musik, du har lyst til at høre."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daraus lässt sich keine Playlist machen. Beschreibe die Musik, die du hören möchtest."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eso no se puede convertir en una playlist. Describe la música que quieres escuchar."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tästä ei voitu tehdä soittolistaa. Kuvaile musiikkia, jota haluat kuunnella."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’en faire une playlist. Décrivez la musique que vous voulez écouter."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekki var hægt að búa til spilunarlista úr þessu. Lýstu tónlistinni sem þú vilt heyra."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è possibile creare una playlist con questo. Descrivi la musica che vuoi ascoltare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この内容ではプレイリストを作成できません。聴きたい音楽を入力してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 요청으로는 재생목록을 만들 수 없습니다. 듣고 싶은 음악을 설명해 주세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dette kunne ikke gjøres om til en spilleliste. Beskriv musikken du har lyst til å høre."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się z tego zrobić playlisty. Opisz muzykę, której chcesz słuchać."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível transformar isso em playlist. Descreva a música que você quer ouvir."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det gick inte att göra en spellista av det. Beskriv musiken du vill höra."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法据此制作播放列表。请描述你想听的音乐。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法根據這段內容製作播放列表。請描述你想聽的音樂。"
           }
         }
       }
@@ -182873,6 +185035,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 主題，已選取"
+          }
+        }
+      }
+    },
+    "There is no music to choose from yet. Add your music, then ask again.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der er endnu ingen musik at vælge imellem. Tilføj din musik, og spørg igen."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Musik zur Auswahl vorhanden. Füge deine Musik hinzu und frag dann noch einmal."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todavía no hay música para elegir. Añade tu música y vuelve a pedirlo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valittavana ei ole vielä musiikkia. Lisää musiikkia ja kysy sitten uudelleen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il n’y a pas encore de musique à choisir. Ajoutez votre musique, puis faites une nouvelle demande."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Það er engin tónlist til að velja úr ennþá. Bættu tónlist í safnið og reyndu svo aftur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non c’è ancora musica da scegliere. Aggiungi la tua musica, poi riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選べる曲がまだありません。音楽を追加してから、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 고를 음악이 없습니다. 음악을 추가한 뒤 다시 요청하세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det finnes ingen musikk å velge fra ennå. Legg til musikken din, og spør igjen."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie ma jeszcze muzyki do wyboru. Dodaj muzykę, a potem zapytaj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não há música para escolher. Adicione suas músicas e peça de novo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det finns ingen musik att välja från ännu. Lägg till din musik och fråga igen."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "资料库里还没有可供挑选的音乐。请先添加音乐，然后再试一次。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前還沒有可以挑選的音樂。請先加入音樂，再重新提問。"
           }
         }
       }
@@ -193239,6 +195495,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "已是最新——每張專輯都有封面和年份。"
+          }
+        }
+      }
+    },
+    "Upbeat, for a 30 minute run": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Energisk, til en løbetur på 30 minutter"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schwungvoll, für einen 30-Minuten-Lauf"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animada, para correr 30 minutos"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rivakkaa 30 minuutin lenkille"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entraînant pour un footing de 30 minutes"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fjörugt, fyrir 30 mínútna hlaup"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ritmata, per una corsa di 30 minuti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30分のランニング用、ノリのいい曲"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30분 달리기에 맞는 신나는 곡"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oppløftende, til en 30 minutters løpetur"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Energiczne na 30-minutowy bieg"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Música animada para uma corrida de 30 minutos"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pigg musik för ett 30 minuters löppass"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "适合 30 分钟跑步的欢快歌曲"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "節奏輕快，適合跑步 30 分鐘"
           }
         }
       }

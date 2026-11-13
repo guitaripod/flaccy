@@ -88,6 +88,10 @@ final class PadSidebar: NSObject {
             UIAction(title: String(localized: "New Playlist"), image: UIImage(systemName: "plus")) { [weak self] _ in
                 self?.createPlaylist()
             },
+            UIAction(title: PlaylistMakerCopy.menuTitle, image: UIImage(systemName: "sparkles")) { [weak self] _ in
+                guard let tabs = self?.tabs else { return }
+                tabs.library.makePlaylistTapped(presentingFrom: tabs)
+            },
         ]
         discoverGroup.sidebarActions = [
             UIAction(title: String(localized: "Year in Music"), image: UIImage(systemName: "calendar.badge.clock")) { [weak tabs] _ in

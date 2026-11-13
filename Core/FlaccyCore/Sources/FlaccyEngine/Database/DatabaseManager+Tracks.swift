@@ -97,6 +97,14 @@ extension DatabaseManager {
         }
     }
 
+    /// When each song that has been played was last played, by its row id.
+    public func lastPlayedByTrackID() throws -> [Int64: Date] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: "SELECT id, lastPlayed FROM tracks WHERE lastPlayed IS NOT NULL")
+            return Dictionary(rows.compactMap { row in (row["lastPlayed"] as Date?).map { (row["id"] as Int64, $0) } }, uniquingKeysWith: { first, _ in first })
+        }
+    }
+
     public func fetchTrackSortKeys() throws -> [(fileURL: String, lastPlayed: Date?)] {
         try dbQueue.read { db in
             let rows = try Row.fetchAll(db, sql: "SELECT fileURL, lastPlayed FROM tracks")

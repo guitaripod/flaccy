@@ -175,7 +175,7 @@ public enum PlaylistMaker {
     /// The length assumed for a song when a number of songs has to be guessed from minutes.
     static let usualSongSeconds = 210
     /// How far the list may run from the minutes asked for, either way.
-    static let lengthTolerance = 0.15
+    public static let lengthTolerance = 0.15
     /// How many songs a playlist gets when the request named neither a length nor a count.
     public static let usualCount = 20
 

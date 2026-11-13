@@ -431,6 +431,12 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         navigationItem.title = segmentedControl.isHidden ? viewModel.currentSegment.title : nil
     }
 
+    /// Opens Make a Playlist, where a sentence becomes a playlist from the library.
+    func makePlaylistTapped(presentingFrom presenter: UIViewController? = nil) {
+        impactLight.impactOccurred()
+        PlaylistMakerViewController.present(from: presenter ?? self)
+    }
+
     func createPlaylistTapped(presentingFrom presenter: UIViewController? = nil) {
         impactLight.impactOccurred()
         let alert = UIAlertController(title: String(localized: "New Playlist"), message: nil, preferredStyle: .alert)
@@ -502,6 +508,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(serverSyncChangesDidArrive), name: ServerSyncLifecycle.changesDidArrive, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(serverSyncChangesDidArrive), name: PlaylistMakerViewController.didSave, object: nil
         )
     }
 

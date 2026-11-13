@@ -56,17 +56,28 @@ nonisolated struct FlaccyAPIClient: Sendable {
 
     /// Posts a chat request to the AI metadata proxy. Throws the transport's error when nothing answered.
     func postMetadata(_ chatRequest: some Encodable & Sendable) async throws -> ProxyReply {
-        var request = URLRequest(url: url(path: "v1/metadata"))
+        try await postAI(path: "v1/metadata", chatRequest)
+    }
+
+    /// Asks flaccy-api to plan a playlist over the library's artists (`plan`) or to choose and order its songs from
+    /// the gathered candidates (`pick`). Both spend the same daily allowance as the metadata proxy.
+    func postPlaylist(step: String, _ body: some Encodable & Sendable) async throws -> ProxyReply {
+        try await postAI(path: "v1/playlist/\(step)", body)
+    }
+
+    /// Posts a JSON body to one of the Worker's model routes with the device id it limits by.
+    private func postAI(path: String, _ body: some Encodable & Sendable) async throws -> ProxyReply {
+        var request = URLRequest(url: url(path: path))
         request.httpMethod = "POST"
         request.setValue(appID, forHTTPHeaderField: "X-App-ID")
         request.setValue(Self.deviceIdentifier, forHTTPHeaderField: "X-Device-ID")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(chatRequest)
-        let (body, response) = try await aiSession.data(for: request)
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await aiSession.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         return ProxyReply(
             status: http.statusCode,
-            body: body,
+            body: data,
             retryAfter: http.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init)
         )
     }

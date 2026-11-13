@@ -81,9 +81,14 @@ final class PlaylistsViewController: NSViewController {
             PlaylistActions.promptForNewPlaylist(adding: [], in: self?.view.window)
         }
 
+        let makeButton = GlassCapsuleButton(title: PlaylistMakerCopy.title, symbolName: "sparkles")
+        makeButton.onClick = { [weak self] in
+            self?.presentAsSheet(MacPlaylistMakerViewController())
+        }
+
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
-        let header = NSStackView(views: [title, spacer, newButton])
+        let header = NSStackView(views: [title, spacer, makeButton, newButton])
         header.orientation = .horizontal
         header.alignment = .centerY
         header.translatesAutoresizingMaskIntoConstraints = false

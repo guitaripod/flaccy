@@ -24,9 +24,16 @@ extension LibraryViewController {
         case .artists:
             navigationItem.rightBarButtonItem = sortButton(menu: artistSortMenu())
         case .playlists:
-            navigationItem.rightBarButtonItem = UIBarButtonItem(
-                systemItem: .add, primaryAction: UIAction { [weak self] _ in self?.createPlaylistTapped() }
-            )
+            let add = UIBarButtonItem(systemItem: .add, menu: UIMenu(children: [
+                UIAction(title: String(localized: "New Playlist"), image: UIImage(systemName: "plus")) { [weak self] _ in
+                    self?.createPlaylistTapped()
+                },
+                UIAction(title: PlaylistMakerCopy.menuTitle, image: UIImage(systemName: "sparkles")) { [weak self] _ in
+                    self?.makePlaylistTapped()
+                },
+            ]))
+            add.accessibilityIdentifier = "library.addPlaylist"
+            navigationItem.rightBarButtonItem = add
         }
     }
 
