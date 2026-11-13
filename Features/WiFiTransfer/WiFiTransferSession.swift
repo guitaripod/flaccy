@@ -130,6 +130,7 @@ final class WiFiTransferSession {
             state.outOfSpace = false
         case .dropped(_, let reason):
             if reason == .noSpace { state.outOfSpace = true }
+            if case .receiving = state.activity { state.activity = .idle }
         case .batchFinished(let folder):
             enqueueImport(of: folder)
         }
