@@ -611,6 +611,7 @@ enum DemoRouter {
             let year = Int(env["FLACCY_YEAR"] ?? "") ?? 2025
             present(YearInMusicViewController(year: year), from: tabs)
         case "settings": presentSettings(pushing: nil, from: tabs)
+        case "listening-guide": presentSettings(pushing: ListeningGuideViewController(), from: tabs)
         case "recap-notifications": presentSettings(pushing: RecapNotificationsViewController(), from: tabs)
         case "watch-sync": presentSettings(pushing: WatchSyncViewController(), from: tabs)
         case "enrichment": presentSettings(pushing: EnrichmentReportViewController(), from: tabs)

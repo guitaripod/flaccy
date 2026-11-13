@@ -15,6 +15,7 @@ final class PadSidebar: NSObject {
         static let playlistsGroup = "playlists"
         static let discoverGroup = "discover"
         static let wantlist = "discover.wantlist"
+        static let listeningGuide = "discover.listeningGuide"
         static let playlistPrefix = "playlist."
 
         static func pivot(_ segment: LibraryViewModel.Segment) -> String {
@@ -69,9 +70,15 @@ final class PadSidebar: NSObject {
         ) { _ in
             UINavigationController(rootViewController: WantlistViewController())
         }
+        let guide = UITab(
+            title: String(localized: "Listening Guide"), image: UIImage(systemName: "book"),
+            identifier: Identifier.listeningGuide
+        ) { _ in
+            UINavigationController(rootViewController: ListeningGuideViewController())
+        }
         discoverGroup = UITabGroup(
             title: String(localized: "Discover"), image: UIImage(systemName: "sparkles"),
-            identifier: Identifier.discoverGroup, children: [wantlist]
+            identifier: Identifier.discoverGroup, children: [wantlist, guide]
         ) { _ in SidebarSectionPlaceholder() }
         discoverGroup.preferredPlacement = .sidebarOnly
         discoverGroup.sidebarAppearance = .rootSection

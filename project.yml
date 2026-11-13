@@ -245,6 +245,7 @@ targets:
           - Library/LibraryWalkExercise.swift
           - Library/PlaylistDetailViewController.swift
           - Library/PlaylistListCells.swift
+          - ListeningGuide/ListeningGuideViewController.swift
           - LyricShare/LyricShareViewController.swift
           - Lyrics/LyricCells.swift
           - Lyrics/LyricWipeView.swift

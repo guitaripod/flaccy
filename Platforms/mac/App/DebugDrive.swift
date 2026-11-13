@@ -130,6 +130,7 @@ enum DebugDrive {
             case "wantlist": .wantlist
             case "charts": .charts
             case "yearinmusic": .yearInMusic
+            case "guide": .listeningGuide
             default: nil
             }
             if let section { return .section(section) }

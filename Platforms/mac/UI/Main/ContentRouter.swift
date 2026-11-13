@@ -221,6 +221,8 @@ final class ContentRouter: NSViewController {
             return ChartsViewController()
         case .yearInMusic:
             return YearInMusicViewController()
+        case .listeningGuide:
+            return ListeningGuideViewController()
         }
     }
 

@@ -36291,6 +36291,194 @@
         }
       }
     },
+    "AirPods Max (USB-C) support 24-bit/48 kHz lossless over a USB-C cable, added by a firmware update in March 2025.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods Max (USB-C) understøtter tabsfrit lyd med 24 bit/48 kHz over et USB-C-kabel, tilføjet med en firmwareopdatering i marts 2025."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods Max (USB‑C) unterstützen verlustfreies Audio mit 24 Bit/48 kHz über ein USB‑C-Kabel – ergänzt durch ein Firmware-Update im März 2025."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los AirPods Max (USB‑C) admiten audio lossless de 24 bits/48 kHz por cable USB‑C, añadido con una actualización de firmware en marzo de 2025."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods Max (USB-C) tukee 24-bittistä/48 kHz:n häviötöntä ääntä USB-C-kaapelilla, ja tuki lisättiin maaliskuun 2025 laiteohjelmistopäivityksellä."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les AirPods Max (USB‑C) prennent en charge le lossless 24 bits/48 kHz via un câble USB‑C, ajouté par une mise à jour du firmware en mars 2025."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods Max (USB-C) styðja 24 bita/48 kHz taplaust hljóð um USB-C snúru, bætt við með hugbúnaðaruppfærslu í mars 2025."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli AirPods Max (USB‑C) supportano il lossless a 24 bit/48 kHz via cavo USB‑C, aggiunto con un aggiornamento firmware a marzo 2025."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods Max（USB‑C）は、2025年3月のファームウェアアップデートで追加されたUSB‑Cケーブル経由の24ビット/48 kHzロスレスに対応しています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods Max(USB‑C)는 2025년 3월 펌웨어 업데이트로 추가된 USB‑C 케이블 연결에서 24비트/48kHz 무손실을 지원합니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods Max (USB-C) støtter 24-bit/48 kHz tapsfritt lyd over en USB-C-kabel, lagt til med en fastvareoppdatering i mars 2025."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods Max (USB-C) obsługują bezstratny dźwięk 24-bitowy/48 kHz przez kabel USB-C dzięki aktualizacji oprogramowania z marca 2025."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os AirPods Max (USB‑C) suportam lossless de 24 bits/48 kHz por cabo USB‑C, recurso adicionado por uma atualização de firmware em março de 2025."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods Max (USB-C) stöder förlustfritt ljud med 24-bit/48 kHz över en USB-C-kabel, tillagt genom en firmwareuppdatering i mars 2025."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods Max（USB‑C）通过 USB‑C 线缆支持 24 位/48 kHz 无损音频，这项能力由 2025 年 3 月的固件更新带来。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods Max（USB‑C）可透過 USB‑C 連接線支援 24 位元/48 kHz 無損音訊，這項功能由 2025 年 3 月的韌體更新帶來。"
+          }
+        }
+      }
+    },
+    "AirPods receive audio over Bluetooth using Apple's AAC codec at up to roughly 256 kbps. The rate is adaptive — it can drop when the wireless link degrades.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods modtager lyd over Bluetooth med Apples AAC-codec med op til cirka 256 kbps. Datahastigheden er adaptiv – den kan falde, når den trådløse forbindelse forringes."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods empfangen Audio über Bluetooth mit Apples AAC-Codec bei bis zu rund 256 kbit/s. Die Rate ist adaptiv und kann sinken, wenn die Funkverbindung schwächer wird."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los AirPods reciben el audio por Bluetooth con el códec AAC de Apple, hasta unos 256 kbps. La tasa es adaptativa: puede bajar cuando el enlace inalámbrico se degrada."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods vastaanottavat äänen Bluetoothilla Applen AAC-koekilla enintään noin 256 kbit/s nopeudella. Nopeus mukautuu tilanteeseen ja voi laskea, kun langaton yhteys heikkenee."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les AirPods reçoivent l'audio en Bluetooth via le codec AAC d'Apple, à environ 256 kbit/s au maximum. Le débit est adaptatif : il peut chuter quand la liaison sans fil se dégrade."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods taka á móti hljóði yfir Bluetooth með AAC-kóðun Apple á allt að um 256 kbps. Hraðinn er breytilegur og getur lækkað þegar þráðlausa tengingin versnar."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli AirPods ricevono l'audio via Bluetooth con il codec AAC di Apple, fino a circa 256 kbps. Il bitrate è adattivo e può calare quando la connessione wireless peggiora."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPodsはBluetooth経由でAppleのAACコーデックを使い、最大およそ256 kbpsで音声を受信します。ビットレートは可変で、無線状況が悪くなると下がることがあります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods는 Apple의 AAC 코덱으로 최대 약 256kbps에서 블루투스로 오디오를 받습니다. 비트레이트는 가변이라 무선 연결이 나빠지면 낮아질 수 있습니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods mottar lyd over Bluetooth med Apples AAC-kodek på opptil omtrent 256 kbps. Raten er adaptiv – den kan falle når den trådløse forbindelsen svekkes."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods odbierają dźwięk przez Bluetooth za pomocą kodeka AAC firmy Apple z przepływnością do około 256 kbps. Przepływność jest zmienna — może spaść, gdy łącze bezprzewodowe się pogorszy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os AirPods recebem áudio por Bluetooth com o codec AAC da Apple, a cerca de 256 kbps no máximo. A taxa é adaptativa: pode cair quando o enlace sem fio piora."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods tar emot ljud över Bluetooth med Apples AAC-kodek på upp till cirka 256 kbit/s. Hastigheten är adaptiv och kan sjunka när den trådlösa länken försämras."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods 通过蓝牙以 Apple 的 AAC 编解码接收音频，最高约 256 kbps。码率是自适应的，无线连接变差时会下降。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods 透過藍牙以 Apple 的 AAC 編碼接收音訊，最高約 256 kbps。位元率會自動調整，無線連線變差時就會下降。"
+          }
+        }
+      }
+    },
     "Album": {
       "localizations": {
         "da": {
@@ -39655,6 +39843,100 @@
         }
       }
     },
+    "Apple confirms Bluetooth connections aren't lossless. Playing a FLAC or ALAC file to AirPods delivers, at best, ~256 kbps AAC at your ear. AirPods Pro 3's spec sheet lists “No Lossless Audio”.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple bekræfter, at Bluetooth-forbindelser ikke er tabsfrie. Afspilning af en FLAC- eller ALAC-fil til AirPods leverer i bedste fald ~256 kbps AAC til dit øre. Specifikationerne for AirPods Pro 3 angiver „No Lossless Audio“."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple bestätigt: Bluetooth-Verbindungen sind nicht verlustfrei. Eine FLAC- oder ALAC-Datei kommt über AirPods bestenfalls als AAC mit ~256 kbit/s an. Im Datenblatt der AirPods Pro 3 steht „No Lossless Audio“."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple lo confirma: las conexiones Bluetooth no son lossless. Un archivo FLAC o ALAC llega a tus AirPods como AAC de ~256 kbps, en el mejor de los casos. La ficha técnica de los AirPods Pro 3 indica “No Lossless Audio”."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple vahvistaa, ettei Bluetooth-yhteys ole häviötön. FLAC- tai ALAC-tiedoston toistaminen AirPodsilla tuo korvaasi parhaimmillaankin noin 256 kbit/s AAC-ääntä. AirPods Pro 3:n teknisissä tiedoissa lukee ”No Lossless Audio”."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple le confirme : les connexions Bluetooth ne sont pas lossless. Un fichier FLAC ou ALAC arrive au mieux en AAC ~256 kbit/s dans vos AirPods. La fiche technique des AirPods Pro 3 indique « No Lossless Audio »."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple staðfestir að Bluetooth-tengingar eru ekki taplausar. Þegar FLAC- eða ALAC-skrá er spiluð í AirPods berst í besta falli ~256 kbps AAC í eyrað á þér. Forskriftir AirPods Pro 3 segja „No Lossless Audio“."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple lo conferma: le connessioni Bluetooth non sono lossless. Un file FLAC o ALAC arriva agli AirPods al massimo come AAC a ~256 kbps. La scheda tecnica degli AirPods Pro 3 riporta “No Lossless Audio”."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AppleもBluetooth接続はロスレスではないと明言しています。FLACやALACのファイルでも、AirPodsに届くのはよくても約256 kbpsのAACです。AirPods Pro 3の仕様には「No Lossless Audio」と記載されています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple도 블루투스 연결은 무손실이 아니라고 밝힙니다. FLAC이나 ALAC 파일도 AirPods까지는 잘해야 약 256kbps AAC로 전달됩니다. AirPods Pro 3 사양에는 “No Lossless Audio”라고 적혀 있습니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple bekrefter at Bluetooth-tilkoblinger ikke er tapsfrie. Å spille av en FLAC- eller ALAC-fil til AirPods gir i beste fall ~256 kbps AAC i øret ditt. Spesifikasjonene for AirPods Pro 3 oppgir «No Lossless Audio»."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple potwierdza, że połączenia Bluetooth nie są bezstratne. Odtwarzanie pliku FLAC lub ALAC na AirPods daje w najlepszym razie ~256 kbps AAC w twoim uchu. Karta danych AirPods Pro 3 wprost podaje „Brak dźwięku bezstratnego”."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple confirma: conexões Bluetooth não são lossless. Um arquivo FLAC ou ALAC chega aos AirPods, na melhor das hipóteses, como AAC de ~256 kbps. A ficha técnica dos AirPods Pro 3 traz “No Lossless Audio”."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple bekräftar att Bluetooth-anslutningar inte är förlustfria. Att spela upp en FLAC- eller ALAC-fil till AirPods ger i bästa fall ~256 kbit/s AAC i örat. AirPods Pro 3:s specifikation anger ”No Lossless Audio”."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 已确认：蓝牙连接不是无损。FLAC 或 ALAC 文件传到 AirPods，最好也只是约 256 kbps 的 AAC。AirPods Pro 3 的规格表写着“No Lossless Audio”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 已確認：藍牙連線並非無損。將 FLAC 或 ALAC 檔案播放到 AirPods，傳到你耳裡的最多也只有約 256 kbps 的 AAC。AirPods Pro 3 的規格表上寫著「No Lossless Audio」。"
+          }
+        }
+      }
+    },
     "Artist": {
       "localizations": {
         "da": {
@@ -40521,6 +40803,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "封面已更新"
+          }
+        }
+      }
+    },
+    "Audio Quality": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lydkvalitet"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audioqualität"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calidad de audio"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Äänenlaatu"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualité audio"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hljóðgæði"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualità audio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オーディオ品質"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오디오 품질"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lydkvalitet"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jakość dźwięku"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualidade de áudio"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ljudkvalitet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音频质量"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音訊品質"
           }
         }
       }
@@ -42611,6 +42987,100 @@
         }
       }
     },
+    "Bluetooth & AAC": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth & AAC"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth & AAC"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth y AAC"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth ja AAC"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth et AAC"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth og AAC"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth e AAC"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BluetoothとAAC"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "블루투스와 AAC"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth og AAC"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth i AAC"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth e AAC"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth och AAC"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "蓝牙与 AAC"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "藍牙與 AAC"
+          }
+        }
+      }
+    },
     "Bring All to Front": {
       "localizations": {
         "da": {
@@ -43453,6 +43923,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在計算…"
+          }
+        }
+      }
+    },
+    "Can you hear the difference?": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan du høre forskellen?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hörst du den Unterschied?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Notas la diferencia?"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuuletko eron?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entendez-vous la différence ?"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heyrirðu muninn?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senti la differenza?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "違いが聴き分けられますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "차이가 들리시나요?"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hører du forskjellen?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Słyszysz różnicę?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você ouve a diferença?"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hör du skillnaden?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你能听出差别吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你聽得出差別嗎？"
           }
         }
       }
@@ -71314,6 +71878,100 @@
         }
       }
     },
+    "Exceptions": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undtagelser"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausnahmen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excepciones"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poikkeukset"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exceptions"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undantekningar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eccezioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例外"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예외"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unntak"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyjątki"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exceções"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undantag"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例外情况"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例外"
+          }
+        }
+      }
+    },
     "Expands the artist biography": {
       "localizations": {
         "da": {
@@ -72344,6 +73002,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "FLAC 專輯一曲接一曲，中間沒有一秒空白。"
+          }
+        }
+      }
+    },
+    "FLAC, ALAC, WAV and AIFF albums are gapless with no caveat.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC-, ALAC-, WAV- og AIFF-album spiller uden huller uden forbehold."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alben in FLAC, ALAC, WAV und AIFF laufen lückenlos – ohne Einschränkung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los álbumes FLAC, ALAC, WAV y AIFF se reproducen sin pausas, sin ninguna salvedad."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC-, ALAC-, WAV- ja AIFF-albumit toistuvat saumattomasti ilman rajoituksia."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les albums FLAC, ALAC, WAV et AIFF s'enchaînent sans blanc, sans aucune réserve."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC-, ALAC-, WAV- og AIFF-plötur spilast án bila, án nokkurs fyrirvara."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli album FLAC, ALAC, WAV e AIFF sono senza pause, senza alcuna riserva."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC、ALAC、WAV、AIFFのアルバムは、例外なくギャップレスで再生されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF 앨범은 예외 없이 갭리스로 재생됩니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC-, ALAC-, WAV- og AIFF-album er sømløse uten forbehold."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albumy FLAC, ALAC, WAV i AIFF odtwarzane są bez przerw i bez żadnych zastrzeżeń."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Álbuns em FLAC, ALAC, WAV e AIFF tocam sem pausas, sem ressalvas."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC-, ALAC-, WAV- och AIFF-album är sömlösa utan några förbehåll."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC、ALAC、WAV 和 AIFF 专辑可无缝播放，没有任何例外。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC、ALAC、WAV 和 AIFF 專輯可無縫播放，沒有任何例外。"
           }
         }
       }
@@ -79547,6 +80299,194 @@
         }
       }
     },
+    "For true lossless on iPad, go wired: the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz. FLAC also shines on a home rig or desktop where the DAC is wired.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vil du have ægte tabsfri lyd på iPad, så brug kabel: Apples hovedtelefonadapter leverer op til 24 bit/48 kHz, og en ekstern USB-C-DAC låser op for hi-res tabsfri lyd op til 24 bit/192 kHz. FLAC kommer også til sin ret på et hjemmeanlæg eller en stationær computer, hvor DAC'en er tilsluttet med kabel."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für echtes verlustfreies Audio am iPad gehst du kabelgebunden: Der Apple-Kopfhöreradapter liefert bis zu 24 Bit/48 kHz, ein externer USB‑C-DAC schaltet Hi-Res bis 24 Bit/192 kHz frei. FLAC glänzt auch an der Anlage oder am Schreibtisch, wo der DAC per Kabel hängt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para lossless de verdad en el iPad, ve por cable: el adaptador de auriculares de Apple llega a 24 bits/48 kHz, y un DAC USB‑C externo desbloquea hi-res hasta 24 bits/192 kHz. El FLAC también brilla en un equipo de casa o de escritorio con el DAC conectado por cable."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aidosti häviötöntä ääntä iPadilla saat langallisesti: Applen kuulokeadapteri toistaa enintään 24-bittistä/48 kHz:n ääntä, ja ulkoinen USB-C-DAC avaa hi-res-häviöttömän äänen enintään 24-bittiseen/192 kHz:iin asti. FLAC soi hyvin myös kotistereoissa tai pöytätietokoneessa, joissa DAC on kytketty langallisesti."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour du vrai lossless sur iPad, passez au filaire : l'adaptateur casque Apple délivre jusqu'à 24 bits/48 kHz, et un DAC USB‑C externe débloque le hi-res jusqu'à 24 bits/192 kHz. Le FLAC brille aussi sur une chaîne ou un bureau où le DAC est câblé."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fyrir sanna taplausa hljóðgæði á iPad skaltu tengja með snúru: Apple heyrnartólamillistykkið skilar allt að 24 bitum/48 kHz, og utanaðkomandi USB-C DAC opnar hi-res taplaust hljóð allt að 24 bitum/192 kHz. FLAC nýtur sín líka í heimakerfi eða við borðtölvu þar sem DAC-inn er tengdur með snúru."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per un lossless vero su iPad serve il cavo: l'adattatore per cuffie Apple arriva a 24 bit/48 kHz e un DAC USB‑C esterno sblocca l'hi-res fino a 24 bit/192 kHz. Il FLAC brilla anche su un impianto o su una scrivania, dove il DAC è collegato via cavo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPadで本当のロスレスを聴くなら有線です。Appleのヘッドフォンアダプタは24ビット/48 kHzまで、外付けUSB‑C DACなら24ビット/192 kHzのハイレゾロスレスまで再生できます。DACを有線でつなぐ据え置き環境やデスク環境でもFLACは真価を発揮します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPad에서 진짜 무손실을 들으려면 유선이 답입니다. Apple 헤드폰 어댑터는 24비트/48kHz까지, 외장 USB‑C DAC은 24비트/192kHz 하이레스 무손실까지 지원합니다. DAC을 유선으로 연결한 홈 오디오나 데스크 환경에서도 FLAC이 빛을 발합니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For ekte tapsfri lyd på iPad må du koble til med kabel: Apples hodetelefonadapter leverer opptil 24-bit/48 kHz, og en ekstern USB-C-DAC låser opp hi-res tapsfri lyd opptil 24-bit/192 kHz. FLAC kommer også godt til sin rett på et hjemmeanlegg eller en stasjonær PC der DAC-en er koblet til med kabel."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dla prawdziwego bezstratnego dźwięku na iPadzie wybierz kabel: adapter słuchawkowy Apple dostarcza do 24-bitowego/48 kHz, a zewnętrzny DAC USB-C odblokowuje bezstratny dźwięk hi-res do 24-bitowego/192 kHz. FLAC błyszczy też na domowym zestawie lub komputerze z podłączonym DAC-iem."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para lossless de verdade no iPad, vá de cabo: o adaptador de fones da Apple entrega até 24 bits/48 kHz, e um DAC USB‑C externo libera hi-res de até 24 bits/192 kHz. O FLAC também brilha num sistema de casa ou de mesa, com o DAC ligado por cabo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "För riktigt förlustfritt ljud på iPad ska du koppla in med kabel: Apples hörlursadapter levererar upp till 24-bit/48 kHz, och en extern USB-C-DAC låser upp hi-res förlustfritt ljud upp till 24-bit/192 kHz. FLAC kommer också till sin rätt i en hemmastereo eller på en stationär dator där DAC:n är kabelansluten."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想在 iPad 上听到真正的无损，就走有线：Apple 耳机转接头最高支持 24 位/48 kHz，外接 USB‑C 解码器可解锁最高 24 位/192 kHz 的高解析度无损。在解码器有线连接的家用或桌面系统上，FLAC 同样出色。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想在 iPad 上聽到真正的無損，就走有線：Apple 耳機轉接器最高支援 24 位元/48 kHz，外接 USB‑C DAC 則能解鎖最高 24 位元/192 kHz 的高解析度無損。在 DAC 以有線連接的家用或桌上型系統上，FLAC 同樣出色。"
+          }
+        }
+      }
+    },
+    "For true lossless on iPhone, go wired: the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz. FLAC also shines on a home rig or desktop where the DAC is wired.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vil du have ægte tabsfri lyd på iPhone, så brug kabel: Apples hovedtelefonadapter leverer op til 24 bit/48 kHz, og en ekstern USB-C-DAC låser op for hi-res tabsfri lyd op til 24 bit/192 kHz. FLAC kommer også til sin ret på et hjemmeanlæg eller en stationær computer, hvor DAC'en er tilsluttet med kabel."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für echtes verlustfreies Audio am iPhone gehst du kabelgebunden: Der Apple-Kopfhöreradapter liefert bis zu 24 Bit/48 kHz, ein externer USB‑C-DAC schaltet Hi-Res bis 24 Bit/192 kHz frei. FLAC glänzt auch an der Anlage oder am Schreibtisch, wo der DAC per Kabel hängt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para lossless de verdad en el iPhone, ve por cable: el adaptador de auriculares de Apple llega a 24 bits/48 kHz, y un DAC USB‑C externo desbloquea hi-res hasta 24 bits/192 kHz. El FLAC también brilla en un equipo de casa o de escritorio con el DAC conectado por cable."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aidosti häviötöntä ääntä iPhonella saat langallisesti: Applen kuulokeadapteri toistaa enintään 24-bittistä/48 kHz:n ääntä, ja ulkoinen USB-C-DAC avaa hi-res-häviöttömän äänen enintään 24-bittiseen/192 kHz:iin asti. FLAC soi hyvin myös kotistereoissa tai pöytätietokoneessa, joissa DAC on kytketty langallisesti."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour du vrai lossless sur iPhone, passez au filaire : l'adaptateur casque Apple délivre jusqu'à 24 bits/48 kHz, et un DAC USB‑C externe débloque le hi-res jusqu'à 24 bits/192 kHz. Le FLAC brille aussi sur une chaîne ou un bureau où le DAC est câblé."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fyrir sanna taplausa hljóðgæði á iPhone skaltu tengja með snúru: Apple heyrnartólamillistykkið skilar allt að 24 bitum/48 kHz, og utanaðkomandi USB-C DAC opnar hi-res taplaust hljóð allt að 24 bitum/192 kHz. FLAC nýtur sín líka í heimakerfi eða við borðtölvu þar sem DAC-inn er tengdur með snúru."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per un lossless vero su iPhone serve il cavo: l'adattatore per cuffie Apple arriva a 24 bit/48 kHz e un DAC USB‑C esterno sblocca l'hi-res fino a 24 bit/192 kHz. Il FLAC brilla anche su un impianto o su una scrivania, dove il DAC è collegato via cavo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhoneで本当のロスレスを聴くなら有線です。Appleのヘッドフォンアダプタは24ビット/48 kHzまで、外付けUSB‑C DACなら24ビット/192 kHzのハイレゾロスレスまで再生できます。DACを有線でつなぐ据え置き環境やデスク環境でもFLACは真価を発揮します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone에서 진짜 무손실을 들으려면 유선이 답입니다. Apple 헤드폰 어댑터는 24비트/48kHz까지, 외장 USB‑C DAC은 24비트/192kHz 하이레스 무손실까지 지원합니다. DAC을 유선으로 연결한 홈 오디오나 데스크 환경에서도 FLAC이 빛을 발합니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For ekte tapsfri lyd på iPhone må du koble til med kabel: Apples hodetelefonadapter leverer opptil 24-bit/48 kHz, og en ekstern USB-C-DAC låser opp hi-res tapsfri lyd opptil 24-bit/192 kHz. FLAC kommer også godt til sin rett på et hjemmeanlegg eller en stasjonær PC der DAC-en er koblet til med kabel."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dla prawdziwego bezstratnego dźwięku na iPhonie wybierz kabel: adapter słuchawkowy Apple dostarcza do 24-bitowego/48 kHz, a zewnętrzny DAC USB-C odblokowuje bezstratny dźwięk hi-res do 24-bitowego/192 kHz. FLAC błyszczy też na domowym zestawie lub komputerze z podłączonym DAC-iem."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para lossless de verdade no iPhone, vá de cabo: o adaptador de fones da Apple entrega até 24 bits/48 kHz, e um DAC USB‑C externo libera hi-res de até 24 bits/192 kHz. O FLAC também brilha num sistema de casa ou de mesa, com o DAC ligado por cabo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "För riktigt förlustfritt ljud på iPhone ska du koppla in med kabel: Apples hörlursadapter levererar upp till 24-bit/48 kHz, och en extern USB-C-DAC låser upp hi-res förlustfritt ljud upp till 24-bit/192 kHz. FLAC kommer också till sin rätt i en hemmastereo eller på en stationär dator där DAC:n är kabelansluten."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想在 iPhone 上听到真正的无损，就走有线：Apple 耳机转接头最高支持 24 位/48 kHz，外接 USB‑C 解码器可解锁最高 24 位/192 kHz 的高解析度无损。在解码器有线连接的家用或桌面系统上，FLAC 同样出色。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想在 iPhone 上聽到真正的無損，就走有線：Apple 耳機轉接器最高支援 24 位元/48 kHz，外接 USB‑C DAC 則能解鎖最高 24 位元/192 kHz 的高解析度無損。在 DAC 以有線連接的家用或桌上型系統上，FLAC 同樣出色。"
+          }
+        }
+      }
+    },
     "Forget this Output": {
       "localizations": {
         "da": {
@@ -81241,6 +82181,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "無縫播放"
+          }
+        }
+      }
+    },
+    "Gapless is always on in Flaccy — the next track is decoded and waiting before the current one ends, so a continuous album runs as one piece. What you hear at the seam depends on the file. Lossless formats store exactly the samples the master had, so there is nothing between tracks to remove. MP3 and AAC encode in fixed blocks and pad every file with a fraction of a second of silence at each end; that padding lives inside the file, and iOS does not strip it on playback.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gapless er altid slået til i Flaccy – det næste nummer er afkodet og klar, før det aktuelle slutter, så et sammenhængende album spilles som ét stykke. Hvad du hører i overgangen, afhænger af filen. Tabsfrie formater gemmer præcis de samples, masteren havde, så der er intet mellem numrene at fjerne. MP3 og AAC kodes i faste blokke og fylder hver fil med en brøkdel af et sekund stilhed i begge ender; denne stilhed ligger i selve filen, og iOS fjerner den ikke ved afspilning."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lückenlose Wiedergabe ist in Flaccy immer aktiv – der nächste Titel ist bereits dekodiert und wartet, bevor der aktuelle endet, sodass ein durchgehendes Album wie aus einem Guss läuft. Was du an der Nahtstelle hörst, hängt von der Datei ab. Verlustfreie Formate speichern genau die Samples des Masters, also gibt es zwischen den Titeln nichts zu entfernen. MP3 und AAC kodieren in festen Blöcken und füllen jede Datei an beiden Enden mit einem Bruchteil einer Sekunde Stille auf; dieses Padding steckt in der Datei, und iOS entfernt es bei der Wiedergabe nicht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La reproducción sin pausas está siempre activa en Flaccy: la pista siguiente ya está decodificada y esperando antes de que termine la actual, así que un álbum continuo suena como una sola pieza. Lo que oyes en la unión depende del archivo. Los formatos lossless guardan exactamente las muestras del máster, así que entre pistas no hay nada que eliminar. MP3 y AAC codifican en bloques fijos y rellenan cada archivo con una fracción de segundo de silencio en cada extremo; ese relleno vive dentro del archivo y iOS no lo elimina al reproducir."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saumaton toisto on Flaccyssa aina päällä – seuraava kappale on dekoodattu ja valmiina ennen kuin nykyinen päättyy, joten yhtenäinen albumi soi yhtenä kokonaisuutena. Saumakohdassa kuuluva ääni riippuu tiedostosta. Häviöttömät muodot tallentavat täsmälleen ne näytteet, jotka masterissa oli, joten kappaleiden välissä ei ole mitään poistettavaa. MP3 ja AAC koodataan kiinteinä lohkoina, ja ne täyttävät jokaisen tiedoston molemmista päistä sekunnin murto-osan hiljaisuutta; tämä täyte on tiedoston sisällä, eikä iOS poista sitä toistettaessa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La lecture sans blanc est toujours active dans Flaccy : le morceau suivant est déjà décodé et attend avant la fin du morceau en cours, si bien qu'un album continu se déroule d'une seule pièce. Ce que vous entendez à la jonction dépend du fichier. Les formats lossless conservent exactement les échantillons du master, il n'y a donc rien à retirer entre les morceaux. Le MP3 et l'AAC encodent par blocs de taille fixe et ajoutent à chaque extrémité de chaque fichier une fraction de seconde de silence ; ce remplissage est inclus dans le fichier, et iOS ne le supprime pas à la lecture."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gapless er alltaf virkt í Flaccy – næsta lag er afkóðað og tilbúið áður en það núverandi endar, þannig að samfelld plata spilast sem ein heild. Það sem þú heyrir á samskeytunum fer eftir skránni. Taplaus snið geyma nákvæmlega þau sýni sem masterinn hafði, þannig að ekkert er á milli laganna sem þarf að fjarlægja. MP3 og AAC eru kóðuð í föstum blokkum og fylla hverja skrá með broti úr sekúndu af þögn í hvorum enda; þessi fylling er inni í skránni og iOS fjarlægir hana ekki við spilun."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La riproduzione senza pause è sempre attiva in Flaccy: il brano successivo è già decodificato e in attesa prima che finisca quello in corso, così un album continuo scorre come un unico pezzo. Ciò che senti nel punto di giunzione dipende dal file. I formati lossless conservano esattamente i campioni del master, quindi tra un brano e l'altro non c'è nulla da rimuovere. MP3 e AAC codificano a blocchi fissi e aggiungono a ogni file una frazione di secondo di silenzio a ciascuna estremità; quel padding sta dentro il file e iOS non lo elimina durante la riproduzione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccyではギャップレス再生は常にオンです。現在の曲が終わる前に次の曲がデコードされて待機しているため、続けて収録されたアルバムは一つの作品としてつながります。つなぎ目で聞こえる音はファイルによって変わります。ロスレス形式はマスターのサンプルをそのまま保存しているので、曲間に取り除くべきものはありません。MP3とAACは固定長のブロックでエンコードされ、すべてのファイルの両端に1秒未満の無音が加えられます。このパディングはファイル内部にあり、iOSは再生時に取り除きません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy에서 갭리스 재생은 항상 켜져 있습니다. 현재 곡이 끝나기 전에 다음 곡이 이미 디코딩되어 대기하므로, 이어지는 앨범이 하나의 작품처럼 흘러갑니다. 이음매에서 들리는 소리는 파일에 따라 달라집니다. 무손실 형식은 마스터의 샘플을 그대로 저장하므로 곡 사이에 제거할 것이 없습니다. MP3와 AAC는 고정 크기 블록으로 인코딩되며 모든 파일의 양쪽 끝에 1초 미만의 무음을 덧붙입니다. 이 패딩은 파일 안에 들어 있고, iOS는 재생할 때 이를 제거하지 않습니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gapless er alltid på i Flaccy – neste spor er dekodet og klart før det nåværende slutter, slik at et sammenhengende album spilles som ett stykke. Hva du hører i skjøten, avhenger av filen. Tapsfrie formater lagrer nøyaktig de samplene masteren hadde, så det er ingenting mellom sporene å fjerne. MP3 og AAC kodes i faste blokker og fyller hver fil med en brøkdel av et sekund stillhet i hver ende; denne fyllingen ligger inni filen, og iOS fjerner den ikke under avspilling."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W Flaccy odtwarzanie bez przerw jest zawsze włączone — następny utwór jest już zdekodowany i czeka, zanim skończy się bieżący, więc ciągły album płynie jak jedna całość. To, co słychać na styku, zależy od pliku. Formaty bezstratne przechowują dokładnie te próbki, które miał master, więc między utworami nie ma niczego do usunięcia. MP3 i AAC kodują w blokach o stałym rozmiarze i dodają na obu końcach każdego pliku ułamek sekundy ciszy; to wypełnienie jest częścią pliku, a iOS nie usuwa go podczas odtwarzania."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A reprodução sem pausas está sempre ativa no Flaccy — a próxima faixa já está decodificada e esperando antes de a atual terminar, então um álbum contínuo toca como uma peça só. O que você ouve na emenda depende do arquivo. Formatos lossless guardam exatamente as amostras do master, então não há nada a remover entre as faixas. MP3 e AAC codificam em blocos fixos e preenchem cada arquivo com uma fração de segundo de silêncio em cada ponta; esse preenchimento fica dentro do arquivo, e o iOS não o remove na reprodução."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gapless är alltid på i Flaccy – nästa låt är avkodad och redo innan den aktuella slutar, så ett sammanhängande album spelas upp som en enhet. Vad du hör i skarven beror på filen. Förlustfria format lagrar exakt de samplen som mastern hade, så det finns inget mellan låtarna att ta bort. MP3 och AAC kodas i fasta block och fyller varje fil med en bråkdel av en sekund tystnad i varje ände; fyllnaden sitter i filen, och iOS tar inte bort den vid uppspelning."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Flaccy 中，无缝播放始终开启——当前曲目结束之前，下一首已经解码完毕、随时待命，所以连续的专辑会像一个整体一样播放。衔接处听到什么，取决于文件本身。无损格式完整保存了母带的采样，曲目之间没有任何需要去除的东西。MP3 和 AAC 按固定块编码，并在每个文件两端补上不到一秒的静音；这段填充就在文件内部，iOS 播放时不会将其去除。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Flaccy 中，無縫播放一律開啟——目前曲目結束之前，下一首已經解碼完畢、隨時待命，所以連續的專輯會像一個整體一樣播放。銜接處聽到什麼，取決於檔案本身。無損格式完整保存了母帶的取樣，曲目之間沒有任何需要移除的東西。MP3 和 AAC 以固定區塊編碼，並在每個檔案兩端補上不到一秒的靜音；這段填充就在檔案內部，iOS 播放時不會將其移除。"
           }
         }
       }
@@ -83691,6 +84725,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在把曲目歸入專輯和演出者。"
+          }
+        }
+      }
+    },
+    "H2-chip AirPods get lossless wirelessly only with Apple Vision Pro, over a proprietary 5 GHz link — not standard Bluetooth.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods med H2-chip får kun trådløst tabsfri lyd sammen med Apple Vision Pro, over en proprietær 5 GHz-forbindelse – ikke almindelig Bluetooth."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods mit H2-Chip bekommen verlustfreies Audio drahtlos nur mit Apple Vision Pro über eine proprietäre 5-GHz-Verbindung – nicht über normales Bluetooth."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los AirPods con chip H2 reciben lossless por vía inalámbrica solo con el Apple Vision Pro, mediante un enlace propietario de 5 GHz, no por Bluetooth estándar."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "H2-sirulliset AirPodsit saavat häviöttömän äänen langattomasti vain Apple Vision Pron kanssa, omalla 5 GHz:n yhteydellä – ei tavallisella Bluetoothilla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les AirPods à puce H2 reçoivent le lossless sans fil uniquement avec l'Apple Vision Pro, via une liaison propriétaire 5 GHz — pas en Bluetooth standard."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods með H2-flögu fá taplaust hljóð þráðlaust aðeins með Apple Vision Pro, yfir sértengingu á 5 GHz – ekki venjulegt Bluetooth."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli AirPods con chip H2 ricevono il lossless senza fili solo con Apple Vision Pro, tramite un collegamento proprietario a 5 GHz, non con il Bluetooth standard."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "H2チップ搭載のAirPodsがワイヤレスでロスレスを受け取れるのはApple Vision Proと組み合わせたときだけで、独自の5 GHzリンクを使います。標準のBluetoothではありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "H2 칩이 들어간 AirPods가 무선으로 무손실을 받는 경우는 Apple Vision Pro와 함께 쓸 때뿐이며, 표준 블루투스가 아니라 독자 5GHz 연결을 사용합니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods med H2-brikke får tapsfri lyd trådløst bare med Apple Vision Pro, over en proprietær 5 GHz-forbindelse – ikke vanlig Bluetooth."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods z chipem H2 uzyskują dźwięk bezstratny bezprzewodowo tylko z Apple Vision Pro, przez zastrzeżone łącze 5 GHz — nie standardowy Bluetooth."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods com chip H2 só recebem lossless sem fio com o Apple Vision Pro, por um enlace proprietário de 5 GHz — não pelo Bluetooth padrão."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods med H2-chip får förlustfritt ljud trådlöst endast med Apple Vision Pro, över en egen 5 GHz-länk – inte vanlig Bluetooth."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搭载 H2 芯片的 AirPods 只有配合 Apple Vision Pro 才能无线获得无损，走的是专有的 5 GHz 连接，而不是标准蓝牙。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搭載 H2 晶片的 AirPods 只有搭配 Apple Vision Pro 才能無線取得無損，走的是專屬的 5 GHz 連線，而不是標準藍牙。"
           }
         }
       }
@@ -86639,6 +87767,100 @@
         }
       }
     },
+    "If one album gaps and the rest don't, check its format before blaming the player.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvis ét album har huller, og de andre ikke har, så tjek dets format, før du giver afspilleren skylden."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn ein Album Lücken hat und die anderen nicht, prüfe zuerst sein Format, bevor du dem Player die Schuld gibst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si un álbum tiene pausas y los demás no, comprueba su formato antes de culpar al reproductor."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jos yksi albumi katkeilee ja muut eivät, tarkista sen muoto ennen kuin syytät soitinta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si un album présente des blancs et pas les autres, vérifiez son format avant d'accuser le lecteur."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ef eitt plata er með bili en hinar ekki, athugaðu snið hennar áður en þú kennir spilaranum um."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se un album ha delle pause e gli altri no, controlla il suo formato prima di dare la colpa al player."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あるアルバムだけ曲間が途切れるなら、プレーヤーを疑う前にそのフォーマットを確認してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 앨범에서만 끊김이 생기고 나머지는 괜찮다면, 플레이어를 탓하기 전에 해당 앨범의 형식부터 확인하세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvis ett album har hull og de andre ikke har det, sjekk formatet før du skylder på spilleren."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeśli jeden album ma przerwy, a pozostałe nie, sprawdź jego format, zanim obwinisz odtwarzacz."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se um álbum tem pausas e os outros não, confira o formato dele antes de culpar o player."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Om ett album har luckor och de övriga inte har det, kontrollera dess format innan du skyller på spelaren."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果只有某张专辑出现间隙，其他专辑都正常，请先检查它的格式，再怪播放器。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果只有某張專輯出現間隙，其他專輯都正常，請先檢查它的格式，再怪播放器。"
+          }
+        }
+      }
+    },
     "If you close now, the songs that have finished stay and the rest stop. Keep this screen open until the computer is done.": {
       "localizations": {
         "da": {
@@ -88627,6 +89849,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "資料庫中是 %@ — 換成無損吧"
+          }
+        }
+      }
+    },
+    "In published blind tests — the largest public one put 580 participants on CD versus 256 kbps AAC — most listeners cannot reliably tell 256 kbps AAC from lossless. Only a small minority succeed, on specific tracks, under ideal conditions, on revealing gear. Apple itself calls the difference “virtually indistinguishable”.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I offentliggjorte blindtests – den største offentlige satte 580 deltagere til at sammenligne cd med 256 kbps AAC – kan de fleste lyttere ikke pålideligt skelne 256 kbps AAC fra tabsfri lyd. Kun et lille mindretal lykkes, på bestemte numre, under ideelle forhold og med afslørende udstyr. Apple selv kalder forskellen „praktisk talt uhørlig“."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In veröffentlichten Blindtests – der größte öffentliche stellte 580 Teilnehmer vor CD gegen 256 kbit/s AAC – können die meisten Hörer AAC mit 256 kbit/s nicht zuverlässig von verlustfrei unterscheiden. Nur eine kleine Minderheit schafft es, bei bestimmten Titeln, unter idealen Bedingungen, an sehr auflösender Hardware. Apple selbst nennt den Unterschied „praktisch nicht wahrnehmbar“."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En las pruebas ciegas publicadas —la mayor puso a 580 participantes ante CD frente a AAC de 256 kbps— la mayoría no distingue de forma fiable el AAC de 256 kbps del lossless. Solo lo consigue una pequeña minoría, en pistas concretas, en condiciones ideales y con equipos muy reveladores. La propia Apple llama a esa diferencia “prácticamente indistinguible”."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Julkaistuissa sokkotesteissä – suurimmassa julkisessa testissä 580 osallistujaa vertasi CD:tä ja 256 kbit/s AAC:tä – useimmat kuuntelijat eivät pysty luotettavasti erottamaan 256 kbit/s AAC:tä häviöttömästä. Vain pieni vähemmistö onnistuu, tietyillä kappaleilla, ihanteellisissa olosuhteissa ja paljastavilla laitteilla. Apple itse kutsuu eroa ”käytännössä erottamattomaksi”."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans les tests en aveugle publiés — le plus vaste a opposé 580 participants au CD face à l'AAC 256 kbit/s — la plupart des auditeurs ne distinguent pas de façon fiable l'AAC 256 kbit/s du lossless. Seule une petite minorité y parvient, sur certains morceaux, dans des conditions idéales, sur du matériel très révélateur. Apple qualifie elle-même la différence de « pratiquement indiscernable »."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Í birtum blindprófum – það stærsta opinbera var með 580 þátttakendur sem báru saman geisladisk og 256 kbps AAC – geta flestir hlustendur ekki áreiðanlega greint 256 kbps AAC frá taplausu hljóði. Aðeins lítill minnihluti nær því, á ákveðnum lögum, við kjöraðstæður og á afhjúpandi græjum. Apple sjálft kallar muninn „nánast ógreinanlegan“."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nei test in cieco pubblicati — il più ampio ha messo 580 partecipanti davanti a CD contro AAC a 256 kbps — la maggior parte degli ascoltatori non distingue in modo affidabile l'AAC a 256 kbps dal lossless. Ci riesce solo una piccola minoranza, su brani specifici, in condizioni ideali, con impianti molto rivelatori. Apple stessa definisce la differenza “praticamente indistinguibile”."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公開されたブラインドテスト（最大規模のものはCDと256 kbps AACを580人で比較）では、ほとんどの人は256 kbps AACとロスレスを確実には区別できませんでした。聴き分けられるのはごく一部の人が、特定の曲を、理想的な条件で、解像度の高い機材で聴いたときだけです。Appleもその差を「事実上聴き分けられない」と表現しています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공개된 블라인드 테스트에서 — 가장 큰 테스트는 참가자 580명에게 CD와 256kbps AAC를 비교하게 했습니다 — 대부분의 청취자는 256kbps AAC와 무손실을 안정적으로 구별하지 못했습니다. 특정 곡을 이상적인 조건에서 해상력 높은 장비로 들을 때 소수만 구별해 냅니다. Apple 역시 그 차이를 “사실상 구별할 수 없다”고 표현합니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I publiserte blindtester – den største offentlige hadde 580 deltakere som sammenlignet CD med 256 kbps AAC – kan de fleste lyttere ikke pålitelig skille 256 kbps AAC fra tapsfri lyd. Bare et lite mindretall klarer det, på bestemte spor, under ideelle forhold og med avslørende utstyr. Apple selv kaller forskjellen «praktisk talt umerkelig»."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W opublikowanych testach ślepych — największy publiczny postawił 580 uczestników wobec CD kontra 256 kbps AAC — większość słuchaczy nie potrafi wiarygodnie odróżnić 256 kbps AAC od dźwięku bezstratnego. Udaje się to jedynie niewielkiej mniejszości, na konkretnych utworach, w idealnych warunkach, na sprzęcie ujawniającym różnice. Sam Apple nazywa tę różnicę „praktycznie niedostrzegalną”."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em testes cegos publicados — o maior deles colocou 580 participantes diante de CD contra AAC de 256 kbps — a maioria dos ouvintes não distingue de forma confiável AAC de 256 kbps do lossless. Só uma pequena minoria consegue, em faixas específicas, em condições ideais, em equipamentos muito reveladores. A própria Apple chama essa diferença de “praticamente indistinguível”."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I publicerade blindtester – det största offentliga testet lät 580 deltagare jämföra cd med 256 kbit/s AAC – kan de flesta lyssnare inte pålitligt skilja 256 kbit/s AAC från förlustfritt. Bara en liten minoritet lyckas, på vissa låtar, under ideala förhållanden och med avslöjande utrustning. Apple själv kallar skillnaden ”praktiskt taget omärkbar”."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在已发表的盲测中——规模最大的一次让 580 名参与者对比 CD 与 256 kbps AAC——大多数听众无法稳定分辨 256 kbps AAC 和无损。只有极少数人能在特定曲目、理想条件和高解析度器材上做到。Apple 自己也称这种差别“几乎无法区分”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在已發表的盲測中——規模最大的一次讓 580 位受試者比較 CD 與 256 kbps AAC——多數聽眾無法穩定分辨 256 kbps AAC 與無損。只有極少數人能在特定曲目、理想條件與夠好的器材上辦到。Apple 自己也說這個差別「幾乎無法分辨」。"
           }
         }
       }
@@ -95297,6 +96613,100 @@
         }
       }
     },
+    "Listening Guide": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lyttevejledning"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hörguide"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guía de escucha"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuunteluopas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guide d'écoute"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hlustunarleiðbeiningar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guida all'ascolto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リスニングガイド"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "감상 가이드"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lyttveiledning"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przewodnik po odsłuchach"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guia de audição"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lyssningsguide"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收听指南"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聆聽指南"
+          }
+        }
+      }
+    },
     "Listening clock, no plays yet": {
       "localizations": {
         "da": {
@@ -99325,6 +100735,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "最受歡迎"
+          }
+        }
+      }
+    },
+    "MP3 and AAC rips of live albums, DJ mixes and segued records can click between tracks — the padding is baked in, not something a player setting can undo.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3- og AAC-rips af liveplader, DJ-mixes og plader med sammenhængende numre kan klikke mellem numrene – fyldet er indbygget og kan ikke fjernes med en afspillerindstilling."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3- und AAC-Rips von Live-Alben, DJ-Mixen und nahtlos ineinander übergehenden Platten können zwischen den Titeln knacken – das Padding ist fest eingebaut und lässt sich per Player-Einstellung nicht rückgängig machen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los rips en MP3 y AAC de álbumes en directo, mezclas de DJ y discos con temas enlazados pueden hacer clic entre pistas: el relleno viene incorporado y ningún ajuste del reproductor puede deshacerlo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live-albumien, DJ-miksien ja yhteen liitettyjen levyjen MP3- ja AAC-rippaukset voivat napsahtaa kappaleiden välillä – täyte on upotettu tiedostoon, eikä mikään soittimen asetus pysty kumoamaan sitä."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les rips en MP3 et AAC d'albums live, de mixes de DJ et de disques aux morceaux enchaînés peuvent produire un clic entre les morceaux : le remplissage est intégré au fichier, et aucun réglage du lecteur ne peut l'annuler."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3- og AAC-afritanir af tónleikaplötum, DJ-blöndum og plötum með samfelldum lögum geta smellt á milli laga – fyllingin er innbyggð og ekki hægt að afturkalla hana með stillingu í spilaranum."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I rip in MP3 e AAC di album dal vivo, DJ mix e dischi con brani in segue possono fare clic tra un brano e l'altro: il padding è incorporato e nessuna impostazione del player può annullarlo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブアルバム、DJミックス、曲間が続けて収録されたレコードをMP3やAACでリッピングすると、曲間でクリック音が入ることがあります。パディングはファイルに組み込まれており、プレーヤーの設定では取り除けません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라이브 앨범, DJ 믹스, 곡이 끊김 없이 이어지는 음반을 MP3나 AAC로 리핑하면 곡 사이에서 딱 소리가 날 수 있습니다. 패딩은 파일에 내장되어 있어 플레이어 설정으로 되돌릴 수 없습니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3- og AAC-rip av liveopptak, DJ-miks og plater med sammenhengende spor kan klikke mellom sporene – fyllet er innebygd, og en innstilling i spilleren kan ikke angre det."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripy albumów koncertowych, miksów didżejskich i płyt z płynnymi przejściami w MP3 i AAC mogą trzaskać między utworami — wypełnienie jest wpisane w plik i żadne ustawienie odtwarzacza tego nie cofnie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rips em MP3 e AAC de álbuns ao vivo, mixes de DJ e discos com faixas emendadas podem estalar entre as faixas — o preenchimento já vem embutido e nenhuma configuração do player consegue desfazê-lo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3- och AAC-rippade liveskivor, DJ-mixar och skivor med sammanhängande spår kan klicka mellan låtarna – fyllnaden är inbakad, och en inställning i spelaren kan inte ta bort den."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "现场专辑、DJ 混音以及曲目首尾相连的唱片，如果抓轨成 MP3 或 AAC，曲目之间可能会出现“咔”声——填充已经固化在文件里，播放器设置无法撤销。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現場專輯、DJ 混音以及曲目首尾相連的唱片，如果擷取成 MP3 或 AAC，曲目之間可能會出現「喀」聲——填充已經固化在檔案裡，播放器設定無法復原。"
           }
         }
       }
@@ -119256,6 +120760,100 @@
         }
       }
     },
+    "Opens in your browser": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Åbnes i browseren"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet sich im Browser"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se abre en tu navegador"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avautuu selaimessa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S'ouvre dans votre navigateur"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opnast í vafranum"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si apre nel browser"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザで開きます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "브라우저에서 열립니다"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Åpnes i nettleseren"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwiera się w przeglądarce"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre no seu navegador"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öppnas i webbläsaren"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将在浏览器中打开"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將在瀏覽器中打開"
+          }
+        }
+      }
+    },
     "Opens system Settings to allow notifications": {
       "localizations": {
         "da": {
@@ -130354,6 +131952,100 @@
         }
       }
     },
+    "Practical takeaway": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Praktisk konklusion"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fazit für die Praxis"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conclusión práctica"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Käytännön johtopäätös"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À retenir en pratique"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hagnýt niðurstaða"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In pratica"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実際のところ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실전 요약"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Praktisk konklusjon"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Praktyczny wniosek"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conclusão prática"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Praktisk slutsats"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "实用结论"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "實用結論"
+          }
+        }
+      }
+    },
     "Preamp": {
       "localizations": {
         "da": {
@@ -135314,6 +137006,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "為 Flaccy 放棄的專輯重新取得封面和發行日期。"
+          }
+        }
+      }
+    },
+    "Re-ripping the album to FLAC removes the seam for good.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvis du ripper albummet igen til FLAC, fjernes overgangen for altid."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn du das Album erneut als FLAC rippst, verschwindet die Nahtstelle für immer."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volver a extraer el álbum en FLAC elimina la unión para siempre."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kun albumi rippataan uudelleen FLAC-muotoon, saumakohta poistuu lopullisesti."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réextraire l'album en FLAC supprime définitivement la jonction."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ef plötunni er rifin aftur í FLAC hverfur samskeytið fyrir fullt og allt."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rippare di nuovo l'album in FLAC elimina la giunzione una volta per tutte."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アルバムをFLACで再リッピングすれば、つなぎ目は完全に解消されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앨범을 FLAC로 다시 리핑하면 이음매가 완전히 사라집니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Å rippe albumet på nytt til FLAC fjerner skjøten for godt."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ponowne zripowanie albumu do FLAC usuwa szew raz na zawsze."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reripar o álbum em FLAC elimina a emenda de vez."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Om du rippar albumet på nytt till FLAC försvinner skarven för gott."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把专辑重新抓取为 FLAC，就能彻底消除衔接处的杂音。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把專輯重新擷取為 FLAC，就能徹底消除銜接處的雜音。"
           }
         }
       }
@@ -158372,6 +160158,100 @@
         }
       }
     },
+    "Six facts about Bluetooth, AAC, and what your files actually deliver to your ears.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seks fakta om Bluetooth, AAC og det, dine filer faktisk leverer til dine ører."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sechs Fakten über Bluetooth, AAC und das, was deine Dateien wirklich an dein Ohr liefern."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seis datos sobre el Bluetooth, el AAC y lo que tus archivos entregan de verdad a tus oídos."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuusi faktaa Bluetoothista, AAC:stä ja siitä, mitä tiedostosi todella tuovat korviisi."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Six faits sur le Bluetooth, l'AAC et ce que vos fichiers délivrent vraiment à vos oreilles."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sex staðreyndir um Bluetooth, AAC og hvað skrárnar þínar skila raunverulega í eyrun."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sei fatti su Bluetooth, AAC e ciò che i tuoi file consegnano davvero alle tue orecchie."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth、AAC、そしてファイルが実際に耳へ届けるものについての6つの事実。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "블루투스와 AAC, 그리고 당신의 파일이 실제로 귀에 전달하는 것에 관한 여섯 가지 사실."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seks fakta om Bluetooth, AAC og hva filene dine faktisk leverer til ørene dine."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sześć faktów o Bluetooth, AAC i o tym, co twoje pliki naprawdę dostarczają twoim uszom."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seis fatos sobre Bluetooth, AAC e o que seus arquivos realmente entregam aos seus ouvidos."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sex fakta om Bluetooth, AAC och vad dina filer faktiskt levererar till dina öron."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关于蓝牙、AAC，以及你的文件究竟把什么送到耳朵里的六个事实。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關於藍牙、AAC，以及你的檔案究竟把什麼送進耳裡的六個事實。"
+          }
+        }
+      }
+    },
     "Six things you played recently": {
       "localizations": {
         "da": {
@@ -165047,6 +166927,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "限時動態"
+          }
+        }
+      }
+    },
+    "Storing AAC 256 instead of FLAC loses nothing audible over AirPods and saves roughly 60% storage.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At gemme AAC 256 i stedet for FLAC mister ikke noget hørbart over AirPods og sparer cirka 60 % lagerplads."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AAC 256 statt FLAC zu speichern kostet über AirPods nichts Hörbares und spart rund 60 % Speicher."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar AAC 256 en lugar de FLAC no pierde nada audible con AirPods y ahorra alrededor de un 60 % de espacio."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AAC 256:n tallentaminen FLACin sijaan ei menetä mitään kuultavaa AirPodsilla ja säästää noin 60 % tallennustilaa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stocker de l'AAC 256 au lieu du FLAC ne coûte rien d'audible via AirPods et économise environ 60 % de stockage."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Að geyma AAC 256 í stað FLAC tapar engu heyranlegu yfir AirPods og sparar um 60% geymslurými."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvare AAC 256 invece del FLAC non toglie nulla di udibile con gli AirPods e fa risparmiare circa il 60% di spazio."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLACの代わりにAAC 256で保存しても、AirPodsで聴こえる違いはなく、容量はおよそ60%節約できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC 대신 AAC 256으로 저장해도 AirPods에서 들리는 차이는 없고 저장 공간은 약 60% 절약됩니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Å lagre AAC 256 i stedet for FLAC mister ingenting hørbart over AirPods og sparer omtrent 60 % lagringsplass."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przechowywanie AAC 256 zamiast FLAC nie traci nic słyszalnego przez AirPods i oszczędza około 60% miejsca."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar AAC 256 em vez de FLAC não perde nada audível pelos AirPods e economiza cerca de 60% de armazenamento."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Att lagra AAC 256 i stället för FLAC förlorar inget hörbart över AirPods och sparar ungefär 60 % lagringsutrymme."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 AAC 256 代替 FLAC 存储，通过 AirPods 听不出差别，却能省下约 60% 的空间。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改存 AAC 256 而不是 FLAC，透過 AirPods 聽不出任何差別，卻能省下約 60% 的儲存空間。"
           }
         }
       }
@@ -191153,6 +193127,194 @@
         }
       }
     },
+    "What happens to your files": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvad sker der med dine filer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was mit deinen Dateien passiert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qué pasa con tus archivos"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitä tiedostoillesi tapahtuu"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce qui arrive à vos fichiers"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvað verður um skrárnar þínar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cosa succede ai tuoi file"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルはどうなるか"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일은 어떻게 되나요"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hva skjer med filene dine"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Co się dzieje z twoimi plikami"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O que acontece com seus arquivos"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vad händer med dina filer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的文件会怎样"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的檔案會怎麼樣"
+          }
+        }
+      }
+    },
+    "What this means for your library": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvad det betyder for dit bibliotek"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was das für deine Mediathek bedeutet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qué significa esto para tu biblioteca"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitä tämä tarkoittaa kirjastollesi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que cela signifie pour votre bibliothèque"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvað þetta þýðir fyrir safnið þitt"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cosa significa per la tua libreria"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブラリにとっての意味"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 라이브러리에 어떤 의미가 있을까"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hva dette betyr for biblioteket ditt"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Co to oznacza dla twojej biblioteki"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O que isso significa para a sua biblioteca"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vad detta betyder för ditt bibliotek"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这对你的音乐库意味着什么"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這對你的音樂庫意味著什麼"
+          }
+        }
+      }
+    },
     "What you've set up so far": {
       "localizations": {
         "da": {
@@ -191243,6 +193405,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "你目前已設定的內容"
+          }
+        }
+      }
+    },
+    "When FLAC is worth it": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvornår FLAC er umagen værd"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wann sich FLAC lohnt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuándo merece la pena el FLAC"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Milloin FLAC kannattaa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quand le FLAC en vaut la peine"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvenær FLAC borgar sig"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando il FLAC vale la pena"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLACが効くとき"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC이 진가를 발휘할 때"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Når FLAC er verdt det"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kiedy FLAC się opłaca"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando o FLAC vale a pena"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "När FLAC är värt det"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "什么时候值得用 FLAC"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "什麼時候值得用 FLAC"
           }
         }
       }
@@ -191719,6 +193975,194 @@
           "stringUnit": {
             "state": "translated",
             "value": "上次離開的地方"
+          }
+        }
+      }
+    },
+    "Why lossless can't reach AirPods": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvorfor tabsfri lyd ikke kan nå AirPods"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warum verlustfrei die AirPods nicht erreicht"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por qué el lossless no llega a los AirPods"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Miksi häviötön ääni ei yllä AirPodsiin"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pourquoi le lossless n'atteint pas les AirPods"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Af hverju taplaust hljóð nær ekki í AirPods"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perché il lossless non arriva agli AirPods"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロスレスがAirPodsに届かない理由"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무손실이 AirPods에 닿지 못하는 이유"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvorfor tapsfri lyd ikke kan nå AirPods"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dlaczego dźwięk bezstratny nie dociera do AirPods"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por que o lossless não chega aos AirPods"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varför förlustfritt ljud inte kan nå AirPods"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为什么无损到不了 AirPods"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "為什麼無損到不了 AirPods"
+          }
+        }
+      }
+    },
+    "Why some albums still click": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvorfor nogle album stadig klikker"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warum manche Alben trotzdem knacken"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por qué algunos álbumes aún hacen clic"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Miksi jotkin albumit napsahtelevat yhä"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pourquoi certains albums font encore des clics"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Af hverju sum plötur smella enn"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perché alcuni album fanno ancora clic"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一部のアルバムでクリック音が残る理由"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일부 앨범에서 여전히 딱 소리가 나는 이유"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvorfor noen album fortsatt klikker"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dlaczego niektóre albumy wciąż trzaskają"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por que alguns álbuns ainda estalam"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varför vissa album fortfarande klickar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为什么有些专辑仍然会有“咔”声"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "為什麼有些專輯仍然會有「喀」聲"
           }
         }
       }
@@ -200254,6 +202698,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "iCloud Drive 或網路共享"
+          }
+        }
+      }
+    },
+    "iOS mixes all audio — your music plus system sounds — into one stream and re-encodes it to AAC for Bluetooth, so even a 256 kbps AAC file is decoded and encoded again on its way to your AirPods. This is how the audio pipeline works: engineering consensus, as Apple doesn't document passthrough. One extra generation of high-bitrate AAC is essentially inaudible — the loss is real on paper, tiny in practice.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS blander al lyd – din musik plus systemlyde – til ét lydstream og koder det om til AAC til Bluetooth, så selv en AAC-fil på 256 kbps bliver afkodet og kodet igen på vej til dine AirPods. Sådan fungerer lydkæden: fagligt konsensus, da Apple ikke dokumenterer passthrough. Én ekstra generation af AAC med høj bitrate er stort set uhørlig – tabet er reelt på papiret, men lille i praksis."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS mischt alles Audio – deine Musik plus Systemtöne – zu einem Stream und kodiert ihn für Bluetooth neu in AAC. Selbst eine 256-kbit/s-AAC-Datei wird also auf dem Weg zu deinen AirPods dekodiert und erneut kodiert. So funktioniert die Audio-Pipeline: Konsens unter Fachleuten, da Apple keinen Passthrough dokumentiert. Eine zusätzliche Generation hochbitratiges AAC ist praktisch unhörbar – der Verlust ist auf dem Papier real, in der Praxis winzig."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS mezcla todo el audio —tu música más los sonidos del sistema— en un único flujo y lo recodifica a AAC para el Bluetooth, así que incluso un archivo AAC de 256 kbps se descodifica y se vuelve a codificar de camino a tus AirPods. Así funciona la cadena de audio: es el consenso técnico, ya que Apple no documenta ningún passthrough. Una generación extra de AAC de alta tasa es esencialmente inaudible: la pérdida es real sobre el papel y mínima en la práctica."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS sekoittaa kaiken äänen – musiikin ja järjestelmän äänet – yhdeksi virraksi ja koodaa sen uudelleen AAC-muotoon Bluetoothia varten, joten jopa 256 kbit/s AAC-tiedosto dekoodataan ja koodataan uudelleen matkalla AirPodsiin. Näin äänen käsittely toimii: alan yksimielinen näkemys, koska Apple ei dokumentoi läpivientiä. Yksi ylimääräinen sukupolvi suurta bittinopeutta olevaa AAC:tä on käytännössä kuulematon – menetys on paperilla todellinen, mutta käytännössä pieni."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS mélange tout l'audio — votre musique et les sons système — en un seul flux et le réencode en AAC pour le Bluetooth : même un fichier AAC à 256 kbit/s est donc décodé puis réencodé en route vers vos AirPods. C'est ainsi que fonctionne la chaîne audio : c'est le consensus technique, Apple ne documentant pas de passthrough. Une génération supplémentaire d'AAC à haut débit est pour ainsi dire inaudible — la perte est réelle sur le papier, minuscule en pratique."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS blandar öllu hljóði – tónlistinni þinni og kerfishljóðum – í einn straum og endurkóðar hann í AAC fyrir Bluetooth, þannig að jafnvel 256 kbps AAC-skrá er afkóðuð og kóðuð aftur á leiðinni í AirPods. Þannig virkar hljóðkeðjan: almenn sátt meðal sérfræðinga, því Apple skjalfestir ekki beina útsendingu. Ein auka kynslóð af háhraða AAC er í raun óheyranleg – tapið er raunverulegt á pappír, en lítið í reynd."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS unisce tutto l'audio — la tua musica più i suoni di sistema — in un unico flusso e lo ricodifica in AAC per il Bluetooth, quindi anche un file AAC a 256 kbps viene decodificato e ricodificato lungo la strada verso gli AirPods. È così che funziona la catena audio: è il consenso tecnico, dato che Apple non documenta alcun passthrough. Una generazione in più di AAC ad alto bitrate è praticamente inudibile: la perdita è reale sulla carta, minima nella pratica."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOSは音楽もシステム音もすべて1つのストリームにミックスし、Bluetooth用にAACへ再エンコードします。そのため256 kbpsのAACファイルでも、AirPodsに届くまでに一度デコードされ、もう一度エンコードされます。これがオーディオ経路の仕組みで、Appleがパススルーを明示していないため技術者の共通見解です。高ビットレートAACの世代が1つ増えても実質的に聴き分けられません — 理屈の上では損失があっても、実際にはごくわずかです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS는 음악과 시스템 사운드를 포함한 모든 오디오를 하나의 스트림으로 합친 뒤 블루투스용 AAC로 다시 인코딩합니다. 그래서 256kbps AAC 파일도 AirPods로 가는 길에 디코딩되고 다시 인코딩됩니다. 오디오 경로가 원래 이렇게 동작하며, Apple이 패스스루를 문서화하지 않아 업계의 공통된 견해입니다. 고비트레이트 AAC를 한 세대 더 거쳐도 사실상 들리지 않습니다 — 이론상 손실은 있지만 실제로는 미미합니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS blander all lyd – musikken din pluss systemlyder – til én strøm og koder den om til AAC for Bluetooth, så selv en 256 kbps AAC-fil blir dekodet og kodet på nytt på vei til AirPods-ene dine. Slik fungerer lydkjeden: faglig konsensus, siden Apple ikke dokumenterer passthrough. Én ekstra generasjon høybitrate AAC er i realiteten uhørbar – tapet er reelt på papiret, men minimalt i bruk."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS miksuje cały dźwięk — twoją muzykę oraz dźwięki systemowe — w jeden strumień i koduje go ponownie do AAC dla Bluetooth, więc nawet plik AAC 256 kbps jest dekodowany i kodowany ponownie w drodze do twoich AirPods. Tak działa potok audio: konsensus inżynierski, ponieważ Apple nie dokumentuje przekazywania bezpośredniego. Jedna dodatkowa generacja AAC o wysokiej przepływności jest praktycznie niesłyszalna — strata jest realna na papierze, znikoma w praktyce."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O iOS mistura todo o áudio — sua música mais os sons do sistema — em um único fluxo e o recodifica em AAC para o Bluetooth, então até um arquivo AAC de 256 kbps é decodificado e codificado de novo no caminho até os AirPods. É assim que o pipeline de áudio funciona: consenso de engenharia, já que a Apple não documenta passthrough. Uma geração extra de AAC de alta taxa é praticamente inaudível — a perda é real no papel e mínima na prática."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS blandar all ljud – din musik plus systemljud – till en enda ström och kodar om den till AAC för Bluetooth, så även en AAC-fil på 256 kbit/s avkodas och kodas om på väg till dina AirPods. Så fungerar ljudkedjan: konsensus bland experter, eftersom Apple inte dokumenterar passthrough. En extra generation högbitrig AAC är i praktiken ohörbar – förlusten finns på papperet men är försumbar i verkligheten."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 会把所有音频——你的音乐加上系统提示音——混合成一路数据流，再为蓝牙重新编码成 AAC，所以即便是 256 kbps 的 AAC 文件，在送到 AirPods 的路上也会被解码并重新编码一次。音频链路本就如此工作：这是工程界的共识，因为 Apple 并未说明存在直通。多一代高码率 AAC 基本听不出来——损失在纸面上真实存在，实际听感上微乎其微。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 會把所有音訊——你的音樂加上系統音效——混合成單一串流，再為藍牙重新編碼成 AAC，所以即使是 256 kbps 的 AAC 檔案，在送往 AirPods 的路上也會被解碼並再編碼一次。音訊管線本來就是這樣運作：這是工程界的共識，因為 Apple 並未說明有直通。多一代高位元率 AAC 基本上聽不出來——損失在紙面上真實存在，實際聽感上微乎其微。"
           }
         }
       }

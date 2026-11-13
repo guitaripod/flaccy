@@ -19,7 +19,7 @@ pub struct SidebarPage {
     pub label: &'static str,
 }
 
-pub const SIDEBAR_PAGES: [SidebarPage; 8] = [
+pub const SIDEBAR_PAGES: [SidebarPage; 9] = [
     SidebarPage { name: "home", icon: "go-home-symbolic", label: "Home" },
     SidebarPage { name: "albums", icon: "media-optical-symbolic", label: "Albums" },
     SidebarPage { name: "songs", icon: "audio-x-generic-symbolic", label: "Songs" },
@@ -28,6 +28,7 @@ pub const SIDEBAR_PAGES: [SidebarPage; 8] = [
     SidebarPage { name: "stats", icon: "flaccy-stats-symbolic", label: "Stats" },
     SidebarPage { name: "wantlist", icon: "starred-symbolic", label: "Wantlist" },
     SidebarPage { name: "downloads", icon: "folder-download-symbolic", label: "Downloads" },
+    SidebarPage { name: "guide", icon: "dialog-information-symbolic", label: "Guide" },
 ];
 
 /// The sidebar position of the page called `name`.
@@ -244,6 +245,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     stack.add_named(&ui::stats::build(&ui), Some("stats"));
     stack.add_named(&ui::wantlist::build(&ui), Some("wantlist"));
     stack.add_named(&ui::downloads::build(&ui), Some("downloads"));
+    stack.add_named(&ui::guide::build(&ui), Some("guide"));
 
     let sidebar = gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::Single)
@@ -2111,7 +2113,7 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
 }
 
 /// Demo mode helper: FLACCY_DEMO_VIEW picks the initially selected sidebar page
-/// (home, albums, songs, artists, playlists, stats, wantlist, downloads)
+/// (home, albums, songs, artists, playlists, stats, wantlist, downloads, guide)
 /// so marketing screenshots can be captured without input automation.
 /// FLACCY_DEMO_HOME opens Home. Defaults to albums.
 fn demo_start_page() -> &'static str {
