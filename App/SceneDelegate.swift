@@ -65,6 +65,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         NewMixShot.runIfRequested(tabs: tabs, player: playerContainer)
         WatchSyncExercise.runIfRequested()
         LibraryWalkExercise.runIfRequested(window: window, tabs: tabs, player: playerContainer)
+        RecapOpenExercise.runIfRequested(tabs: tabs)
         WatchRemoteExercise.runIfRequested()
         EqualizerExercise.runIfRequested()
         SongVolumeExercise.runIfRequested()
