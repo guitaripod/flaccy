@@ -1,11 +1,13 @@
+import FlaccyCore
 import XCTest
 @testable import flaccy
 
 /// The Apple half of the chart-queue proof; `linux/src/chart_queue.rs` carries
-/// the same five cases. A top list plays whatever the library owns behind it, so
-/// what must hold is rank order, skipping what is not owned, matching through
-/// the casing and punctuation Last.fm disagrees with the tags about, and never
-/// queueing a song twice.
+/// the same five cases, and the two artist-track cases mirror the ones in
+/// `linux/library/src/library.rs`. A top list plays whatever the library owns
+/// behind it, so what must hold is rank order, skipping what is not owned,
+/// matching through the casing and punctuation Last.fm disagrees with the tags
+/// about, and never queueing a song twice.
 nonisolated final class RecapLibraryIndexTests: XCTestCase {
 
     private func track(_ path: String, _ title: String, artist: String, album: String) -> Track {
@@ -77,5 +79,56 @@ nonisolated final class RecapLibraryIndexTests: XCTestCase {
         ])
         XCTAssertEqual(paths(queue), ["a/1.flac", "a/2.flac", "b/1.flac"])
         XCTAssertTrue(index.tracks(byArtist: "Nobody").isEmpty)
+    }
+
+    /// The library `mixed_library()` builds in `linux/library/src/library.rs`: a
+    /// soundtrack two composers perform on, one composer's own albums, an empty
+    /// album, credits that fold to nothing, and a credit only diacritics tell apart.
+    private func mixedLibrary() -> [Album] {
+        func album(_ title: String, _ artist: String, _ tracks: [(String, String)]) -> Album {
+            Album(
+                title: title, artist: artist, artwork: nil,
+                tracks: tracks.map { track("\($0.0).flac", $0.0, artist: $0.1, album: title) }, year: nil, genre: nil
+            )
+        }
+        return [
+            album("Soundtrack", "Various Artists", [("s/1", "Composer A"), ("s/2", "composer a feat. Guest"), ("s/3", "Composer B")]),
+            album("Own", "Composer A", [("o/1", "Composer A"), ("o/2", "Composer B")]),
+            album("Empty", "Nobody", []),
+            album("Punctuation", "?!", [("p/1", "...")]),
+            album("Sigur", "Sigur Rós", [("g/1", "Sigur Ros")]),
+            album("Again", "Composer A", [("o/3", "Someone Else")]),
+        ]
+    }
+
+    /// What the index must answer for an artist: walk every album, taking it
+    /// whole when it is credited to them and otherwise each track they perform.
+    private func walkingTracks(byArtist artist: String, in albums: [Album]) -> [Track] {
+        let key = LibraryHygiene.artistKey(artist)
+        return albums.flatMap { album -> [Track] in
+            if LibraryHygiene.artistKey(album.artist) == key { return album.tracks }
+            return album.tracks.filter { LibraryHygiene.artistKey($0.artist) == key }
+        }
+    }
+
+    func testArtistTracksMatchWalkingEveryAlbumAndTrack() {
+        let albums = mixedLibrary()
+        let index = RecapLibraryIndex(albums: albums, tracks: albums.flatMap(\.tracks))
+        for artist in [
+            "Composer A", "COMPOSER B", "Various Artists", "Nobody", "?!", "",
+            "Sigur Rós", "sigur ros", "Absent", "Composer A feat. Guest",
+        ] {
+            XCTAssertEqual(
+                paths(index.tracks(byArtist: artist)), paths(walkingTracks(byArtist: artist, in: albums)), artist
+            )
+        }
+    }
+
+    func testArtistTracksKeepAlbumOrderWithCreditedAlbumsWhole() {
+        let albums = mixedLibrary()
+        let index = RecapLibraryIndex(albums: albums, tracks: albums.flatMap(\.tracks))
+        XCTAssertEqual(
+            paths(index.tracks(byArtist: "Composer A")), ["s/1.flac", "s/2.flac", "o/1.flac", "o/2.flac", "o/3.flac"]
+        )
     }
 }

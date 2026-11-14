@@ -49,6 +49,8 @@ final class ChartsViewController: NSViewController {
     }
 
     private var playQueues: [ChartList: [Track]] = [:]
+    private var renderGeneration = 0
+    private var hasShownData = false
     private var listActions: [ChartList: NSView] = [:]
 
     override func loadView() {
@@ -126,6 +128,7 @@ final class ChartsViewController: NSViewController {
             .store(in: &cancellables)
 
         setLoading(true)
+        RecapLibraryIndexCache.shared.prepare()
         viewModel.load(period: viewModel.selectedPeriod)
     }
 
@@ -317,12 +320,20 @@ final class ChartsViewController: NSViewController {
         return actions
     }
 
-    private func refreshPlayQueues(_ data: RecapData, index: RecapLibraryIndex) {
-        playQueues = [
-            .artists: index.queue(forArtists: data.topArtists),
-            .albums: index.queue(forAlbums: data.topAlbums),
-            .tracks: index.queue(forTracks: data.topTracks),
-        ]
+    /// The owned songs behind each top list, matched off the main thread.
+    @concurrent
+    nonisolated private static func queues(
+        for data: RecapData, index: RecapLibraryIndex
+    ) async -> (artists: [Track], albums: [Track], tracks: [Track]) {
+        (
+            index.queue(forArtists: data.topArtists),
+            index.queue(forAlbums: data.topAlbums),
+            index.queue(forTracks: data.topTracks)
+        )
+    }
+
+    private func refreshPlayQueues(_ queues: (artists: [Track], albums: [Track], tracks: [Track])) {
+        playQueues = [.artists: queues.artists, .albums: queues.albums, .tracks: queues.tracks]
         for list in ChartList.allCases {
             listActions[list]?.isHidden = playQueues[list]?.isEmpty != false
         }
@@ -389,23 +400,39 @@ final class ChartsViewController: NSViewController {
 
     /// First load shows the skeleton; every later load keeps the previous
     /// period on screen and only spins a small indicator beside the picker, so
-    /// flipping periods never blanks the page.
+    /// flipping periods never blanks the page. The skeleton stays up until the
+    /// first snapshot is on screen: the render that replaces it waits for the
+    /// library index, so the end of loading alone would uncover an empty page.
     private func setLoading(_ loading: Bool) {
-        let hasData = viewModel.data != nil
-        skeletonContainer.isHidden = !loading || hasData
-        if loading, !hasData {
+        if loading, !hasShownData {
+            skeletonContainer.isHidden = false
             sectionViews.forEach { $0.isHidden = true }
             emptyState.isHidden = true
         }
-        if loading, hasData {
+        if loading, hasShownData {
             loadingSpinner.startAnimation(nil)
         } else {
             loadingSpinner.stopAnimation(nil)
         }
     }
 
+    /// Shows a freshly-loaded snapshot once the library index (built and cached
+    /// off the main thread) and the play queues it yields are ready, so a Recap
+    /// render never normalizes the library on the main thread.
     private func render(_ data: RecapData?) {
         guard let data else { return }
+        renderGeneration += 1
+        let generation = renderGeneration
+        Task { [weak self] in
+            let index = await RecapLibraryIndexCache.shared.index()
+            let queues = await Self.queues(for: data, index: index)
+            guard let self, generation == self.renderGeneration else { return }
+            self.show(data, index: index, queues: queues)
+        }
+    }
+
+    private func show(_ data: RecapData, index: RecapLibraryIndex, queues: (artists: [Track], albums: [Track], tracks: [Track])) {
+        hasShownData = true
         skeletonContainer.isHidden = true
 
         let isEmpty = !data.hasContent
@@ -425,11 +452,11 @@ final class ChartsViewController: NSViewController {
             profileLabel.stringValue = String(localized: "Local listening history")
         }
 
-        refreshPlayQueues(data, index: RecapLibraryIndex(albums: Library.shared.albums, tracks: Library.shared.allTracks))
+        refreshPlayQueues(queues)
         renderStats(data)
-        renderArtists(data)
-        renderAlbums(data)
-        renderTracks(data)
+        renderArtists(data, index: index)
+        renderAlbums(data, index: index)
+        renderTracks(data, index: index)
 
         clockView.configure(buckets: data.listeningClock, tint: accent)
         heatmapView.configure(
@@ -513,9 +540,8 @@ final class ChartsViewController: NSViewController {
         return RecapCard.host(stack, cornerRadius: 16)
     }
 
-    private func renderArtists(_ data: RecapData) {
+    private func renderArtists(_ data: RecapData, index: RecapLibraryIndex) {
         artistsList.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        let index = RecapLibraryIndex(albums: Library.shared.albums, tracks: Library.shared.allTracks)
         for artist in data.topArtists.prefix(10) {
             let album = index.representativeAlbum(forArtist: artist.name)
             let row = rankedRow(
@@ -532,9 +558,8 @@ final class ChartsViewController: NSViewController {
         }
     }
 
-    private func renderTracks(_ data: RecapData) {
+    private func renderTracks(_ data: RecapData, index: RecapLibraryIndex) {
         tracksList.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        let index = RecapLibraryIndex(albums: Library.shared.albums, tracks: Library.shared.allTracks)
         for track in data.topTracks.prefix(10) {
             let local = index.track(title: track.name, artist: track.artistName)
             let row = rankedRow(
@@ -551,9 +576,8 @@ final class ChartsViewController: NSViewController {
         }
     }
 
-    private func renderAlbums(_ data: RecapData) {
+    private func renderAlbums(_ data: RecapData, index: RecapLibraryIndex) {
         albumsGrid.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        let index = RecapLibraryIndex(albums: Library.shared.albums, tracks: Library.shared.allTracks)
         for album in data.topAlbums.prefix(6) {
             let local = index.album(name: album.name, artist: album.artistName)
             let tile = albumTile(album: album, local: local)

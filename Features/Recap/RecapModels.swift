@@ -171,26 +171,41 @@ nonisolated enum RecapPersona {
 /// resolve Last.fm chart entries (whose casing/formatting often differs from the
 /// AI-cleaned local metadata) back to the real owned album/track. This is what
 /// lets the Recap show local cover art and enable tap-to-play for owned music.
-nonisolated struct RecapLibraryIndex {
+///
+/// Every key is normalized once while the index is built, each distinct credit
+/// only once, so lookups and the per-artist queues afterwards are dictionary
+/// reads; `RecapLibraryIndexCache` builds it off the main thread. Mirrors
+/// `ChartKeys` and the artist positions in `linux/library/src/library.rs`.
+nonisolated struct RecapLibraryIndex: Sendable {
     private let albumsByKey: [String: Album]
     private let tracksByKey: [String: Track]
     private let albumByArtist: [String: Album]
-    private let albums: [Album]
+    private let tracksByArtist: [String: [Track]]
 
     init(albums: [Album] = [], tracks: [Track] = []) {
-        self.albums = albums
+        var artistKeys = KeyMemo(ListenHistory.artistKey)
+        var albumTitleKeys = KeyMemo(ListenHistory.albumKey)
         var albumMap: [String: Album] = [:]
         var artistMap: [String: Album] = [:]
+        var byArtist: [String: [Track]] = [:]
         for album in albums {
-            albumMap[Self.albumKey(album.title, album.artist)] = album
-            let artistKey = ListenHistory.artistKey(album.artist)
+            let artistKey = artistKeys.key(album.artist)
+            albumMap[albumTitleKeys.key(album.title) + "\u{0}" + artistKey] = album
             if !artistKey.isEmpty, artistMap[artistKey] == nil { artistMap[artistKey] = album }
+            byArtist[artistKey, default: []].append(contentsOf: album.tracks)
+            for track in album.tracks {
+                let trackArtistKey = artistKeys.key(track.artist)
+                if trackArtistKey != artistKey { byArtist[trackArtistKey, default: []].append(track) }
+            }
         }
         var trackMap: [String: Track] = [:]
-        for track in tracks { trackMap[ListenHistory.trackKey(title: track.title, artist: track.artist)] = track }
+        for track in tracks {
+            trackMap[ListenHistory.titleKey(track.title) + "\u{0}" + artistKeys.key(track.artist)] = track
+        }
         albumsByKey = albumMap
         tracksByKey = trackMap
         albumByArtist = artistMap
+        tracksByArtist = byArtist
     }
 
     func album(name: String, artist: String) -> Album? { albumsByKey[Self.albumKey(name, artist)] }
@@ -219,11 +234,7 @@ nonisolated struct RecapLibraryIndex {
     /// composer on a Various Artists soundtrack is not an empty queue. Mirrors
     /// `Core::artist_tracks` on Linux and `ownedTracks()` on the artist pages.
     func tracks(byArtist artist: String) -> [Track] {
-        let key = LibraryHygiene.artistKey(artist)
-        return albums.flatMap { album -> [Track] in
-            if LibraryHygiene.artistKey(album.artist) == key { return album.tracks }
-            return album.tracks.filter { LibraryHygiene.artistKey($0.artist) == key }
-        }
+        tracksByArtist[ListenHistory.artistKey(artist)] ?? []
     }
 
     private static func unique(_ tracks: [Track]) -> [Track] {
@@ -233,5 +244,21 @@ nonisolated struct RecapLibraryIndex {
 
     private static func albumKey(_ title: String, _ artist: String) -> String {
         ListenHistory.albumKey(title) + "\u{0}" + ListenHistory.artistKey(artist)
+    }
+
+    /// Normalizes each distinct string once: a library repeats the same few
+    /// thousand credits and album titles across all of its tracks.
+    private struct KeyMemo {
+        private let normalize: (String) -> String
+        private var keys: [String: String] = [:]
+
+        init(_ normalize: @escaping (String) -> String) { self.normalize = normalize }
+
+        mutating func key(_ raw: String) -> String {
+            if let known = keys[raw] { return known }
+            let key = normalize(raw)
+            keys[raw] = key
+            return key
+        }
     }
 }

@@ -20,18 +20,29 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
     private var currentPalette = ArtworkPaletteExtractor.fallbackPalette(seed: "flaccy")
     private var currentTint = UIColor.systemIndigo
     private var syncStatus: ListenHistoryStatus = .notConnected
-    private var libraryIndex = RecapLibraryIndex()
     private var playQueues: [RecapSection: [Track]] = [:]
     private var cancellables = Set<AnyCancellable>()
     private var renderGeneration = 0
+    private var prewarmTasks: [Task<Void, Never>] = []
 
-    private static let prewarmTimeout: TimeInterval = 9
+    private static let firstPaintBudget: Duration = .milliseconds(350)
 
-    private struct ArtworkPrewarmTarget: Sendable {
+    nonisolated private struct ArtworkPrewarmTarget: Sendable {
         let title: String
         let artist: String
         let remoteURL: String?
         let fallback: RecapArtworkQuery?
+    }
+
+    /// Everything a render takes from the library, worked out off the main thread.
+    nonisolated private struct RenderPlan: Sendable {
+        let artists: [RecapArtistItem]
+        let albums: [AlbumItem]
+        let tracks: [TrackItem]
+        let heatmapDays: [HeatmapDay]
+        let playQueues: [RecapSection: [Track]]
+        let ownedArtwork: [ArtworkPrewarmTarget]
+        let remoteArtwork: [ArtworkPrewarmTarget]
     }
 
     init(audioPlayer: AudioPlaying = AudioPlayer.shared) {
@@ -56,6 +67,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         setupShareButton()
         bindViewModel()
 
+        RecapLibraryIndexCache.shared.prepare()
         viewModel.load(period: viewModel.selectedPeriod)
     }
 
@@ -366,11 +378,15 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         } completion: { _ in finish() }
     }
 
-    /// Renders a freshly-loaded snapshot. The artwork for every top album/track is
-    /// resolved and downloaded into the shared thumbnail cache *before* the content
-    /// is published, so cells appear with their images already in place rather than
-    /// flashing placeholders and churning async downloads on every scroll pass. The
-    /// skeleton is held for the whole prewarm; a timeout guarantees it always ends.
+    /// Renders a freshly-loaded snapshot. The main thread only recolors the
+    /// backdrop: matching the chart against the library, the play queues and
+    /// the heatmap are worked out off it, against the cached library index.
+    /// The artwork for every top album/track is then prewarmed into the shared
+    /// thumbnail cache, the library's own covers and Last.fm's side by side,
+    /// and the content is published once the owned covers are in or
+    /// `firstPaintBudget` runs out, whichever comes first, so they appear
+    /// already in place while a slow Last.fm lookup never holds the skeleton;
+    /// a cover still on its way fades in on its cell.
     private func render(_ data: RecapData) {
         renderGeneration += 1
         let generation = renderGeneration
@@ -378,35 +394,50 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         updatePalette(for: data)
         navigationItem.rightBarButtonItem?.isEnabled = data.hasContent
 
-        libraryIndex = RecapLibraryIndex(albums: Library.shared.albums, tracks: Library.shared.allTracks)
-        playQueues = [
-            .artists: libraryIndex.queue(forArtists: data.topArtists),
-            .albums: libraryIndex.queue(forAlbums: data.topAlbums),
-            .tracks: libraryIndex.queue(forTracks: data.topTracks),
-        ]
-        let artists = data.topArtists.map { resolveArtist($0) }
-        let albums = data.topAlbums.map { resolveAlbum($0) }
-        let tracks = data.topTracks.map { resolveTrack($0) }
-
-        let localCount = tracks.filter(\.isLocal).count
-        MidgarLog.debug("Recap resolved \(localCount)/\(tracks.count) top tracks to local library", category: .content)
-
-        let snapshot = buildSnapshot(data: data, artists: artists, albums: albums, tracks: tracks)
-        let targets = prewarmTargets(artists: artists, albums: albums, tracks: tracks)
-
         Task { [weak self] in
-            await Self.prewarmArtwork(targets, timeout: Self.prewarmTimeout)
+            let index = await RecapLibraryIndexCache.shared.index()
+            let plan = await Self.plan(for: data, index: index)
             guard let self, generation == self.renderGeneration else { return }
-            self.apply(snapshot, for: data)
+            self.prewarmTasks.forEach { $0.cancel() }
+            let owned = Task.detached(priority: .userInitiated) { await Self.runPrewarm(plan.ownedArtwork, source: "owned") }
+            let remote = Task.detached(priority: .userInitiated) { await Self.runPrewarm(plan.remoteArtwork, source: "Last.fm") }
+            self.prewarmTasks = [owned, remote]
+            await Self.waitForPrewarm(owned, atMost: Self.firstPaintBudget)
+            guard generation == self.renderGeneration else { return }
+            self.playQueues = plan.playQueues
+            self.apply(self.buildSnapshot(data: data, plan: plan), for: data)
         }
     }
 
-    private func buildSnapshot(
-        data: RecapData,
-        artists: [RecapArtistItem],
-        albums: [AlbumItem],
-        tracks: [TrackItem]
-    ) -> NSDiffableDataSourceSnapshot<RecapSection, RecapItem> {
+    @concurrent
+    nonisolated private static func plan(for data: RecapData, index: RecapLibraryIndex) async -> RenderPlan {
+        let started = DispatchTime.now().uptimeNanoseconds
+        let artists = data.topArtists.map { resolveArtist($0, in: index) }
+        let albums = data.topAlbums.map { resolveAlbum($0, in: index) }
+        let tracks = data.topTracks.map { resolveTrack($0, in: index) }
+        let artwork = prewarmTargets(artists: artists, albums: albums, tracks: tracks)
+        let plan = RenderPlan(
+            artists: artists,
+            albums: albums,
+            tracks: tracks,
+            heatmapDays: data.heatmap.map { HeatmapDay(date: $0.key, count: $0.value) }.sorted { $0.date < $1.date },
+            playQueues: [
+                .artists: index.queue(forArtists: data.topArtists),
+                .albums: index.queue(forAlbums: data.topAlbums),
+                .tracks: index.queue(forTracks: data.topTracks),
+            ],
+            ownedArtwork: artwork.owned,
+            remoteArtwork: artwork.remote
+        )
+        let milliseconds = (DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
+        MidgarLog.debug(
+            "Recap resolved \(tracks.filter(\.isLocal).count)/\(tracks.count) top tracks to local library in \(milliseconds) ms",
+            category: .content
+        )
+        return plan
+    }
+
+    private func buildSnapshot(data: RecapData, plan: RenderPlan) -> NSDiffableDataSourceSnapshot<RecapSection, RecapItem> {
         var snapshot = NSDiffableDataSourceSnapshot<RecapSection, RecapItem>()
 
         let displayPlays = data.totalPlays > 0 ? data.totalPlays : (data.userInfo?.playcount ?? 0)
@@ -428,25 +459,27 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         snapshot.appendSections([.period])
         snapshot.appendItems([.period(data.period)], toSection: .period)
 
-        if !artists.isEmpty {
+        if !plan.artists.isEmpty {
             snapshot.appendSections([.artists])
-            snapshot.appendItems(artists.map { .artist($0) }, toSection: .artists)
+            snapshot.appendItems(plan.artists.map { .artist($0) }, toSection: .artists)
         }
-        if !albums.isEmpty {
+        if !plan.albums.isEmpty {
             snapshot.appendSections([.albums])
-            snapshot.appendItems(albums.map { .album($0) }, toSection: .albums)
+            snapshot.appendItems(plan.albums.map { .album($0) }, toSection: .albums)
         }
-        if !tracks.isEmpty {
+        if !plan.tracks.isEmpty {
             snapshot.appendSections([.tracks])
-            snapshot.appendItems(tracks.map { .track($0) }, toSection: .tracks)
+            snapshot.appendItems(plan.tracks.map { .track($0) }, toSection: .tracks)
         }
         if data.hasScrobbles {
             snapshot.appendSections([.clock])
             snapshot.appendItems([.clock(ClockItem(buckets: data.listeningClock, seed: paletteSeed(for: data)))], toSection: .clock)
 
             snapshot.appendSections([.streak])
-            let days = data.heatmap.map { HeatmapDay(date: $0.key, count: $0.value) }.sorted { $0.date < $1.date }
-            snapshot.appendItems([.streak(StreakItem(streakDays: data.streak, days: days, seed: paletteSeed(for: data)))], toSection: .streak)
+            snapshot.appendItems(
+                [.streak(StreakItem(streakDays: data.streak, days: plan.heatmapDays, seed: paletteSeed(for: data)))],
+                toSection: .streak
+            )
 
             snapshot.appendSections([.persona])
             snapshot.appendItems([.persona(PersonaItem(persona: data.persona, seed: paletteSeed(for: data)))], toSection: .persona)
@@ -469,54 +502,63 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    /// Builds the prewarm work list, mirroring exactly how each cell will request
+    /// Builds the prewarm work lists, mirroring exactly how each cell will request
     /// its artwork so the downloaded thumbnails land under the keys the cells read.
-    private func prewarmTargets(
+    /// Covers the library owns are kept apart from the rest: they decode from the
+    /// database in a few milliseconds each and fill most of the first screen,
+    /// while the others wait on Last.fm.
+    nonisolated private static func prewarmTargets(
         artists: [RecapArtistItem],
         albums: [AlbumItem],
         tracks: [TrackItem]
-    ) -> [ArtworkPrewarmTarget] {
-        var targets: [ArtworkPrewarmTarget] = []
+    ) -> (owned: [ArtworkPrewarmTarget], remote: [ArtworkPrewarmTarget]) {
+        var owned: [ArtworkPrewarmTarget] = []
+        var remote: [ArtworkPrewarmTarget] = []
         for artist in artists {
             guard let title = artist.artworkTitle, let name = artist.artworkArtist else { continue }
-            targets.append(ArtworkPrewarmTarget(title: title, artist: name, remoteURL: nil, fallback: nil))
+            owned.append(ArtworkPrewarmTarget(title: title, artist: name, remoteURL: nil, fallback: nil))
         }
         for album in albums {
-            let fallback: RecapArtworkQuery? = album.isLocal ? nil : .album(artist: album.artist, album: album.name)
-            targets.append(ArtworkPrewarmTarget(
+            let target = ArtworkPrewarmTarget(
                 title: album.artworkTitle ?? album.name,
                 artist: album.artworkArtist ?? album.artist,
                 remoteURL: album.imageURL,
-                fallback: fallback
-            ))
+                fallback: album.isLocal ? nil : .album(artist: album.artist, album: album.name)
+            )
+            if album.isLocal { owned.append(target) } else { remote.append(target) }
         }
         for track in tracks {
-            let fallback: RecapArtworkQuery? = track.isLocal ? nil : .track(artist: track.artist, track: track.name)
-            targets.append(ArtworkPrewarmTarget(
+            let target = ArtworkPrewarmTarget(
                 title: track.artworkTitle ?? track.name,
                 artist: track.artworkArtist ?? track.artist,
                 remoteURL: nil,
-                fallback: fallback
-            ))
+                fallback: track.isLocal ? nil : .track(artist: track.artist, track: track.name)
+            )
+            if track.isLocal { owned.append(target) } else { remote.append(target) }
         }
-        return targets
+        return (owned, remote)
     }
 
-    /// Prewarms all artwork with bounded concurrency, racing an overall timeout so a
-    /// few slow or missing images can never hang the skeleton. On timeout the
-    /// in-flight work is cancelled and the remaining cells fall back to their own
-    /// async load (with a shimmer) once shown.
-    nonisolated private static func prewarmArtwork(_ targets: [ArtworkPrewarmTarget], timeout: TimeInterval) async {
+    /// Returns once `prewarm` has finished or `budget` has run out, whichever
+    /// comes first, and leaves the prewarm running so the covers it is still
+    /// fetching land in the cache for the cells that show them.
+    private static func waitForPrewarm(_ prewarm: Task<Void, Never>, atMost budget: Duration) async {
+        let gate = FirstOfGate()
+        await withCheckedContinuation { continuation in
+            gate.arm(continuation)
+            Task {
+                await prewarm.value
+                gate.open()
+            }
+            Task {
+                try? await Task.sleep(for: budget)
+                gate.open()
+            }
+        }
+    }
+
+    nonisolated private static func runPrewarm(_ targets: [ArtworkPrewarmTarget], source: String) async {
         guard !targets.isEmpty else { return }
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await runPrewarm(targets) }
-            group.addTask { try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000)) }
-            _ = await group.next()
-            group.cancelAll()
-        }
-    }
-
-    nonisolated private static func runPrewarm(_ targets: [ArtworkPrewarmTarget]) async {
         let start = Date()
         var cached = 0
         await withTaskGroup(of: Bool.self) { group in
@@ -529,7 +571,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
             }
             while let didCache = await group.next() {
                 if didCache { cached += 1 }
-                if index < targets.count {
+                if index < targets.count, !Task.isCancelled {
                     let target = targets[index]
                     index += 1
                     group.addTask { await prewarm(target) }
@@ -537,7 +579,11 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
             }
         }
         let elapsed = Date().timeIntervalSince(start)
-        MidgarLog.info("Recap prewarm: \(cached)/\(targets.count) artworks cached in \(String(format: "%.2f", elapsed))s", category: .content)
+        let outcome = Task.isCancelled ? "superseded after" : "in"
+        MidgarLog.info(
+            "Recap prewarm: \(cached)/\(targets.count) \(source) artworks cached \(outcome) \(String(format: "%.2f", elapsed))s",
+            category: .content
+        )
     }
 
     nonisolated private static func prewarm(_ target: ArtworkPrewarmTarget) async -> Bool {
@@ -549,9 +595,9 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         )
     }
 
-    private func resolveArtist(_ artist: ChartArtist) -> RecapArtistItem {
+    nonisolated private static func resolveArtist(_ artist: ChartArtist, in index: RecapLibraryIndex) -> RecapArtistItem {
         var item = RecapArtistItem(rank: artist.rank, name: artist.name, playCount: artist.playCount)
-        if let album = libraryIndex.representativeAlbum(forArtist: artist.name) {
+        if let album = index.representativeAlbum(forArtist: artist.name) {
             item.artworkTitle = album.title
             item.artworkArtist = album.artist
             item.isLocal = true
@@ -559,9 +605,9 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         return item
     }
 
-    private func resolveAlbum(_ album: ChartAlbum) -> AlbumItem {
+    nonisolated private static func resolveAlbum(_ album: ChartAlbum, in index: RecapLibraryIndex) -> AlbumItem {
         var item = AlbumItem(rank: album.rank, name: album.name, artist: album.artistName, playCount: album.playCount, imageURL: album.imageURL)
-        if let local = libraryIndex.album(name: album.name, artist: album.artistName) {
+        if let local = index.album(name: album.name, artist: album.artistName) {
             item.artworkTitle = local.title
             item.artworkArtist = local.artist
             item.isLocal = true
@@ -570,9 +616,9 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         return item
     }
 
-    private func resolveTrack(_ track: ChartTrack) -> TrackItem {
+    nonisolated private static func resolveTrack(_ track: ChartTrack, in index: RecapLibraryIndex) -> TrackItem {
         var item = TrackItem(rank: track.rank, name: track.name, artist: track.artistName, playCount: track.playCount)
-        if let local = libraryIndex.track(title: track.name, artist: track.artistName) {
+        if let local = index.track(title: track.name, artist: track.artistName) {
             item.artworkTitle = local.albumTitle
             item.artworkArtist = local.artist
             item.isLocal = true
@@ -743,5 +789,20 @@ extension ChartsViewController: UICollectionViewDelegate {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         MidgarLog.info("Recap start station: \(tapped.name)", category: .playback)
         audioPlayer.startStation(seedArtist: tapped.name)
+    }
+}
+
+/// Resumes one waiting caller exactly once, on whichever of several events gets
+/// there first; the later ones find it already open and do nothing.
+private final class FirstOfGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    func arm(_ continuation: CheckedContinuation<Void, Never>) {
+        self.continuation = continuation
+    }
+
+    func open() {
+        continuation?.resume()
+        continuation = nil
     }
 }
