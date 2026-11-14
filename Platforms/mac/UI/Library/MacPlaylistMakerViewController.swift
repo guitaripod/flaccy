@@ -174,11 +174,14 @@ final class MacPlaylistMakerViewController: NSViewController, NSTableViewDataSou
     }
 
     private func buildTable() {
-        for (identifier, width) in [(Self.titleColumn, 250.0), (Self.artistColumn, 160.0), (Self.timeColumn, 44.0)] {
+        for (identifier, width) in [(Self.titleColumn, 230.0), (Self.artistColumn, 160.0), (Self.timeColumn, 48.0)] {
             let column = NSTableColumn(identifier: identifier)
             column.width = width
+            column.minWidth = identifier == Self.titleColumn ? 120 : width
+            column.resizingMask = identifier == Self.titleColumn ? .autoresizingMask : []
             table.addTableColumn(column)
         }
+        table.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
         table.headerView = nil
         table.rowHeight = 24
         table.usesAlternatingRowBackgroundColors = true
@@ -189,6 +192,8 @@ final class MacPlaylistMakerViewController: NSViewController, NSTableViewDataSou
         table.setAccessibilityLabel(PlaylistMakerCopy.title)
         scrollView.documentView = table
         scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
         scrollView.borderType = .bezelBorder
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         stack.addArrangedSubview(scrollView)
