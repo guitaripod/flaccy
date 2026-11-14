@@ -313,19 +313,24 @@ extension EqualizerViewController {
         compare.image = UIImage(systemName: "circle.lefthalf.filled", withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold))
         compare.imagePadding = 8
         compare.baseForegroundColor = .white
+        compare.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12)
+        compare.titleLineBreakMode = .byTruncatingTail
         compare.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
             outgoing.font = UIFont.scaled(.body, size: 15, weight: .semibold, maxSize: 19)
             return outgoing
         }
         compareButton.configuration = compare
+        yieldWidth(of: compareButton)
         compareButton.addAction(UIAction { [weak self] _ in self?.beginCompare() }, for: .touchDown)
         compareButton.addAction(UIAction { [weak self] _ in self?.endCompare() }, for: [.touchUpInside, .touchUpOutside, .touchCancel, .touchDragExit])
         compareButton.accessibilityHint = String(localized: "Hold to hear the original without the equalizer")
         let compareCapsule = LiquidGlass.capsule(hosting: compareButton, height: 48)
 
-        let reset = makePillButton(title: String(localized: "Reset"), symbol: "arrow.counterclockwise") { [weak self] in self?.resetToFlat() }
-        let save = makePillButton(title: String(localized: "Save"), symbol: "bookmark") { [weak self] in self?.promptSave() }
+        let reset = makePillButton(resetButton, title: Self.resetTitle, symbol: "arrow.counterclockwise") { [weak self] in self?.resetToFlat() }
+        let save = makePillButton(saveButton, title: Self.saveTitle, symbol: "bookmark") { [weak self] in self?.promptSave() }
+        resetButton.accessibilityLabel = Self.resetTitle
+        saveButton.accessibilityLabel = Self.saveTitle
         let delete = makeIconButton(symbol: "trash", label: String(localized: "Delete band"), tint: EqualizerTheme.danger) { [weak self] in self?.deleteSelectedBand() }
         let more = makeMoreButton()
         resetCapsule.addSubview(reset); pin(reset, in: resetCapsule)
@@ -352,6 +357,58 @@ extension EqualizerViewController {
         return actionRow
     }
 
+    static var resetTitle: String { String(localized: "Reset") }
+    static var saveTitle: String { String(localized: "Save") }
+    static let actionFont = UIFont.scaled(.body, size: 15, weight: .semibold, maxSize: 19)
+    static let smallestCompareScale: CGFloat = 0.75
+    /// How far the compare title may shrink before a pill gives up its word. Kept above the smallest scale the
+    /// label takes, so a title that only just fits on paper is not cut short on screen.
+    static let plannedCompareScale: CGFloat = 0.85
+
+    /// Makes the compare button the one that gives way when the row is too wide for the screen: its title
+    /// shrinks, then shortens, so the pills beside it keep their words on one line. A configured button resets
+    /// its label on every update, so the label is set up again each time.
+    func yieldWidth(of button: UIButton) {
+        button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        button.configurationUpdateHandler = { button in
+            button.titleLabel?.numberOfLines = 1
+            button.titleLabel?.adjustsFontSizeToFitWidth = true
+            button.titleLabel?.minimumScaleFactor = Self.smallestCompareScale
+        }
+    }
+
+    /// Keeps Reset, the compare button and Save on one row in every language. When the three do not fit with
+    /// their words, even with the compare title somewhat smaller, Reset keeps only its arrow, and when that is
+    /// not enough Save keeps only its bookmark. Both symbols read on their own, and VoiceOver hears the words
+    /// either way.
+    func fitActionRow() {
+        let width = actionRow.bounds.width
+        guard width > 0, !resetCapsule.isHidden else { return }
+        let compareTitle = compareButton.configuration?.title ?? ""
+        let smallestCompare = compareButton.intrinsicContentSize.width - Self.width(of: compareTitle) * (1 - Self.plannedCompareScale)
+        let resetWord = wordWidth(of: resetButton, Self.resetTitle)
+        let saveWord = wordWidth(of: saveButton, Self.saveTitle)
+        let room = width - smallestCompare - actionRow.spacing * 2
+            - (resetButton.intrinsicContentSize.width - (resetButton.configuration?.title == nil ? 0 : resetWord))
+            - (saveButton.intrinsicContentSize.width - (saveButton.configuration?.title == nil ? 0 : saveWord))
+        show(room >= resetWord + saveWord ? Self.resetTitle : nil, on: resetButton)
+        show(room >= saveWord ? Self.saveTitle : nil, on: saveButton)
+    }
+
+    /// The width a pill's word adds beside its symbol.
+    private func wordWidth(of button: UIButton, _ word: String) -> CGFloat {
+        Self.width(of: word) + (button.configuration?.imagePadding ?? 0)
+    }
+
+    private func show(_ word: String?, on button: UIButton) {
+        guard button.configuration?.title != word else { return }
+        button.configuration?.title = word
+    }
+
+    private static func width(of title: String) -> CGFloat {
+        ceil((title as NSString).size(withAttributes: [.font: actionFont]).width)
+    }
+
     func pin(_ child: UIView, in parent: UIView) {
         child.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -362,20 +419,21 @@ extension EqualizerViewController {
         ])
     }
 
-    func makePillButton(title: String, symbol: String, action: @escaping () -> Void) -> UIView {
-        let button = UIButton(type: .system)
+    func makePillButton(_ button: UIButton, title: String, symbol: String, action: @escaping () -> Void) -> UIView {
         var configuration = UIButton.Configuration.plain()
         configuration.title = title
         configuration.image = UIImage(systemName: symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: 15, weight: .semibold))
         configuration.imagePadding = 7
-        configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 14, bottom: 0, trailing: 14)
         configuration.baseForegroundColor = .white
+        configuration.titleLineBreakMode = .byTruncatingTail
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
             outgoing.font = UIFont.scaled(.body, size: 15, weight: .semibold, maxSize: 19)
             return outgoing
         }
         button.configuration = configuration
+        button.setContentCompressionResistancePriority(.required, for: .horizontal)
         button.addAction(UIAction { _ in action() }, for: .touchUpInside)
         return LiquidGlass.capsule(hosting: button, height: 48)
     }

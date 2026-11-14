@@ -75,9 +75,11 @@ final class EqualizerViewController: UIViewController {
 
     let actionRow = UIStackView()
     let resetCapsule = UIView()
+    let resetButton = UIButton(type: .system)
     let deleteCapsule = UIView()
     let compareButton = UIButton(type: .system)
     let saveCapsule = UIView()
+    let saveButton = UIButton(type: .system)
     let moreCapsule = UIView()
 
     var accent: UIColor = EqualizerTheme.fallbackAccent
@@ -115,6 +117,7 @@ final class EqualizerViewController: UIViewController {
         let share: CGFloat = mode == .simple ? 0.38 : 0.34
         let target = min(max(view.bounds.height * share, Self.minimumCurveHeight), Self.maximumCurveHeight).rounded()
         if abs(curveHeight.constant - target) >= 1 { curveHeight.constant = target }
+        fitActionRow()
     }
 
     override func viewWillAppear(_ animated: Bool) {
