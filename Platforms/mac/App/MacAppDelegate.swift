@@ -49,6 +49,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         LyricShareExercise.runIfRequested()
         LyricsMeaningExercise.runIfRequested()
         PlaylistMakerExercise.runIfRequested()
+        EqualizerDescribeExercise.runIfRequested()
         RemoteExercise.runIfRequested()
         #endif
         MacLibrarySurfaceModel.shared.start()

@@ -23,6 +23,7 @@ final class MacEqualizerDeck: NSView {
     var onHoverPreviewChanged: ((Bool) -> Void)?
     var onRowAction: ((MacDeckRowAction, String) -> Void)?
     var onImport: (() -> Void)?
+    var onDescribe: (() -> Void)?
     var footerMenu: NSMenu?
 
     private let hoverSwitch = NSSwitch()
@@ -86,6 +87,16 @@ final class MacEqualizerDeck: NSView {
         importButton.font = .systemFont(ofSize: 12.5, weight: .medium)
         importButton.translatesAutoresizingMaskIntoConstraints = false
 
+        let describeButton = NSButton(title: EqualizerDescribeCopy.menuTitle, target: self, action: #selector(describePressed))
+        describeButton.isBordered = false
+        describeButton.image = NSImage(systemSymbolName: "wand.and.stars", accessibilityDescription: nil)
+        describeButton.imagePosition = .imageLeading
+        describeButton.contentTintColor = .white.withAlphaComponent(0.8)
+        describeButton.font = .systemFont(ofSize: 12.5, weight: .medium)
+        describeButton.lineBreakMode = .byTruncatingTail
+        describeButton.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        describeButton.translatesAutoresizingMaskIntoConstraints = false
+
         let more = NSButton(image: NSImage(systemSymbolName: "ellipsis.circle", accessibilityDescription: String(localized: "More"))!, target: self, action: #selector(morePressed(_:)))
         more.isBordered = false
         more.contentTintColor = .white.withAlphaComponent(0.8)
@@ -103,7 +114,7 @@ final class MacEqualizerDeck: NSView {
         footer.alignment = .centerY
         footer.translatesAutoresizingMaskIntoConstraints = false
 
-        for subview in [header, hintLabel, scroll, divider, footer] { addSubview(subview) }
+        for subview in [header, hintLabel, scroll, divider, describeButton, footer] { addSubview(subview) }
         NSLayoutConstraint.activate([
             header.topAnchor.constraint(equalTo: topAnchor, constant: 14),
             header.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
@@ -118,7 +129,11 @@ final class MacEqualizerDeck: NSView {
             divider.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
             divider.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
             divider.heightAnchor.constraint(equalToConstant: 1),
-            divider.bottomAnchor.constraint(equalTo: footer.topAnchor, constant: -6),
+            divider.bottomAnchor.constraint(equalTo: describeButton.topAnchor, constant: -8),
+            describeButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            describeButton.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -14),
+            describeButton.heightAnchor.constraint(equalToConstant: 24),
+            describeButton.bottomAnchor.constraint(equalTo: footer.topAnchor, constant: -4),
             footer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
             footer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
             footer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
@@ -246,6 +261,10 @@ final class MacEqualizerDeck: NSView {
 
     @objc private func importPressed() {
         onImport?()
+    }
+
+    @objc private func describePressed() {
+        onDescribe?()
     }
 
     @objc private func morePressed(_ sender: NSButton) {

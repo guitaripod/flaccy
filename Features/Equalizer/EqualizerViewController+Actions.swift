@@ -146,4 +146,8 @@ extension EqualizerViewController {
     func openImport() {
         navigationController?.pushViewController(EqualizerImportViewController(accent: accent), animated: true)
     }
+
+    func openDescribe() {
+        navigationController?.pushViewController(EqualizerDescribeViewController(accent: accent), animated: true)
+    }
 }

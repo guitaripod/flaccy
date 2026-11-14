@@ -36,6 +36,7 @@ extension EqualizerViewController {
         stack.addArrangedSubview(makeModeControl())
         stack.addArrangedSubview(makeCurveCard())
         stack.addArrangedSubview(makePreampBlock())
+        stack.addArrangedSubview(makeDescribeRow())
         stack.addArrangedSubview(makePresetsBlock())
         stack.addArrangedSubview(makeAdvancedBlock())
         stack.addArrangedSubview(makeActionRow())
@@ -240,6 +241,28 @@ extension EqualizerViewController {
         presetsBlock.addArrangedSubview(header)
         presetsBlock.addArrangedSubview(presetsScroll)
         return presetsBlock
+    }
+
+    /// The way into Describe the Sound: a row that reads as a field waiting for a sentence.
+    func makeDescribeRow() -> UIView {
+        let button = UIButton(type: .system)
+        var configuration = UIButton.Configuration.plain()
+        configuration.title = EqualizerDescribeCopy.menuTitle
+        configuration.image = UIImage(systemName: "wand.and.stars", withConfiguration: UIImage.SymbolConfiguration(pointSize: 15, weight: .semibold))
+        configuration.imagePadding = 10
+        configuration.baseForegroundColor = UIColor.white.withAlphaComponent(0.86)
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
+        configuration.titleLineBreakMode = .byTruncatingTail
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = UIFont.scaled(.body, size: 15, weight: .semibold, maxSize: 19)
+            return outgoing
+        }
+        button.configuration = configuration
+        button.contentHorizontalAlignment = .leading
+        button.accessibilityIdentifier = "equalizer.describe"
+        button.addAction(UIAction { [weak self] _ in self?.openDescribe() }, for: .touchUpInside)
+        return LiquidGlass.capsule(hosting: button, height: 48)
     }
 
     func makeAdvancedBlock() -> UIView {
@@ -463,6 +486,7 @@ extension EqualizerViewController {
 
     func moreMenuActions() -> [UIMenuElement] {
         [
+            UIAction(title: EqualizerDescribeCopy.menuTitle, image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in self?.openDescribe() },
             UIAction(title: String(localized: "Import from Text…"), image: UIImage(systemName: "square.and.arrow.down")) { [weak self] _ in self?.openImport() },
             UIAction(title: String(localized: "Export as Text"), image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in self?.exportProfile() },
             UIAction(title: String(localized: "Save as Preset…"), image: UIImage(systemName: "bookmark")) { [weak self] _ in self?.promptSave() },

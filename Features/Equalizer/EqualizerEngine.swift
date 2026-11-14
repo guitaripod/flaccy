@@ -243,6 +243,35 @@ final class EqualizerEngine {
         return .imported(parsed.profile, droppedFilters: parsed.droppedFilters)
     }
 
+    /// What the music plays through, in the word flaccy-api reads for a described curve.
+    var outputKind: String {
+        (output?.kind ?? .other).rawValue
+    }
+
+    /// Keeps a curve made from a sentence as one of the person's own, under a name no other of theirs carries,
+    /// and with `use` makes it the one in force and switches the equalizer on.
+    @discardableResult
+    func keep(_ profile: EqualizerProfile, use: Bool) -> EqualizerProfile {
+        var kept = profile
+        kept.id = UUID().uuidString
+        kept.name = Self.freeName(profile.name, taken: Set(state.userProfiles.map(\.name)))
+        state.userProfiles.append(kept)
+        if use {
+            state.select(profileID: kept.id, forOutput: outputID)
+            state.isEnabled = true
+        }
+        commit(reason: "described")
+        return kept
+    }
+
+    /// `name`, or `name 2`, `name 3` and so on when profiles already carry the names before it.
+    static func freeName(_ name: String, taken: Set<String>) -> String {
+        guard taken.contains(name) else { return name }
+        var number = 2
+        while taken.contains("\(name) \(number)") { number += 1 }
+        return "\(name) \(number)"
+    }
+
     func exportText(for profile: EqualizerProfile) -> String {
         EqualizerProfileText.write(profile)
     }

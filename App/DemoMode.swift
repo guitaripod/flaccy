@@ -665,7 +665,7 @@ enum DemoRouter {
             tabs.library.select(segment: .playlists)
             PlaylistMakerViewController.present(from: tabs, request: env["FLACCY_PLAYLIST_REQUEST"])
         case "paywall": PaywallViewController.presentSheet(from: tabs)
-        case "equalizer", "equalizer-advanced", "equalizer-presets", "equalizer-outputs", "equalizer-import", "equalizer-preview", "equalizer-preview-cancel":
+        case "equalizer", "equalizer-advanced", "equalizer-presets", "equalizer-outputs", "equalizer-import", "equalizer-describe", "equalizer-preview", "equalizer-preview-cancel":
             player.expand()
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { presentEqualizer(route, from: tabs) }
         case "streaming":
@@ -701,12 +701,23 @@ enum DemoRouter {
         case "equalizer-presets": controller.pushViewController(EqualizerPresetsViewController(startingOn: .presets, accent: accent), animated: false)
         case "equalizer-outputs": controller.pushViewController(EqualizerPresetsViewController(startingOn: .outputs, accent: accent), animated: false)
         case "equalizer-import": controller.pushViewController(EqualizerImportViewController(accent: accent, initialText: EqualizerShots.importSample), animated: false)
+        case "equalizer-describe":
+            let describe = EqualizerDescribeViewController(accent: accent)
+            controller.pushViewController(describe, animated: false)
+            let environment = ProcessInfo.processInfo.environment
+            if let sentence = environment["FLACCY_EQ_SENTENCE"] { describe.ask(sentence) }
+            guard environment["FLACCY_EQ_END"] != nil else { break }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 12) { describe.revealEndForScreenshot() }
         case "equalizer-preview", "equalizer-preview-cancel":
             let screen = controller.viewControllers.first as? EqualizerViewController
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                 screen?.showAuditionForScreenshot(presetKey: "bassBoost", cancelling: route == "equalizer-preview-cancel")
             }
-        default: break
+        default:
+            guard ProcessInfo.processInfo.environment["FLACCY_EQ_END"] != nil, let screen = controller.viewControllers.first as? EqualizerViewController else { break }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                screen.scroll.setContentOffset(CGPoint(x: 0, y: max(screen.scroll.contentSize.height - screen.scroll.bounds.height, 0)), animated: false)
+            }
         }
     }
 

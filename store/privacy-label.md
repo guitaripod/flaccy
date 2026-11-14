@@ -16,7 +16,7 @@ Answers for App Store Connect, App Privacy section, for the iOS app and the Mac 
 | Identifiers, Device ID | Yes | No | App Functionality | The app reads no advertising identifier and no vendor identifier. MidgarKit's App Attest key id, per app and per device, stored with the Midgar ID when the ID is created or joined. App Store and TestFlight builds use App Attest's production environment whether or not the app has the App Attest entitlement (Apple, App Attest Environment entitlement), so released builds create it. The AI cleanup and Last.fm signing requests to `flaccy-api` also carry a random per-install UUID (`X-Device-ID`) that only counts daily requests. (New with this release.) |
 | Usage Data, Product Interaction | No | No | Analytics | The anonymous More Apps card events (opened, shown, tapped) that the portal sends to `api.midgarcorp.cc/v1/signals` through MidgarKit's anonymous signals client, with no Midgar ID, device identifier or `Authorization` header. Reading "Your Midgar" sends no event. (New with this release.) |
 | Purchases, Purchase History | Yes | No | App Functionality | The App Store transactions of Flaccy Pro (yearly) and the lifetime unlocks, bought through MidgarStore with the Midgar ID as Apple's app account token and reported to the Midgar ledger. |
-| User Content, Other User Content | No | No | App Functionality | The AI metadata cleanup sends file and folder names (never audio) through `api.midgarcorp.cc/v1/flaccy` to the Claude model and keeps nothing. The request carries the per-install `X-Device-ID` only for the daily count. |
+| User Content, Other User Content | No | No | App Functionality | The AI features send text (never audio) through `api.midgarcorp.cc/v1/flaccy` to the Claude model, which keeps nothing: metadata cleanup sends file and folder names and tags; lyric meanings send the song's title, artist, album and lyrics; Make a Playlist sends the person's sentence, each artist's name, genre, years and song counts, and the titles, artists, albums, years, lengths and loved marks of up to 300 candidate songs; Describe the Sound sends the person's sentence, the kind of device and output and the equalizer bands in use. Each request carries the per-install `X-Device-ID` only for the daily count. |
 
 Everything else is "Data Not Collected".
 
@@ -38,7 +38,7 @@ Everything else is "Data Not Collected".
 
 - MidgarKit 4.3.1: `MidgarPortal` ships a manifest that declares Product Interaction for Analytics, not linked, matching the row above. `MidgarCore` (identity, HTTP, logging, signals) ships none and uses no required-reason API beyond the ones listed below. Anonymous signals send nothing else: MetricKit collection is not started.
 - Cloudflare: hosts the gateway (`api.midgarcorp.cc`) and the services behind it, including Flaccy's worker, and may keep standard request logs (IP address) for a limited time; IP address is not a data type in the label.
-- Anthropic: answers the AI metadata cleanup request that Flaccy's worker forwards.
+- Anthropic: answers the AI requests that Flaccy's worker forwards (metadata cleanup, lyric meanings, Make a Playlist and Describe the Sound).
 
 ## Required-reason APIs (in the manifest, not in the label)
 

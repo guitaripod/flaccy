@@ -321,6 +321,9 @@ enum DebugDrive {
                 screen.auditionForCapture(profileID: EqualizerPresets.id(forKey: "bassBoost"))
                 try? await Task.sleep(for: .seconds(1))
             }
+            if scene == "describe", let screen = controller.contentViewController as? MacEqualizerViewController {
+                await driveDescribe(on: screen)
+            }
             capture(window: controller.window, name: "flaccy-shot-equalizer-\(scene)")
             return
         case .stats(let period):

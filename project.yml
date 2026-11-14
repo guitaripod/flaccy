@@ -193,6 +193,7 @@ targets:
           - Enrichment/EnrichmentReportViewController.swift
           - Equalizer/EqualizerControls.swift
           - Equalizer/EqualizerCurveView.swift
+          - Equalizer/EqualizerDescribeViewController.swift
           - Equalizer/EqualizerImportViewController.swift
           - Equalizer/EqualizerPresetsViewController.swift
           - Equalizer/EqualizerViewController+Actions.swift

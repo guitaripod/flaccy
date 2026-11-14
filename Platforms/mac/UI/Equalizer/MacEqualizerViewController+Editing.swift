@@ -187,6 +187,17 @@ extension MacEqualizerViewController {
         _ = window
     }
 
+    /// Opens Describe the Sound over the equalizer. A preview the deck was playing ends first, so the sheet's
+    /// own audition is the only one.
+    @discardableResult
+    @objc func describeSound() -> MacEqualizerDescribeViewController {
+        endAudition()
+        let sheet = MacEqualizerDescribeViewController(accent: accent)
+        sheet.onFinish = { [weak self] in self?.refresh(animated: false) }
+        presentAsSheet(sheet)
+        return sheet
+    }
+
     @objc func exportProfile() {
         export(profile)
     }

@@ -129,6 +129,10 @@ final class EqualizerPresetsViewController: UIViewController {
         plus.showsMenuAsPrimaryAction = true
         plus.menu = UIMenu(children: [
             UIAction(title: String(localized: "Save Current Curve…"), image: UIImage(systemName: "bookmark")) { [weak self] _ in self?.promptSaveCurrent() },
+            UIAction(title: EqualizerDescribeCopy.menuTitle, image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
+                guard let self else { return }
+                self.navigationController?.pushViewController(EqualizerDescribeViewController(accent: self.accent), animated: true)
+            },
             UIAction(title: String(localized: "Paste or Import Text…"), image: UIImage(systemName: "doc.on.clipboard")) { [weak self] _ in
                 guard let self else { return }
                 self.navigationController?.pushViewController(EqualizerImportViewController(accent: self.accent), animated: true)

@@ -12,6 +12,7 @@ extension MacEqualizerViewController {
         deck.onAuditionBriefly = { [weak self] id in self?.auditionBriefly(id) }
         deck.onHoverPreviewChanged = { [weak self] on in self?.hoverPreviewChanged(on) }
         deck.onImport = { [weak self] in self?.importProfile() }
+        deck.onDescribe = { [weak self] in self?.describeSound() }
         deck.onRowAction = { [weak self] action, id in self?.performRowAction(action, id: id) }
     }
 

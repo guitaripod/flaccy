@@ -65,6 +65,12 @@ nonisolated struct FlaccyAPIClient: Sendable {
         try await postAI(path: "v1/playlist/\(step)", body)
     }
 
+    /// Asks flaccy-api to turn a sentence about sound into equalizer bands. It spends the same daily allowance as
+    /// the metadata proxy, one unit a sentence.
+    func postEqualizer(_ body: some Encodable & Sendable) async throws -> ProxyReply {
+        try await postAI(path: "v1/equalizer", body)
+    }
+
     /// Posts a JSON body to one of the Worker's model routes with the device id it limits by.
     private func postAI(path: String, _ body: some Encodable & Sendable) async throws -> ProxyReply {
         var request = URLRequest(url: url(path: path))
