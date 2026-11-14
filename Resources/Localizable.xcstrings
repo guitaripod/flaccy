@@ -47465,6 +47465,100 @@
         }
       }
     },
+    "Change it: a little less bass": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ændr den: lidt mindre bas"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändere sie: etwas weniger Bass"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cámbiala: un poco menos de bajos"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muuta: hieman vähemmän bassoa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifiez-la : un peu moins de basses"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Breyttu: aðeins minna bassa"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modificala: un po’ meno bassi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変えるなら、低音を少しだけ減らして"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "변경: 베이스를 조금 줄이기"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endre den: litt mindre bass"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zmień: trochę mniej basu"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mude: um pouco menos de graves"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändra den: lite mindre bas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改一下：低音少一点"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改一下：低音少一點"
+          }
+        }
+      }
+    },
     "Change year": {
       "localizations": {
         "da": {
@@ -51237,6 +51331,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "已清除 %@ 的快取歌曲。下載內容未受影響。"
+          }
+        }
+      }
+    },
+    "Clearer voices": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tydeligere stemmer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klarere Stimmen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voces más claras"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selkeämmät laulajien äänet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voix plus claires"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skýrari raddir"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voci più chiare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ボーカルがもっと聴き取りやすく"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 선명한 보컬"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tydeligere stemmer"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyraźniejsze wokale"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vozes mais claras"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tydligare röster"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人声更清晰"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人聲更清晰"
           }
         }
       }
@@ -63275,6 +63463,288 @@
         }
       }
     },
+    "Couldn't shape the curve because Flaccy's AI couldn't be reached. Check your connection and try again.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan ikke forme kurven, fordi Flaccys AI ikke kunne nås. Kontrollér forbindelsen, og prøv igen."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurve nicht möglich, weil Flaccys KI nicht erreichbar war. Prüfe deine Verbindung und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo crear la curva porque no se pudo conectar con la IA de Flaccy. Comprueba tu conexión e inténtalo de nuevo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Käyrää ei voitu luoda, koska Flaccyn tekoälyyn ei saatu yhteyttä. Tarkista yhteys ja yritä uudelleen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de créer la courbe, car l’IA de Flaccy est injoignable. Vérifiez votre connexion et réessayez."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekki tókst að móta ferilinn því ekki náðist samband við gervigreind Flaccy. Athugaðu tenginguna og reyndu aftur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile creare la curva perché l’IA di Flaccy non è raggiungibile. Controlla la connessione e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FlaccyのAIに接続できなかったため、カーブを作成できませんでした。接続を確認して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy의 AI에 연결할 수 없어 곡선을 만들지 못했습니다. 연결을 확인하고 다시 시도하세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke forme kurven fordi Flaccys KI ikke kunne nås. Sjekk tilkoblingen og prøv igjen."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się utworzyć krzywej, bo nie można połączyć się z AI Flaccy. Sprawdź połączenie i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível criar a curva porque a IA do Flaccy não pôde ser acessada. Verifique sua conexão e tente novamente."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det gick inte att forma kurvan eftersom Flaccys AI inte kunde nås. Kontrollera anslutningen och försök igen."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法生成曲线，因为连接不上 Flaccy 的 AI。请检查网络连接后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法生成曲線，因為連不上 Flaccy 的 AI。請檢查網路連線後再試一次。"
+          }
+        }
+      }
+    },
+    "Couldn't shape the curve because Flaccy's AI is unavailable right now. Try again in a few minutes.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan ikke forme kurven, fordi Flaccys AI ikke er tilgængelig lige nu. Prøv igen om nogle minutter."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurve nicht möglich, weil Flaccys KI gerade nicht verfügbar ist. Versuche es in ein paar Minuten erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo crear la curva porque la IA de Flaccy no está disponible ahora mismo. Inténtalo de nuevo en unos minutos."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Käyrää ei voitu luoda, koska Flaccyn tekoäly ei ole käytettävissä juuri nyt. Yritä muutaman minuutin kuluttua uudelleen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de créer la courbe, car l’IA de Flaccy est indisponible pour le moment. Réessayez dans quelques minutes."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekki tókst að móta ferilinn því gervigreind Flaccy er ekki tiltæk sem stendur. Reyndu aftur eftir nokkrar mínútur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile creare la curva perché l’IA di Flaccy non è disponibile al momento. Riprova tra qualche minuto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FlaccyのAIが現在利用できないため、カーブを作成できませんでした。数分後にもう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy의 AI를 지금 사용할 수 없어 곡선을 만들지 못했습니다. 몇 분 후 다시 시도하세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke forme kurven fordi Flaccys KI er utilgjengelig akkurat nå. Prøv igjen om noen minutter."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się utworzyć krzywej, bo AI Flaccy jest teraz niedostępna. Spróbuj ponownie za kilka minut."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível criar a curva porque a IA do Flaccy está indisponível no momento. Tente novamente em alguns minutos."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det gick inte att forma kurvan eftersom Flaccys AI inte är tillgänglig just nu. Försök igen om några minuter."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法生成曲线，因为 Flaccy 的 AI 暂时不可用。请几分钟后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法生成曲線，因為 Flaccy 的 AI 目前無法使用。請幾分鐘後再試一次。"
+          }
+        }
+      }
+    },
+    "Couldn't shape the curve because today's AI allowance is used up. It comes back at %@.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan ikke forme kurven, fordi dagens AI-kvote er opbrugt. Den kommer tilbage ved %@."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurve nicht möglich, weil das heutige KI-Kontingent aufgebraucht ist. Es steht ab %@ wieder zur Verfügung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo crear la curva porque la cuota de IA de hoy se ha agotado. Vuelve a estar disponible a las %@."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Käyrää ei voitu luoda, koska tämän päivän tekoälykäyttö on käytetty loppuun. Se palautuu %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de créer la courbe, car le quota d’IA du jour est épuisé. Il revient à %@."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekki tókst að móta ferilinn því dagskvóti gervigreindarinnar er uppurinn. Hann endurnýjast kl. %@."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile creare la curva perché la quota di IA di oggi è esaurita. Torna disponibile alle %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日のAI利用枠を使い切ったため、カーブを作成できませんでした。%@に再び使えるようになります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘의 AI 사용량을 모두 써서 곡선을 만들지 못했습니다. %@에 다시 사용할 수 있습니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke forme kurven fordi dagens KI-kvote er brukt opp. Den fornyes %@."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się utworzyć krzywej, bo dzisiejszy limit AI się wyczerpał. Wróci o %@."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível criar a curva porque a cota de IA de hoje acabou. Ela volta às %@."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det gick inte att forma kurvan eftersom dagens AI-kvot är slut. Den är tillgänglig igen från %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法生成曲线，因为今天的 AI 额度已用完。将于 %@ 恢复。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法生成曲線，因為今天的 AI 額度已用完。將於 %@ 恢復。"
+          }
+        }
+      }
+    },
     "Couldn't update metadata.": {
       "localizations": {
         "da": {
@@ -67945,6 +68415,382 @@
         }
       }
     },
+    "Describe the Sound": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskriv lyden"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klang beschreiben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Describe el sonido"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuvaile ääntä"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Décrire le son"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lýstu hljóðinu"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrivi il suono"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サウンドを説明"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소리 설명하기"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskriv lyden"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opisz brzmienie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descreva o som"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskriv ljudet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "描述声音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "描述聲音"
+          }
+        }
+      }
+    },
+    "Describe the Sound…": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskriv lyden…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klang beschreiben…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Describe el sonido…"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuvaile ääntä…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Décrire le son…"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lýstu hljóðinu…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrivi il suono…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サウンドを説明…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소리 설명하기…"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskriv lyden…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opisz brzmienie…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descreva o som…"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskriv ljudet…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "描述声音…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "描述聲音…"
+          }
+        }
+      }
+    },
+    "Described": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskrevet"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beschrieben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrito"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuvailtu"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Décrit"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lýst"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descritto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "説明から作成"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "맞춤"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskrevet"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opisany"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrito"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskriven"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按描述生成"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依描述生成"
+          }
+        }
+      }
+    },
+    "Describing a sound uses Flaccy's AI, which comes with Flaccy Lifetime.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At beskrive en lyd bruger Flaccys AI, som følger med Flaccy Lifetime."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Klang zu beschreiben nutzt Flaccys KI, die in Flaccy Lifetime enthalten ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Describir un sonido usa la IA de Flaccy, que viene con Flaccy Lifetime."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Äänen kuvailu käyttää Flaccyn tekoälyä, joka sisältyy Flaccy Lifetimeen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Décrire un son utilise l’IA de Flaccy, incluse avec Flaccy à vie."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Að lýsa hljóði notar gervigreind Flaccy, sem fylgir Flaccy Lifetime."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrivere un suono usa l’IA di Flaccy, inclusa in Flaccy Lifetime."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サウンドの説明にはFlaccyのAIを使用します。このAIはFlaccy Lifetimeに含まれています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소리를 설명하려면 Flaccy의 AI를 사용하며, 이 AI는 Flaccy Lifetime에 포함됩니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Å beskrive en lyd bruker Flaccys KI, som følger med Flaccy Lifetime."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opisywanie brzmienia korzysta z AI Flaccy, która jest częścią Flaccy Lifetime."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrever um som usa a IA do Flaccy, que vem com o Flaccy Lifetime."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Att beskriva ett ljud använder Flaccys AI, som ingår i Flaccy Lifetime."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "描述声音要用到 Flaccy 的 AI，它包含在 Flaccy Lifetime 中。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "描述聲音要用到 Flaccy 的 AI，它包含在 Flaccy Lifetime 中。"
+          }
+        }
+      }
+    },
     "Details of %@": {
       "localizations": {
         "da": {
@@ -72426,6 +73272,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "每首歌在播放清單中只保留一次，位於其首次出現的位置。你的檔案不會被刪除。"
+          }
+        }
+      }
+    },
+    "Easy on the ears, late at night": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blidt for ørerne, sent om natten"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sanft für die Ohren, spät in der Nacht"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suave para los oídos, de noche"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Helppo kuunnella myöhään yöllä"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doux pour les oreilles, tard le soir"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Þægilegt fyrir eyrun, seint um nótt"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non stanca le orecchie, a tarda notte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "夜遅くでも耳に優しい音"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "늦은 밤에도 귀가 편한 소리"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mildt for ørene, sent på natten"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Łagodne dla uszu, późną nocą"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suave para os ouvidos, à noite"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Milt för öronen, sent på kvällen"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深夜听也不累耳"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深夜聽也不累耳"
           }
         }
       }
@@ -88601,6 +89541,100 @@
         }
       }
     },
+    "Hear It": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hør det"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorhören"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escuchar"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuuntele"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écouter"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heyrðu það"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ascolta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聴いてみる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미리 듣기"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hør det"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odsłuchaj"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvir agora"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lyssna på det"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试听"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試聽"
+          }
+        }
+      }
+    },
     "Hear your whole library on every device": {
       "localizations": {
         "da": {
@@ -98583,6 +99617,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "版面配置：%@。點兩下可更改。"
+          }
+        }
+      }
+    },
+    "Less boom in the bass": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mindre dunk i bassen"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weniger Dröhnen im Bass"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menos retumbo en los bajos"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vähemmän jyrinää bassossa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moins de bourdonnement dans les basses"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minni dynur í bassanum"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meno rimbombo nei bassi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "低音のボワつきを減らして"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "베이스의 웅웅거림 줄이기"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mindre dunk i bassen"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mniej dudnienia w basie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menos ronco nos graves"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mindre dån i basen"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "减少低音的轰鸣感"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "減少低音的轟鳴感"
           }
         }
       }
@@ -108667,6 +109795,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "隨著你聆聽，會出現更多混音"
+          }
+        }
+      }
+    },
+    "More punch in the drums": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mere punch i trommerne"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehr Wucht im Schlagzeug"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más pegada en la batería"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enemmän potkua rumpuihin"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus de punch dans la batterie"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meira bit í trommunum"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più impatto nella batteria"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラムにもっとパンチを"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드럼에 펀치감 더하기"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mer kraft i trommene"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Więcej pazura w perkusji"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mais pegada na bateria"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mer punch i trummorna"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鼓声再有力一些"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鼓聲再有力一些"
           }
         }
       }
@@ -131854,6 +133076,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "播放一首歌曲，歌詞就會顯示在這裡。"
+          }
+        }
+      }
+    },
+    "Play a song to hear this curve before you keep it.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spil en sang for at høre kurven, før du beholder den."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiel einen Song ab, um diese Kurve zu hören, bevor du sie übernimmst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproduce una canción para escuchar esta curva antes de guardarla."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soita kappale, niin kuulet tämän käyrän ennen kuin säilytät sen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jouez un morceau pour entendre cette courbe avant de la conserver."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spilaðu lag til að heyra ferilinn áður en þú vistar hann."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduci un brano per sentire questa curva prima di confermarla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲を再生すると、保存する前にこのカーブを聴けます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "곡을 재생하면 저장하기 전에 이 곡선을 들어 볼 수 있습니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spill en sang for å høre kurven før du beholder den."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwórz utwór, aby posłuchać tej krzywej, zanim ją zapiszesz."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toque uma música para ouvir esta curva antes de salvá-la."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spela en låt för att höra kurvan innan du behåller den."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放一首歌，先听听这条曲线，再决定是否保留。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放一首歌，先聽聽這條曲線，再決定是否保留。"
           }
         }
       }
@@ -155272,6 +156588,100 @@
         }
       }
     },
+    "Say how you want your music to sound and Flaccy shapes an equalizer curve for it. Your words, the kind of device and output you are listening on and the curve in use go to Flaccy's AI. Nothing else leaves this device.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skriv, hvordan du vil have musikken til at lyde, så former Flaccy en equalizerkurve til det. Dine ord, hvilken type enhed og lydudgang du lytter på, og den kurve, der er i brug, sendes til Flaccys AI. Intet andet forlader denne enhed."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sag, wie deine Musik klingen soll, und Flaccy formt dafür eine Equalizer-Kurve. Deine Worte, die Art des Geräts und der Ausgabe, über die du hörst, und die gerade verwendete Kurve gehen an Flaccys KI. Sonst verlässt nichts dieses Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Describe cómo quieres que suene tu música y Flaccy crea una curva de ecualizador para ella. Tus palabras, el tipo de dispositivo y de salida de audio con el que escuchas y la curva en uso se envían a la IA de Flaccy. Nada más sale de este dispositivo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kerro, miltä haluat musiikin kuulostavan, niin Flaccy muodostaa siihen equalizer-käyrän. Sanasi, laitteen tyyppi, toistolaite (kuulokkeet, kaiutin, auto ja muut) ja käytössä oleva käyrä lähetetään Flaccyn tekoälylle. Mikään muu ei poistu tältä laitteelta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dites comment vous voulez que votre musique sonne, et Flaccy crée une courbe d’égaliseur pour cela. Vos mots, le type d’appareil et de sortie audio sur lequel vous écoutez, ainsi que la courbe utilisée, sont envoyés à l’IA de Flaccy. Rien d’autre ne quitte cet appareil."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lýstu því hvernig þú vilt að tónlistin hljómi og Flaccy mótar tónjafnaraferil fyrir það. Orðin þín, tegund tækis og hljóðúttaks (heyrnartól, hátalari, bíll o.s.frv.) og ferillinn í notkun fara til gervigreindar Flaccy. Ekkert annað fer úr þessu tæki."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrivi come vuoi che suoni la tua musica e Flaccy crea una curva dell’equalizzatore su misura. Le tue parole, il tipo di dispositivo e di uscita su cui ascolti e la curva in uso vanno all’IA di Flaccy. Nient’altro lascia questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽をどう聴きたいかを伝えると、Flaccyがそれに合わせてイコライザのカーブを作ります。入力した言葉、お使いの機器と出力先（ヘッドフォン、スピーカー、カーなど）の種類、使用中のカーブがFlaccyのAIに送られます。ほかのデータがこの端末から外に出ることはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원하는 소리를 말하면 Flaccy가 그에 맞는 이퀄라이저 곡선을 만들어 드립니다. 입력한 말, 사용 중인 기기와 출력 장치 종류(헤드폰, 스피커, 자동차 등), 사용 중인 곡선이 Flaccy의 AI에 전송됩니다. 그 밖의 정보는 이 기기를 벗어나지 않습니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si hvordan du vil at musikken skal høres ut, så former Flaccy en equalizerkurve for det. Dine ord, hvilken type enhet og lydutgang du lytter på, og kurven som er i bruk, sendes til Flaccys KI. Ingenting annet forlater denne enheten."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opisz, jak chcesz, żeby brzmiała twoja muzyka, a Flaccy utworzy dla niej krzywą korektora. Twoje słowa, rodzaj urządzenia i wyjścia audio, z którego słuchasz, oraz używana krzywa trafiają do AI Flaccy. Nic więcej nie opuszcza tego urządzenia."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diga como você quer que sua música soe e o Flaccy cria uma curva de equalizador para ela. Suas palavras, o tipo de dispositivo e de saída de áudio em que você ouve e a curva em uso são enviados à IA do Flaccy. Nada mais sai deste dispositivo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Säg hur du vill att musiken ska låta, så formar Flaccy en equalizerkurva för det. Dina ord, vilken typ av enhet och ljudutgång du lyssnar på och kurvan som används skickas till Flaccys AI. Inget annat lämnar den här enheten."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说说你希望音乐听起来怎样，Flaccy 会为它生成均衡器曲线。你的文字、所用设备和输出方式的类型（耳机、扬声器、汽车等）以及正在使用的曲线会发送给 Flaccy 的 AI。除此之外，没有任何内容会离开这台设备。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "說說你希望音樂聽起來怎樣，Flaccy 會為它生成等化器曲線。你的文字、所用裝置和輸出方式的類型（耳機、喇叭、車用等）以及正在使用的曲線會傳送給 Flaccy 的 AI。除此之外，沒有任何資料會離開這台裝置。"
+          }
+        }
+      }
+    },
     "Say what you want to hear and Flaccy makes a playlist from the music you own. Your words and the names of your artists and songs go to Flaccy's AI to choose them. Nothing else leaves this device.": {
       "localizations": {
         "da": {
@@ -161256,6 +162666,100 @@
         }
       }
     },
+    "Shape It": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lav kurve"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurve erstellen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear curva"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luo käyrä"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Créer la courbe"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Móta ferilinn"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea curva"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カーブを作る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "곡선 만들기"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lag kurve"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwórz krzywą"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criar curva"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forma kurvan"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成曲线"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成曲線"
+          }
+        }
+      }
+    },
     "Shaped": {
       "localizations": {
         "da": {
@@ -161440,6 +162944,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "透過響應曲線與預設塑造聲音"
+          }
+        }
+      }
+    },
+    "Shaping the curve…": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Former kurven…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurve wird erstellt…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creando la curva…"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luodaan käyrää…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Création de la courbe…"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mótar ferilinn…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creazione della curva…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カーブを作成中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "곡선을 만드는 중…"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Former kurven…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tworzenie krzywej…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criando a curva…"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Formar kurvan…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在生成曲线…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在生成曲線…"
           }
         }
       }
@@ -180105,6 +181703,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法根據這段內容製作播放列表。請描述你想聽的音樂。"
+          }
+        }
+      }
+    },
+    "That didn't describe a sound an equalizer can shape. Say how you want the music to sound.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det beskrev ikke en lyd, som en equalizer kan forme. Skriv, hvordan du vil have musikken til at lyde."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das beschreibt keinen Klang, den ein Equalizer formen kann. Sag, wie die Musik klingen soll."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eso no describe un sonido que un ecualizador pueda moldear. Describe cómo quieres que suene la música."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tämä ei kuvaillut ääntä, jota equalizer voi muokata. Kerro, miltä haluat musiikin kuulostavan."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ceci ne décrit pas un son qu’un égaliseur peut façonner. Dites comment vous voulez que la musique sonne."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Þetta lýsti ekki hljóði sem tónjafnari getur mótað. Lýstu því hvernig þú vilt að tónlistin hljómi."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo non descrive un suono che un equalizzatore può modellare. Indica come vuoi che suoni la musica."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イコライザで整えられる音の説明ではありませんでした。音楽をどう聴きたいかを伝えてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이퀄라이저로 만들 수 있는 소리를 설명하지 않았습니다. 원하는 소리를 말해 주세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det beskrev ikke en lyd en equalizer kan forme. Si hvordan du vil at musikken skal høres ut."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To nie opisuje brzmienia, które korektor może ukształtować. Opisz, jak chcesz, żeby brzmiała muzyka."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isso não descreve um som que um equalizador possa moldar. Diga como você quer que a música soe."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det beskrev inte ett ljud som en equalizer kan forma. Säg hur du vill att musiken ska låta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这段文字没有描述均衡器能够调整的声音。请说说你希望音乐听起来怎样。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這段文字沒有描述等化器能調整的聲音。請說說你希望音樂聽起來怎樣。"
           }
         }
       }
@@ -199901,6 +201593,100 @@
         }
       }
     },
+    "Warmer, with softer cymbals": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varmere, med blødere cymbaler"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wärmer, mit sanfteren Becken"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más cálido, con platillos más suaves"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lämpimämpi, pehmeämmät symbaalit"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus chaleureux, avec des cymbales plus douces"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hlýrra, með mýkri symbölum"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più caldo, con piatti più morbidi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もっと温かく、シンバルはやわらかめに"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 따뜻하게, 심벌즈는 부드럽게"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varmere, med mykere cymbaler"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cieplej, z łagodniejszymi talerzami"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mais quente, com pratos mais suaves"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varmare, med mjukare cymbaler"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更温暖，镲声柔和一些"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更溫暖，鈸聲柔和一些"
+          }
+        }
+      }
+    },
     "Watch Storage": {
       "localizations": {
         "da": {
@@ -203587,6 +205373,194 @@
           "stringUnit": {
             "state": "translated",
             "value": "你"
+          }
+        }
+      }
+    },
+    "You are hearing this curve. Nothing is saved until you add it.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hører denne kurve. Intet gemmes, før du tilføjer den."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hörst gerade diese Kurve. Nichts wird gespeichert, bis du sie hinzufügst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estás escuchando esta curva. No se guarda nada hasta que la añadas."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuulet tätä käyrää. Mitään ei tallenneta, ennen kuin lisäät sen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous entendez cette courbe. Rien n’est enregistré tant que vous ne l’ajoutez pas."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Þú heyrir þennan feril. Ekkert er vistað fyrr en þú bætir honum við."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stai ascoltando questa curva. Non viene salvato nulla finché non la aggiungi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このカーブを聴いています。追加するまで保存されません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 이 곡선이 적용된 소리를 듣고 있습니다. 추가하기 전까지는 아무것도 저장되지 않습니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hører denne kurven. Ingenting lagres før du legger den til."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Słyszysz tę krzywą. Nic nie zostanie zapisane, dopóki jej nie dodasz."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você está ouvindo esta curva. Nada é salvo até você adicioná-la."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hör den här kurvan. Ingenting sparas förrän du lägger till den."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你正在听这条曲线。添加之前不会保存任何内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你正在聽這條曲線。加入之前不會儲存任何內容。"
+          }
+        }
+      }
+    },
+    "You are hearing your music as it was. Nothing is saved until you add it.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hører din musik, som den var. Intet gemmes, før du tilføjer kurven."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hörst deine Musik unverändert. Nichts wird gespeichert, bis du die Kurve hinzufügst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estás escuchando tu música tal como era. No se guarda nada hasta que añadas la curva."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuulet musiikkisi alkuperäisenä. Mitään ei tallenneta, ennen kuin lisäät käyrän."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous entendez votre musique telle quelle. Rien n’est enregistré tant que vous n’ajoutez pas la courbe."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Þú heyrir tónlistina þína óbreytta. Ekkert er vistað fyrr en þú bætir ferlinum við."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stai ascoltando la tua musica senza modifiche. Non viene salvato nulla finché non aggiungi la curva."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カーブなしの元の音で再生しています。追加するまで保存されません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원래 소리 그대로 듣고 있습니다. 추가하기 전까지는 아무것도 저장되지 않습니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hører musikken din slik den var. Ingenting lagres før du legger kurven til."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Słuchasz muzyki w oryginalnym brzmieniu. Nic nie zostanie zapisane, dopóki nie dodasz krzywej."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você está ouvindo sua música como ela era. Nada é salvo até você adicioná-la."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hör din musik som den var. Ingenting sparas förrän du lägger till kurvan."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你听到的是原本的音乐。添加之前不会保存任何内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你聽到的是原本的音樂。加入之前不會儲存任何內容。"
           }
         }
       }
