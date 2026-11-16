@@ -321,10 +321,11 @@ extension NowPlayingViewController {
     }
 
     /// Shows the companions the laptop pose adds to the artwork state (lyrics
-    /// beside the cover, the queue above the controls) and tears them down in
-    /// every other pose so nothing observes the player for no reason. A pane
-    /// tall enough to leave room under the title (an iPad's Now Playing
-    /// column) shows what plays next there too.
+    /// beside the cover, what plays next above the controls) and tears them
+    /// down in every other pose so nothing observes the player for no reason.
+    /// A pane tall enough to leave room under the title (an iPad's Now Playing
+    /// column) shows what plays next there too. Either strip lists Up Next
+    /// alone; the whole queue, history included, is a tap on the queue button.
     func syncLaptopCompanions() {
         let queueRoom = bottomControls.frame.minY - 10 - (laptopQueueHost.frame.minY)
         let showsLyrics = isLaptopLayout && centerState == .artwork && AudioPlayer.shared.currentTrack != nil
@@ -343,7 +344,7 @@ extension NowPlayingViewController {
             laptopQueueHost, visible: showsQueue, current: laptopQueueChild,
             make: { [weak self] in
                 let controller = QueueViewController()
-                controller.listsUpNextOnly = showsPaneQueue
+                controller.listsUpNextOnly = showsPaneQueue || self?.isLaptopLayout == true
                 controller.onPushRequest = { viewController in self?.dismissAndPush(viewController) }
                 return controller
             },
