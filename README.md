@@ -23,6 +23,7 @@ Point flaccy at your music. It plays FLAC, ALAC, WAV, AIFF, MP3 and AAC gaplessl
 | Platform | What it is | Get it |
 |---|---|---|
 | **iPhone + Apple Watch** | The full app, with a standalone Watch player that plays offline through AirPods | [App Store](https://apps.apple.com/app/id6787493695) |
+| **iPhone Duo** | The same app across both displays: open, your library sits beside Now Playing once music plays and every page meets the fold; like a book, lyrics or the queue take the facing page; like a laptop, the cover and lyrics sit above the controls; closed, the full player, upright or on its side | [App Store](https://apps.apple.com/app/id6787493695) |
 | **iPad** | The same app with a sidebar, Now Playing and Up Next in a column beside it, keyboard shortcuts, the menu bar, pointer support and drag and drop; one purchase with iPhone | [App Store](https://apps.apple.com/app/id6787493695) |
 | **Mac** | Native AppKit app with Liquid Glass, folder watching and a menu bar player; one purchase covers iPhone, iPad, Watch and Mac | [Mac App Store](https://apps.apple.com/app/id6787493695) |
 | **Linux** | Native GTK4/libadwaita app with GStreamer, MPRIS and the same library, lyrics and equalizer; free | `yay -S flaccy-bin` or `curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-flaccy.sh \| sh` |
