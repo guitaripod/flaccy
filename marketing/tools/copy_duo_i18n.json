@@ -1,0 +1,730 @@
+{
+  "de": {
+    "home": {
+      "kicker": "Fürs iPhone Duo",
+      "headline": "Mediathek und Player, *nebeneinander.*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "Buchform",
+      "headline": "Cover auf der einen Seite, *Songtext auf der anderen.*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "Verlustfrei",
+      "headline": "Jedes Album, *neben dem, was läuft.*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "Als Nächstes",
+      "headline": "Deine Warteschlange, *auf der Gegenseite.*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "Laptop-Haltung",
+      "headline": "Cover und Songtext oben, *Steuerung unten.*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Last.fm-Scrobbling",
+      "headline": "Jeder Titel gezählt, *auch offline.*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "Alben",
+      "headline": "Das Cover auf der einen Seite, *jeder Titel auf der anderen.*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "Zusammengeklappt",
+      "headline": "Zugeklappt, *immer noch der ganze Player.*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "Mediathek",
+      "headline": "Deine ganze Mediathek, *in einer Hand.*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "Quer gehalten",
+      "headline": "Das Cover *neben der Steuerung.*",
+      "maxLines": 2
+    }
+  },
+  "es": {
+    "home": {
+      "kicker": "Hecho para iPhone Duo",
+      "headline": "Biblioteca y reproductor, *lado a lado.*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "Pose de libro",
+      "headline": "La portada en una página, *la letra en la otra.*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "Sin pérdida",
+      "headline": "Cada álbum, *junto a lo que suena.*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "A continuación",
+      "headline": "Tu cola, *en la página de enfrente.*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "Pose de portátil",
+      "headline": "Carátula y letra arriba, *controles abajo.*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Scrobbling en Last.fm",
+      "headline": "Cada escucha suma, *incluso sin conexión.*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "Álbumes",
+      "headline": "La portada en una página, *cada pista en la otra.*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "Plegado",
+      "headline": "Cerrado, *sigue siendo todo el reproductor.*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "Biblioteca",
+      "headline": "Toda tu biblioteca, *en la palma de la mano.*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "De lado",
+      "headline": "La portada *junto a los controles.*",
+      "maxLines": 2
+    }
+  },
+  "fr": {
+    "home": {
+      "kicker": "Fait pour iPhone Duo",
+      "headline": "La bibliothèque et le lecteur, *côte à côte.*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "Pose livre",
+      "headline": "La pochette sur une page, *les paroles sur l'autre.*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "Sans perte",
+      "headline": "Chaque album, *à côté de ce qui joue.*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "À suivre",
+      "headline": "Votre file, *sur la page d'en face.*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "Pose portable",
+      "headline": "Pochette et paroles en haut, *commandes en bas.*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Scrobbling Last.fm",
+      "headline": "Chaque écoute comptée, *même hors ligne.*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "Albums",
+      "headline": "La pochette d'un côté, *chaque piste de l'autre.*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "Replié",
+      "headline": "Fermé, *toujours le lecteur complet.*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "Bibliothèque",
+      "headline": "Toute votre bibliothèque, *d'une main.*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "À l'horizontale",
+      "headline": "La pochette *à côté des commandes.*",
+      "maxLines": 2
+    }
+  },
+  "it": {
+    "home": {
+      "kicker": "Per iPhone Duo",
+      "headline": "La libreria e il player, *fianco a fianco.*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "Posa a libro",
+      "headline": "Copertina su una pagina, *il testo sull'altra.*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "Senza perdite",
+      "headline": "Ogni album, *accanto a ciò che suona.*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "Successivi",
+      "headline": "La tua coda, *sulla pagina di fronte.*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "Posa a laptop",
+      "headline": "Copertina e testo sopra, *comandi sotto.*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Scrobbling Last.fm",
+      "headline": "Ogni ascolto conteggiato, *anche offline.*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "Album",
+      "headline": "La copertina da un lato, *ogni brano dall'altro.*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "Ripiegato",
+      "headline": "Chiuso, *è sempre tutto il player.*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "Libreria",
+      "headline": "Tutta la libreria, *in una mano.*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "In orizzontale",
+      "headline": "La copertina *accanto ai comandi.*",
+      "maxLines": 2
+    }
+  },
+  "ja": {
+    "home": {
+      "kicker": "iPhone Duo のために",
+      "headline": "ライブラリとプレーヤーを、*並べて。*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "ブックポーズ",
+      "headline": "アートは片面に、*歌詞はもう片面に。*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "ロスレス",
+      "headline": "すべてのアルバムを、*再生中の横に。*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "次に再生",
+      "headline": "キューは、*向かいのページに。*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "ラップトップポーズ",
+      "headline": "ジャケットと歌詞は上に、*操作は下に。*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Last.fm スクロブル",
+      "headline": "オフラインでも、*すべて記録。*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "アルバム",
+      "headline": "ジャケットは片面に、*全曲はもう片面に。*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "折りたたみ",
+      "headline": "閉じても、*プレーヤーはそのまま。*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "ライブラリ",
+      "headline": "ライブラリ全体が、*片手の中に。*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "横向き",
+      "headline": "ジャケットを、*操作の横に。*",
+      "maxLines": 2
+    }
+  },
+  "ko": {
+    "home": {
+      "kicker": "iPhone Duo를 위해",
+      "headline": "보관함과 플레이어를, *나란히.*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "북 자세",
+      "headline": "앨범 아트는 한 면에, *가사는 반대 면에.*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "무손실",
+      "headline": "모든 앨범을, *재생 중인 곡 옆에.*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "다음 재생",
+      "headline": "대기열을, *맞은편 페이지에.*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "노트북 자세",
+      "headline": "커버와 가사는 위에, *조작부는 아래에.*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Last.fm 스크로블링",
+      "headline": "오프라인에서도, *모든 재생이 기록돼요.*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "앨범",
+      "headline": "커버는 한 면에, *모든 트랙은 반대 면에.*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "접은 상태",
+      "headline": "닫아도, *플레이어는 그대로.*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "보관함",
+      "headline": "내 전체 보관함, *한 손에.*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "가로 보기",
+      "headline": "앨범 커버 곁에, *조작부가 나란히.*",
+      "maxLines": 2
+    }
+  },
+  "pl": {
+    "home": {
+      "kicker": "Dla iPhone Duo",
+      "headline": "Biblioteka i odtwarzacz, *obok siebie.*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "Pozycja książkowa",
+      "headline": "Okładka na jednej stronie, *teksty na drugiej.*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "Bezstratnie",
+      "headline": "Każdy album, *obok tego, co gra.*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "Następne",
+      "headline": "Twoja kolejka, *na stronie obok.*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "Pozycja laptopowa",
+      "headline": "Okładka i teksty u góry, *sterowanie na dole.*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Scrobbling Last.fm",
+      "headline": "Każde odtworzenie policzone, *nawet offline.*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "Albumy",
+      "headline": "Okładka z jednej strony, *każdy utwór z drugiej.*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "Złożony",
+      "headline": "Zamknięty, *wciąż cały odtwarzacz.*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "Biblioteka",
+      "headline": "Cała biblioteka, *w jednej dłoni.*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "Na boku",
+      "headline": "Okładka *obok sterowania.*",
+      "maxLines": 2
+    }
+  },
+  "pt-BR": {
+    "home": {
+      "kicker": "Feito para o iPhone Duo",
+      "headline": "Biblioteca e player, *lado a lado.*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "Pose de livro",
+      "headline": "Capa em uma página, *a letra na outra.*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "Sem perdas",
+      "headline": "Cada álbum, *ao lado do que está tocando.*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "A seguir",
+      "headline": "Sua fila, *na página ao lado.*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "Pose de notebook",
+      "headline": "Capa e letra em cima, *controles embaixo.*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Scrobble do Last.fm",
+      "headline": "Cada play contado, *mesmo offline.*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "Álbuns",
+      "headline": "A capa em uma página, *cada faixa na outra.*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "Dobrado",
+      "headline": "Fechado, *ainda o player inteiro.*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "Biblioteca",
+      "headline": "Sua biblioteca inteira, *em uma mão.*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "Na horizontal",
+      "headline": "A capa *ao lado dos controles.*",
+      "maxLines": 2
+    }
+  },
+  "zh-Hans": {
+    "home": {
+      "kicker": "为 iPhone Duo 而做",
+      "headline": "资料库与播放器，*并排呈现。*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "书本姿态",
+      "headline": "封面在一页，*歌词在另一页。*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "无损",
+      "headline": "每张专辑，*与正在播放并列。*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "接下来播放",
+      "headline": "播放队列，*就在对页。*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "笔记本姿态",
+      "headline": "封面与歌词在上，*控制在下。*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Last.fm 记录",
+      "headline": "离线也记录，*每一次播放。*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "专辑",
+      "headline": "封面在一页，*每首曲目在另一页。*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "合上",
+      "headline": "合上时，*依然是完整的播放器。*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "资料库",
+      "headline": "整个资料库，*尽在一手。*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "横放",
+      "headline": "封面，*紧挨控制栏。*",
+      "maxLines": 2
+    }
+  },
+  "zh-Hant": {
+    "home": {
+      "kicker": "專為 iPhone Duo 打造",
+      "headline": "資料庫與播放器，*並排呈現。*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "書本姿勢",
+      "headline": "封面在一頁，*歌詞在另一頁。*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "無損",
+      "headline": "每張專輯，*就在播放中的旁邊。*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "接著播放",
+      "headline": "待播清單，*就在對頁。*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "筆電姿勢",
+      "headline": "封面與歌詞在上，*控制項在下。*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Last.fm 記錄",
+      "headline": "每一次播放都記錄，*離線也不漏。*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "專輯",
+      "headline": "封面在一頁，*每首曲目在另一頁。*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "摺疊",
+      "headline": "合起來，*依然是完整的播放器。*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "資料庫",
+      "headline": "整座音樂庫，*單手掌握。*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "橫放",
+      "headline": "封面，*緊貼著控制項。*",
+      "maxLines": 2
+    }
+  },
+  "sv": {
+    "home": {
+      "kicker": "Gjord för iPhone Duo",
+      "headline": "Bibliotek och spelare, *sida vid sida.*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "Bokläge",
+      "headline": "Omslag på ena sidan, *låttext på den andra.*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "Förlustfritt",
+      "headline": "Varje album, *bredvid det som spelas.*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "Nästa",
+      "headline": "Din kö, *på sidan mitt emot.*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "Laptopläge",
+      "headline": "Omslag och låttext ovanför, *reglagen nedanför.*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Scrobbla till Last.fm",
+      "headline": "Varje lyssning räknas, *även offline.*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "Album",
+      "headline": "Omslaget på en sida, *varje låt på den andra.*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "Hopfälld",
+      "headline": "Stängd, *fortfarande hela spelaren.*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "Bibliotek",
+      "headline": "Hela biblioteket, *i ena handen.*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "På sidan",
+      "headline": "Omslaget *bredvid reglagen.*",
+      "maxLines": 2
+    }
+  },
+  "da": {
+    "home": {
+      "kicker": "Lavet til iPhone Duo",
+      "headline": "Bibliotek og afspiller, *side om side.*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "Bogstilling",
+      "headline": "Cover på den ene side, *sangtekst på den anden.*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "Tabsfri",
+      "headline": "Hvert album, *ved siden af det, der spiller.*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "Næste",
+      "headline": "Din kø, *på den modsatte side.*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "Laptopstilling",
+      "headline": "Cover og sangtekst foroven, *betjening forneden.*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Scrobbling til Last.fm",
+      "headline": "Hver afspilning tæller, *også offline.*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "Album",
+      "headline": "Cover på den ene side, *alle sporene på den anden.*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "Foldet",
+      "headline": "Lukket, *stadig hele afspilleren.*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "Bibliotek",
+      "headline": "Hele dit bibliotek, *i én hånd.*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "Liggende",
+      "headline": "Coveret *ved siden af knapperne.*",
+      "maxLines": 2
+    }
+  },
+  "no": {
+    "home": {
+      "kicker": "Laget for iPhone Duo",
+      "headline": "Bibliotek og spiller, *side om side.*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "Bokstilling",
+      "headline": "Omslag på den ene siden, *sangtekst på den andre.*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "Tapsfritt",
+      "headline": "Hvert album, *ved siden av det som spilles.*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "Neste",
+      "headline": "Køen din, *på siden rett overfor.*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "Laptopstilling",
+      "headline": "Omslag og sangtekst over, *kontrollene under.*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Scrobbling til Last.fm",
+      "headline": "Hver avspilling teller, *også offline.*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "Album",
+      "headline": "Omslaget på den ene siden, *hvert spor på den andre.*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "Lukket",
+      "headline": "Lukket, *fortsatt hele spilleren.*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "Bibliotek",
+      "headline": "Hele biblioteket, *i én hånd.*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "På siden",
+      "headline": "Omslaget *ved siden av kontrollene.*",
+      "maxLines": 2
+    }
+  },
+  "fi": {
+    "home": {
+      "kicker": "Tehty iPhone Duolle",
+      "headline": "Kirjasto ja soitin, *vierekkäin.*",
+      "maxLines": 2
+    },
+    "book": {
+      "kicker": "Kirja-asento",
+      "headline": "Kansi toisella sivulla, *sanoitukset toisella.*",
+      "maxLines": 2
+    },
+    "album": {
+      "kicker": "Häviötön",
+      "headline": "Joka albumi *soivan kappaleen vieressä.*",
+      "maxLines": 2
+    },
+    "queue": {
+      "kicker": "Seuraavana",
+      "headline": "Jonosi, *vastasivulla.*",
+      "maxLines": 2
+    },
+    "laptop": {
+      "kicker": "Kannettavan asento",
+      "headline": "Kansi ja sanoitukset ylhäällä, *ohjaimet alhaalla.*",
+      "maxLines": 2
+    },
+    "scrobble": {
+      "kicker": "Last.fm-scrobblaus",
+      "headline": "Joka kuuntelu lasketaan, *myös offline.*",
+      "maxLines": 2
+    },
+    "tracks": {
+      "kicker": "Albumit",
+      "headline": "Kansi toisella sivulla, *jokainen raita toisella.*",
+      "maxLines": 2
+    },
+    "closed": {
+      "kicker": "Taitettuna",
+      "headline": "Suljettuna, *silti koko soitin.*",
+      "maxLines": 2
+    },
+    "library": {
+      "kicker": "Kirjasto",
+      "headline": "Koko kirjasto *yhdessä kädessä.*",
+      "maxLines": 2
+    },
+    "landscape": {
+      "kicker": "Sivuttain",
+      "headline": "Kansi *ohjainten vieressä.*",
+      "maxLines": 2
+    }
+  }
+}

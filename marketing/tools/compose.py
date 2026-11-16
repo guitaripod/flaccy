@@ -342,5 +342,41 @@ def compose_ipad(slide, copy, locale, raw_path, out_path, index, slides, work_di
     return out_path
 
 
+DUO_SLOTS = {
+    (2853, 2007): dict(device=0.80, caption=2500, scale=0.86, top=88),
+    (2007, 2853): dict(device=0.86, caption=1800, scale=1.14, top=150),
+    (1398, 2034): dict(device=0.88, caption=1260, scale=0.84, top=92),
+    (2034, 1398): dict(device=0.80, caption=1840, scale=0.62, top=60),
+}
+
+
+def duo_blobs(size, accent, secondary):
+    w, h = size
+    return [(w * 0.10, h * 0.70, max(w, h) * 0.55, accent, 0.34), (w * 0.92, h * 0.95, max(w, h) * 0.6, secondary, 0.28),
+            (w * 0.5, 0, max(w, h) * 0.4, accent, 0.06)]
+
+
+def compose_duo(slide, copy, locale, raw_path, out_path, index, slides, work_dir):
+    """One iPhone Duo slot: the canvas is the raw capture's own size (inner or outer display, either
+    way up), the caption on top, the Duo framed by `frames` bleeding off the bottom edge."""
+    raw = Image.open(raw_path)
+    size = raw.size
+    if size not in DUO_SLOTS:
+        raise SystemExit(f"{raw_path}: {size} is not an iPhone Duo screenshot size")
+    slot = DUO_SLOTS[size]
+    accent, secondary = slide.get("accent", CORAL), slide.get("secondary", VIOLET)
+    w, h = size
+    canvas = backdrop(index, len(slides), size, duo_blobs(size, accent, secondary), ring_rgb=accent,
+                      ring_center=(w // 2, int(h * 0.68)))
+    canvas = top_scrim(canvas, height=int(h * 0.36))
+    prefix = os.path.join(work_dir, f"duo{index:02d}")
+    os.makedirs(work_dir, exist_ok=True)
+    caption_bottom = draw_caption(canvas, copy, locale, prefix, accent, top=slot["top"], width=slot["caption"], scale=slot["scale"])
+    framed = trimmed(frame_device(raw_path, slide.get("duo_color", "Night Sky")))
+    place_device(canvas, framed, int(w * slot["device"]), caption_bottom + int(CAPTION_GAP * slot["scale"]))
+    canvas.convert("RGB").save(out_path, "PNG", optimize=True)
+    return out_path
+
+
 if __name__ == "__main__":
     print(__doc__)

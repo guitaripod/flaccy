@@ -1,0 +1,52 @@
+{
+  "home": {
+    "kicker": "Made for iPhone Duo",
+    "headline": "Library and player, *side by side.*",
+    "maxLines": 1
+  },
+  "book": {
+    "kicker": "Book pose",
+    "headline": "Art on one page, *lyrics on the other.*",
+    "maxLines": 1
+  },
+  "album": {
+    "kicker": "Lossless",
+    "headline": "Every album, *beside what's playing.*",
+    "maxLines": 1
+  },
+  "queue": {
+    "kicker": "Up Next",
+    "headline": "Your queue, *on the facing page.*",
+    "maxLines": 1
+  },
+  "laptop": {
+    "kicker": "Laptop pose",
+    "headline": "Cover and lyrics above, *controls below.*",
+    "maxLines": 2
+  },
+  "scrobble": {
+    "kicker": "Last.fm scrobbling",
+    "headline": "Every play counted, *even offline.*",
+    "maxLines": 2
+  },
+  "tracks": {
+    "kicker": "Albums",
+    "headline": "The cover on one page, *every track on the other.*",
+    "maxLines": 1
+  },
+  "closed": {
+    "kicker": "Folded",
+    "headline": "Closed, *still the whole player.*",
+    "maxLines": 2
+  },
+  "library": {
+    "kicker": "Library",
+    "headline": "Your whole library, *in one hand.*",
+    "maxLines": 2
+  },
+  "landscape": {
+    "kicker": "On its side",
+    "headline": "The cover *beside the controls.*",
+    "maxLines": 1
+  }
+}
