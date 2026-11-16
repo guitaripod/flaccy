@@ -129,12 +129,20 @@ extension NowPlayingViewController {
         preferredWidth.priority = UILayoutPriority(999)
         artworkPreferredWidth = preferredWidth
 
+        let centered = artworkContainer.centerXAnchor.constraint(equalTo: row.centerXAnchor)
+        centered.priority = .defaultLow
+        let leadingRoom = artworkContainer.leadingAnchor.constraint(greaterThanOrEqualTo: row.leadingAnchor)
+        let trailingRoom = artworkContainer.trailingAnchor.constraint(lessThanOrEqualTo: row.trailingAnchor)
+        artworkLeadingRoom = leadingRoom
+        artworkTrailingRoom = trailingRoom
+
         NSLayoutConstraint.activate([
             artworkContainer.topAnchor.constraint(equalTo: row.topAnchor),
             artworkContainer.bottomAnchor.constraint(equalTo: row.bottomAnchor),
-            artworkContainer.centerXAnchor.constraint(equalTo: row.centerXAnchor),
+            centered,
+            leadingRoom,
+            trailingRoom,
             artworkContainer.widthAnchor.constraint(equalTo: artworkContainer.heightAnchor),
-            artworkContainer.widthAnchor.constraint(lessThanOrEqualTo: row.widthAnchor),
             preferredWidth,
         ])
         return row

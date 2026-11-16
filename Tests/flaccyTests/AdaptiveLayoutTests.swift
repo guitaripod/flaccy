@@ -82,6 +82,30 @@ nonisolated final class AdaptiveLayoutTests: XCTestCase {
         XCTAssertFalse(AdaptiveLayout.showsPlayerPane(size: iPad, style: .column, hasTrack: false, isShown: true))
     }
 
+    /// The Now Playing half on the inner display: 455 pt wide, an 82 pt top
+    /// inset that only the status cluster in its top trailing corner explains.
+    @MainActor func testTheCoverRisesBesideACornerCutout() {
+        let cluster = CGRect(x: 321.3, y: 0, width: 134, height: 82)
+        let clearance = AdaptiveLayout.mediaClearance(column: 28...427.3, safeTop: 82, occlusions: [cluster])
+        XCTAssertEqual(clearance.rise, 82)
+        XCTAssertEqual(clearance.leading, 0)
+        XCTAssertEqual(clearance.trailing, 427.3 - (321.3 - AdaptiveLayout.mediaClearanceGap), accuracy: 0.001)
+    }
+
+    @MainActor func testTheCoverStaysBelowAnInsetNothingExplains() {
+        XCTAssertEqual(AdaptiveLayout.mediaClearance(column: 28...427.3, safeTop: 82, occlusions: []), .none)
+        XCTAssertEqual(AdaptiveLayout.mediaClearance(column: 28...427.3, safeTop: 0, occlusions: [CGRect(x: 321, y: 0, width: 134, height: 82)]), .none)
+        XCTAssertEqual(AdaptiveLayout.mediaClearance(column: 28...427.3, safeTop: 62, occlusions: [CGRect(x: 150, y: 11, width: 126, height: 37)]), .none)
+        XCTAssertEqual(AdaptiveLayout.mediaClearance(column: 28...427.3, safeTop: 82, occlusions: [CGRect(x: 0, y: 300, width: 40, height: 40)]), .none)
+        XCTAssertEqual(AdaptiveLayout.mediaClearance(column: 28...200, safeTop: 82, occlusions: [CGRect(x: 150, y: 0, width: 134, height: 82)]), .none)
+    }
+
+    @MainActor func testACutoutOnTheLeadingCornerPushesTheCoverTheOtherWay() {
+        let clearance = AdaptiveLayout.mediaClearance(column: 28...427.3, safeTop: 82, occlusions: [CGRect(x: 0, y: 0, width: 134, height: 82)])
+        XCTAssertEqual(clearance.leading, 134 + AdaptiveLayout.mediaClearanceGap - 28, accuracy: 0.001)
+        XCTAssertEqual(clearance.trailing, 0)
+    }
+
     @MainActor func testAWholeIPadWindowPutsTheCoverBesideTheControls() {
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 1376, height: 1032), horizontalFold: nil), .landscape)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 1180, height: 820), horizontalFold: nil), .landscape)

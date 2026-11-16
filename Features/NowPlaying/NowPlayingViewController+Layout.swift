@@ -44,10 +44,13 @@ extension NowPlayingViewController {
         artworkGroupTop.isActive = mode != .landscape
         placeInfoBlock(inControls: mode == .landscape)
         infoBlock.isHidden = mode == .landscape && centerState != .artwork
+        portraitMediaTop = nil
         switch mode {
         case .portrait:
+            let mediaTop = centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: Self.portraitMediaInset)
+            portraitMediaTop = mediaTop
             constraints = [
-                centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 24),
+                mediaTop,
                 centerContainer.leadingAnchor.constraint(equalTo: portraitColumn.leadingAnchor),
                 centerContainer.trailingAnchor.constraint(equalTo: portraitColumn.trailingAnchor),
                 centerContainer.bottomAnchor.constraint(equalTo: bottomControls.topAnchor, constant: -14),
@@ -150,6 +153,43 @@ extension NowPlayingViewController {
         NSLayoutConstraint.activate(constraints)
         modeConstraints = constraints
         refreshCenterVisibility()
+    }
+
+    static let portraitMediaInset: CGFloat = 24
+
+    /// Lets the cover of the iPhone Duo's Now Playing half rise beside the
+    /// status cluster in its top corner instead of under the whole band that
+    /// cluster reserves, sliding sideways just enough to clear it. The system
+    /// reports the cluster as an occlusion only after a layout pass and may
+    /// change it at any time, so this is read again on every pass.
+    func applyMediaClearance() {
+        let clearance = currentMediaClearance()
+        let top = Self.portraitMediaInset - clearance.rise
+        var changed = false
+        if let mediaTop = portraitMediaTop, mediaTop.constant != top {
+            mediaTop.constant = top
+            changed = true
+        }
+        if artworkLeadingRoom?.constant != clearance.leading {
+            artworkLeadingRoom?.constant = clearance.leading
+            changed = true
+        }
+        if artworkTrailingRoom?.constant != -clearance.trailing {
+            artworkTrailingRoom?.constant = -clearance.trailing
+            changed = true
+        }
+        guard changed else { return }
+        MidgarLog.debug("Now Playing cover clearance \(clearance) in \(view.bounds.size)", category: .ui)
+        view.setNeedsLayout()
+    }
+
+    private func currentMediaClearance() -> AdaptiveLayout.MediaClearance {
+        guard isPaneMode, paneStyle == .halves, layoutMode == .portrait, centerState == .artwork else { return .none }
+        let column = portraitColumn.layoutFrame
+        guard column.width > 0 else { return .none }
+        return AdaptiveLayout.mediaClearance(
+            column: column.minX...column.maxX, safeTop: view.safeAreaInsets.top, occlusions: view.activeOcclusionFrames
+        )
     }
 
     /// Landscape gives the artwork a column to itself, so the title block moves

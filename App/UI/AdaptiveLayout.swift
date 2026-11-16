@@ -152,6 +152,50 @@ enum AdaptiveLayout {
         return .stacked
     }
 
+    static let mediaClearanceGap: CGFloat = 12
+    static let mediaClearanceMinimumWidth: CGFloat = 160
+
+    /// How the cover of a pane may use the band a corner cutout reserves. A
+    /// view whose top is inset only because something sits in one corner (the
+    /// iPhone Duo's status cluster over the Now Playing half) need not lose
+    /// that whole band: the cover can rise into it as long as it stays clear
+    /// of the corner sideways.
+    struct MediaClearance: Equatable {
+        /// How far above the safe area the media may start.
+        var rise: CGFloat
+        /// The room the cover keeps from the column's leading and trailing edges.
+        var leading: CGFloat
+        var trailing: CGFloat
+
+        static let none = MediaClearance(rise: 0, leading: 0, trailing: 0)
+    }
+
+    /// The clearance for a column spanning `column` (x, in the view's own
+    /// space) under a top inset of `safeTop`, given the active occlusions the
+    /// system reports for the view. Nothing changes when no occlusion explains
+    /// the inset, when one covers the column's centre, or when the cover would
+    /// be left narrower than `mediaClearanceMinimumWidth`.
+    static func mediaClearance(column: ClosedRange<CGFloat>, safeTop: CGFloat, occlusions: [CGRect]) -> MediaClearance {
+        guard safeTop > 0 else { return .none }
+        let band = occlusions.filter { $0.minY < safeTop && $0.width > 0 && $0.height > 0 }
+        guard !band.isEmpty else { return .none }
+        let center = (column.lowerBound + column.upperBound) / 2
+        var leading: CGFloat = 0
+        var trailing: CGFloat = 0
+        for region in band {
+            guard region.maxX > column.lowerBound, region.minX < column.upperBound else { continue }
+            if region.minX <= center, region.maxX >= center { return .none }
+            if region.maxX < center {
+                leading = max(leading, region.maxX + mediaClearanceGap - column.lowerBound)
+            } else {
+                trailing = max(trailing, column.upperBound - (region.minX - mediaClearanceGap))
+            }
+        }
+        let width = column.upperBound - column.lowerBound - leading - trailing
+        guard width >= mediaClearanceMinimumWidth else { return .none }
+        return MediaClearance(rise: safeTop, leading: leading, trailing: trailing)
+    }
+
     enum PlayerLayout: Equatable {
         case portrait
         case landscape
@@ -198,6 +242,18 @@ extension UIView {
         }
         #endif
         return nil
+    }
+
+    /// The occlusions the system reports in this view's own space that are in
+    /// effect right now, such as the iPhone Duo's status cluster; none where
+    /// nothing is reported or before iOS 27.1.
+    var activeOcclusionFrames: [CGRect] {
+        #if canImport(UIKit, _version: 9127.0.85)
+        if #available(iOS 27.1, *) {
+            return reservedRegions(kind: .occlusion, options: []).filter(\.isActive).map(\.frame)
+        }
+        #endif
+        return []
     }
 
     /// The vertical extent of a fold that runs across this view, or nil when

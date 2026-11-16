@@ -89,6 +89,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     let portraitColumn = UILayoutGuide()
     var portraitColumnFill: NSLayoutConstraint?
     var artworkPreferredWidth: NSLayoutConstraint?
+    var artworkLeadingRoom: NSLayoutConstraint?
+    var artworkTrailingRoom: NSLayoutConstraint?
+    var portraitMediaTop: NSLayoutConstraint?
     var compactControlsApplied: Bool?
     let landscapeControlsRegion = UILayoutGuide()
     let laptopLyricsHost = UIView()
@@ -216,6 +219,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateLayoutModeIfNeeded()
+        applyMediaClearance()
         placeBadgeStrip()
         refreshActionRowWrapping()
         backdropView.frame = view.bounds
