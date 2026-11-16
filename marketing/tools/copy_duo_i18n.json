@@ -230,27 +230,27 @@
     },
     "laptop": {
       "kicker": "ラップトップポーズ",
-      "headline": "ジャケットと歌詞は上に、*操作は下に。*",
+      "headline": "ジャケットと歌詞は上に、\n*操作は下に。*",
       "maxLines": 2
     },
     "scrobble": {
       "kicker": "Last.fm スクロブル",
-      "headline": "オフラインでも、*すべて記録。*",
+      "headline": "オフラインでも、\n*すべて記録。*",
       "maxLines": 2
     },
     "tracks": {
       "kicker": "アルバム",
-      "headline": "ジャケットは片面に、*全曲はもう片面に。*",
+      "headline": "ジャケットは片面に、\n*全曲はもう片面に。*",
       "maxLines": 2
     },
     "closed": {
       "kicker": "折りたたみ",
-      "headline": "閉じても、*プレーヤーはそのまま。*",
+      "headline": "閉じても、\n*プレーヤーはそのまま。*",
       "maxLines": 2
     },
     "library": {
       "kicker": "ライブラリ",
-      "headline": "ライブラリ全体が、*片手の中に。*",
+      "headline": "ライブラリ全体が、\n*片手の中に。*",
       "maxLines": 2
     },
     "landscape": {
@@ -438,27 +438,27 @@
     },
     "laptop": {
       "kicker": "笔记本姿态",
-      "headline": "封面与歌词在上，*控制在下。*",
+      "headline": "封面与歌词在上，\n*控制在下。*",
       "maxLines": 2
     },
     "scrobble": {
       "kicker": "Last.fm 记录",
-      "headline": "离线也记录，*每一次播放。*",
+      "headline": "离线也记录，\n*每一次播放。*",
       "maxLines": 2
     },
     "tracks": {
       "kicker": "专辑",
-      "headline": "封面在一页，*每首曲目在另一页。*",
+      "headline": "封面在一页，\n*每首曲目在另一页。*",
       "maxLines": 2
     },
     "closed": {
       "kicker": "合上",
-      "headline": "合上时，*依然是完整的播放器。*",
+      "headline": "合上时，\n*依然是完整的播放器。*",
       "maxLines": 2
     },
     "library": {
       "kicker": "资料库",
-      "headline": "整个资料库，*尽在一手。*",
+      "headline": "整个资料库，\n*尽在一手。*",
       "maxLines": 2
     },
     "landscape": {
@@ -490,27 +490,27 @@
     },
     "laptop": {
       "kicker": "筆電姿勢",
-      "headline": "封面與歌詞在上，*控制項在下。*",
+      "headline": "封面與歌詞在上，\n*控制項在下。*",
       "maxLines": 2
     },
     "scrobble": {
       "kicker": "Last.fm 記錄",
-      "headline": "每一次播放都記錄，*離線也不漏。*",
+      "headline": "每一次播放都記錄，\n*離線也不漏。*",
       "maxLines": 2
     },
     "tracks": {
       "kicker": "專輯",
-      "headline": "封面在一頁，*每首曲目在另一頁。*",
+      "headline": "封面在一頁，\n*每首曲目在另一頁。*",
       "maxLines": 2
     },
     "closed": {
       "kicker": "摺疊",
-      "headline": "合起來，*依然是完整的播放器。*",
+      "headline": "合起來，\n*依然是完整的播放器。*",
       "maxLines": 2
     },
     "library": {
       "kicker": "資料庫",
-      "headline": "整座音樂庫，*單手掌握。*",
+      "headline": "整座音樂庫，\n*單手掌握。*",
       "maxLines": 2
     },
     "landscape": {
