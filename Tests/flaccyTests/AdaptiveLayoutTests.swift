@@ -65,9 +65,21 @@ nonisolated final class AdaptiveLayoutTests: XCTestCase {
         )
     }
 
-    @MainActor func testSplitStyleFollowsTheIdiom() {
-        XCTAssertEqual(AdaptiveLayout.SplitStyle(idiom: .pad), .column)
-        XCTAssertEqual(AdaptiveLayout.SplitStyle(idiom: .phone), .halves)
+    @MainActor func testSplitStyleFollowsTheFold() {
+        XCTAssertEqual(AdaptiveLayout.SplitStyle(division: CGRect(x: 455.5, y: 0, width: 40, height: 669)), .halves)
+        XCTAssertEqual(AdaptiveLayout.SplitStyle(division: CGRect(x: 0, y: 455.5, width: 669, height: 40)), .column)
+        XCTAssertEqual(AdaptiveLayout.SplitStyle(division: nil), .column)
+    }
+
+    @MainActor func testThePlayerPaneWaitsForSomethingToPlay() {
+        let inner = CGSize(width: 951, height: 669)
+        XCTAssertFalse(AdaptiveLayout.showsPlayerPane(size: inner, style: .halves, hasTrack: false, isShown: true))
+        XCTAssertTrue(AdaptiveLayout.showsPlayerPane(size: inner, style: .halves, hasTrack: true, isShown: true))
+        XCTAssertFalse(AdaptiveLayout.showsPlayerPane(size: CGSize(width: 669, height: 951), style: .halves, hasTrack: true, isShown: true))
+        let iPad = CGSize(width: 1376, height: 1032)
+        XCTAssertTrue(AdaptiveLayout.showsPlayerPane(size: iPad, style: .column, hasTrack: true, isShown: true))
+        XCTAssertFalse(AdaptiveLayout.showsPlayerPane(size: iPad, style: .column, hasTrack: true, isShown: false))
+        XCTAssertFalse(AdaptiveLayout.showsPlayerPane(size: iPad, style: .column, hasTrack: false, isShown: true))
     }
 
     @MainActor func testAWholeIPadWindowPutsTheCoverBesideTheControls() {

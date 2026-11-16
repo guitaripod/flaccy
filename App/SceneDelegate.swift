@@ -232,13 +232,17 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 }
 
 /// Root container. Under 840 pt it is the library with the player overlay
-/// morphing over it; at 840 x 560 pt and up it is two panes, the library stack
-/// beside a permanent Now Playing, each ending at the fold when there is one.
+/// morphing over it; at 840 x 560 pt and up, once something is playing, it is
+/// two panes, the library stack beside Now Playing, each ending at the fold
+/// when there is one. Until the first song, and again once the queue empties,
+/// the library has the whole window, so an iPhone Duo opened on a new library
+/// shows Home and its way in rather than half a screen of empty player.
 /// On an iPad Now Playing is instead a column over the trailing edge, there
 /// once something is playing and the window leaves the library its room, and
 /// gone again when the person hides it; the tabs keep the whole window and
 /// their content steps clear of the column through the safe area, so the
-/// sidebar still docks. It also lets the player overlay drive
+/// sidebar still docks. Either pane slides in from the trailing edge and out
+/// past it. It also lets the player overlay drive
 /// the status bar, so it flips to light content as the dark player expands
 /// over the library.
 final class RootContainerViewController: UIViewController {
@@ -356,16 +360,19 @@ final class RootContainerViewController: UIViewController {
     }
 
     private var splitStyle: AdaptiveLayout.SplitStyle {
-        AdaptiveLayout.SplitStyle(idiom: traitCollection.userInterfaceIdiom)
+        AdaptiveLayout.SplitStyle(division: view.divisionRegionFrame)
     }
 
-    /// Where the panes meet for this window, or nil when it stays one pane. A
-    /// column waits for something to play and steps aside when hidden.
+    /// Where the panes meet for this window, or nil when it stays one pane.
+    /// Either style waits for something to play; a column also steps aside
+    /// when hidden.
     private func desiredSplitGeometry() -> AdaptiveLayout.SplitGeometry? {
         let size = view.bounds.size
         let style = splitStyle
-        guard AdaptiveLayout.usesSplit(size: size, style: style) else { return nil }
-        if style == .column, !hasCurrentTrack || !PlayerColumnSetting.isShown { return nil }
+        let shown = style == .halves || PlayerColumnSetting.isShown
+        guard AdaptiveLayout.showsPlayerPane(size: size, style: style, hasTrack: hasCurrentTrack, isShown: shown) else {
+            return nil
+        }
         return AdaptiveLayout.splitGeometry(width: size.width, division: view.divisionRegionFrame, style: style)
     }
 
@@ -379,11 +386,13 @@ final class RootContainerViewController: UIViewController {
         refreshColumn(animated: true)
     }
 
-    /// Slides the Now Playing column in from the trailing edge or out past it
+    /// Slides the Now Playing pane in from the trailing edge or out past it
     /// when it comes or goes for a reason other than the window's size: the
-    /// first song, the queue emptying, or the person showing or hiding it.
+    /// first song, the queue emptying, or the person showing or hiding an
+    /// iPad's column. Halves bring the library to its half as the player
+    /// arrives and give it the whole window back as the player leaves.
     private func refreshColumn(animated: Bool) {
-        guard view.window != nil, splitStyle == .column, !isAnimatingColumn else {
+        guard view.window != nil, !isAnimatingColumn else {
             view.setNeedsLayout()
             return
         }
@@ -397,9 +406,13 @@ final class RootContainerViewController: UIViewController {
         let width = view.bounds.width
         isAnimatingColumn = true
         if let target {
+            if splitStyle == .halves {
+                playerLeading.constant = width
+                view.layoutIfNeeded()
+            }
             applySplitLayout(target)
             playerLeading.constant = width
-            view.layoutIfNeeded()
+            if splitStyle == .column { view.layoutIfNeeded() }
             playerLeading.constant = target.secondaryLeading
             animateColumn { [weak self] in
                 self?.isAnimatingColumn = false
@@ -408,6 +421,7 @@ final class RootContainerViewController: UIViewController {
         } else {
             playerLeading.constant = width
             navigation.additionalSafeAreaInsets.right = 0
+            navigationWidth.constant = width
             animateColumn { [weak self] in
                 guard let self else { return }
                 self.isAnimatingColumn = false

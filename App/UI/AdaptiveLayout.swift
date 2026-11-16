@@ -44,16 +44,21 @@ enum AdaptiveLayout {
         contentWidth >= homeWideMinimumWidth
     }
 
-    /// How a window that holds the library beside Now Playing divides. On a
-    /// phone the two are halves, ending at the fold when there is one; on an
-    /// iPad Now Playing is a column along the trailing edge and the library
-    /// keeps the rest. The idiom picks the arrangement, never the thresholds.
+    /// How a window that holds the library beside Now Playing divides. A
+    /// window a fold runs down (an iPhone Duo's inner display on its side)
+    /// splits into halves that end at the fold; any other window gives Now
+    /// Playing a column along the trailing edge and the library the rest.
+    /// The fold the system reports decides, never the device.
     enum SplitStyle: Equatable {
         case halves
         case column
 
-        init(idiom: UIUserInterfaceIdiom) {
-            self = idiom == .pad ? .column : .halves
+        init(division: CGRect?) {
+            guard let division, division.height > division.width, division.width > 0 else {
+                self = .column
+                return
+            }
+            self = .halves
         }
     }
 
@@ -67,6 +72,14 @@ enum AdaptiveLayout {
         case .halves: return size.width >= splitMinimumWidth
         case .column: return size.width - playerColumnWidth(forWidth: size.width) >= columnLibraryMinimumWidth
         }
+    }
+
+    /// Whether Now Playing has a pane of its own right now: the window has
+    /// room for one, something is playing, and the person has not hidden it.
+    /// With nothing to play the library keeps the whole window instead of
+    /// sharing it with an empty player.
+    static func showsPlayerPane(size: CGSize, style: SplitStyle, hasTrack: Bool, isShown: Bool) -> Bool {
+        hasTrack && isShown && usesSplit(size: size, style: style)
     }
 
     struct SplitGeometry: Equatable {
