@@ -72,7 +72,7 @@ final class AppTabBarController: UITabBarController {
         recapNavigation.navigationBar.prefersLargeTitles = false
         searchNavigation.navigationBar.prefersLargeTitles = true
         home.tabController = self
-        if UIDevice.current.userInterfaceIdiom == .pad {
+        if UIDevice.current.userInterfaceIdiom == .pad { // duo-audit:ignore the sidebar tab set is iPad policy: UIKit offers an iPhone no sidebar, the Duo's inner display included (27.1, measured)
             configurePadTabs()
         } else {
             configureTabs()
@@ -108,7 +108,7 @@ final class AppTabBarController: UITabBarController {
     /// sidebar's last rows stay clear of the dock too.
     private func applyDockClearance() {
         guard #unavailable(iOS 26.0) else { return }
-        let barAlongBottom = traitCollection.userInterfaceIdiom == .phone || traitCollection.horizontalSizeClass == .compact
+        let barAlongBottom = traitCollection.userInterfaceIdiom == .phone || traitCollection.horizontalSizeClass == .compact // duo-audit:ignore runs only before iOS 26, which no iPhone Duo has
         let own = barAlongBottom ? 0 : dockClearance
         let perTab = dockClearance - own
         if additionalSafeAreaInsets.bottom != own { additionalSafeAreaInsets.bottom = own }

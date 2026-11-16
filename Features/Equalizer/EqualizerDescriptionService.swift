@@ -72,7 +72,7 @@ private extension EqualizerDescriptionService {
         #if os(macOS)
         "computer"
         #else
-        await MainActor.run { UIDevice.current.userInterfaceIdiom == .pad ? "tablet" : "phone" }
+        await MainActor.run { UIDevice.current.userInterfaceIdiom == .pad ? "tablet" : "phone" } // duo-audit:ignore names the hardware for flaccy-api's speaker advice, never a layout
         #endif
     }
 }

@@ -27,9 +27,7 @@ final class SignalPathCell: UITableViewCell {
         verdict.spacing = 10
         verdict.alignment = .firstBaseline
 
-        let divider = UIView()
-        divider.backgroundColor = .separator
-        divider.translatesAutoresizingMaskIntoConstraints = false
+        let divider = HairlineView(color: .separator)
 
         let stack = UIStackView(arrangedSubviews: [
             fileStage, Self.connector(), flaccyStage, Self.connector(), outputStage, divider, verdict,
@@ -46,7 +44,6 @@ final class SignalPathCell: UITableViewCell {
             stack.trailingAnchor.constraint(equalTo: margins.trailingAnchor),
             stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 14),
             stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -14),
-            divider.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale),
             verdictDot.widthAnchor.constraint(equalToConstant: 10),
             verdictDot.heightAnchor.constraint(equalToConstant: 10),
         ])

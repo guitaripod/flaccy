@@ -155,8 +155,8 @@ final class LyricShareViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             previewFrame.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            previewFrame.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            previewFrame.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            previewFrame.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            previewFrame.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
             previewFrame.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.4),
             previewImage.centerXAnchor.constraint(equalTo: previewFrame.centerXAnchor),
             previewImage.topAnchor.constraint(equalTo: previewFrame.topAnchor),
@@ -167,8 +167,8 @@ final class LyricShareViewController: UIViewController {
             audioSpinner.centerXAnchor.constraint(equalTo: playButton.centerXAnchor),
             audioSpinner.centerYAnchor.constraint(equalTo: playButton.centerYAnchor),
             audioNote.topAnchor.constraint(equalTo: previewFrame.bottomAnchor, constant: 6),
-            audioNote.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            audioNote.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            audioNote.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 24),
+            audioNote.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
         ])
     }
 
@@ -186,8 +186,8 @@ final class LyricShareViewController: UIViewController {
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             stack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor, constant: 4),
             stack.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -20),
-            stack.leadingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.trailingAnchor, constant: -16),
+            stack.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
         ])
 
         stack.addArrangedSubview(section(LyricShareCopy.templateHeader, content: templateRow()))
@@ -385,8 +385,8 @@ final class LyricShareViewController: UIViewController {
         view.addSubview(background)
         view.addSubview(bar)
         NSLayoutConstraint.activate([
-            bar.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            bar.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            bar.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            bar.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
             bar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
             shareVideoButton.heightAnchor.constraint(greaterThanOrEqualToConstant: 50),
             background.topAnchor.constraint(equalTo: bar.topAnchor, constant: -10),
