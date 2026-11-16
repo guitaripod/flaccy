@@ -129,6 +129,64 @@ enum AdaptiveLayout {
         return fitted + fitted % 2
     }
 
+    /// A grid a vertical fold divides: one column count on each side and one
+    /// tile width on both, with the fold itself as the gap between the two
+    /// middle columns, so in the book pose no tile lies across the hinge.
+    struct FoldGrid: Equatable {
+        let columnsPerSide: Int
+        let sideWidth: CGFloat
+        /// The fold's own width, the gap between the two halves.
+        let gap: CGFloat
+        /// What the grid adds to the section's usual leading and trailing
+        /// insets so its two halves meet at the fold. The wider side gives up
+        /// the difference, which mirrors a vertical bar on the other edge.
+        let extraLeading: CGFloat
+        let extraTrailing: CGFloat
+    }
+
+    static let foldGridMinimumSide: CGFloat = 200
+
+    /// The fold grid for content spanning `content` (x, in the view's own
+    /// space, after the section's usual insets) with a vertical fold over
+    /// `fold`, or nil when there is no fold or it leaves either side too
+    /// narrow. Each side takes the column count a grid of its width would
+    /// have, as on a phone.
+    static func foldGrid(
+        content: ClosedRange<CGFloat>, fold: ClosedRange<CGFloat>?, columnsForSide: @MainActor (CGFloat) -> Int
+    ) -> FoldGrid? {
+        guard let fold, fold.lowerBound > content.lowerBound, fold.upperBound < content.upperBound else { return nil }
+        let leading = fold.lowerBound - content.lowerBound
+        let trailing = content.upperBound - fold.upperBound
+        let side = min(leading, trailing)
+        guard side >= foldGridMinimumSide else { return nil }
+        return FoldGrid(
+            columnsPerSide: max(1, columnsForSide(side)), sideWidth: side, gap: fold.upperBound - fold.lowerBound,
+            extraLeading: leading - side, extraTrailing: trailing - side
+        )
+    }
+
+    /// A row of two parts that meets a fold running down it: the leading part
+    /// ends where the fold begins and the trailing part starts where it ends,
+    /// so each stands on its own page in the book pose.
+    struct FoldHalves: Equatable {
+        let leading: CGFloat
+        let trailing: CGFloat
+        let gap: CGFloat
+    }
+
+    /// The halves for content spanning `content` (x, in the view's own space)
+    /// with a vertical fold over `fold`, or nil when there is no fold or either
+    /// part would be narrower than its minimum.
+    static func foldHalves(
+        content: ClosedRange<CGFloat>, fold: ClosedRange<CGFloat>?, leadingMinimum: CGFloat, trailingMinimum: CGFloat
+    ) -> FoldHalves? {
+        guard let fold else { return nil }
+        let leading = fold.lowerBound - content.lowerBound
+        let trailing = content.upperBound - fold.upperBound
+        guard leading >= leadingMinimum, trailing >= trailingMinimum else { return nil }
+        return FoldHalves(leading: leading, trailing: trailing, gap: fold.upperBound - fold.lowerBound)
+    }
+
     static let shelfTargetTileWidth: CGFloat = 190
 
     /// Album shelf column count on an artist page: two on a phone, then an
@@ -254,6 +312,15 @@ extension UIView {
         }
         #endif
         return []
+    }
+
+    /// The horizontal extent of a fold that runs down this view, inactive or
+    /// not, when it lies inside the view's bounds; nil on the outer display,
+    /// on a pane that ends at the fold, and on devices without one.
+    var verticalFoldSpan: ClosedRange<CGFloat>? {
+        guard let frame = divisionRegionFrame, frame.height > frame.width, frame.width > 0,
+              frame.minX > bounds.minX, frame.maxX < bounds.maxX else { return nil }
+        return frame.minX...frame.maxX
     }
 
     /// The vertical extent of a fold that runs across this view, or nil when

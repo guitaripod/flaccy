@@ -294,7 +294,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
     }
 
     func setupCollectionView() {
-        collectionView = UICollectionView(frame: .zero, collectionViewLayout: createLayout())
+        collectionView = FoldAwareCollectionView(frame: .zero, collectionViewLayout: createLayout())
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.delegate = self
         collectionView.backgroundColor = .clear
@@ -327,7 +327,8 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
                 let group = NSCollectionLayoutGroup.vertical(layoutSize: groupSize, subitems: [item])
                 let layoutSection = NSCollectionLayoutSection(group: group)
                 layoutSection.contentInsetsReference = .safeArea
-                layoutSection.contentInsets = NSDirectionalEdgeInsets(top: 16, leading: 24, bottom: 8, trailing: 24)
+                let trailing = (self?.collectionView as? FoldAwareCollectionView)?.leadingPageTrailingInset(leading: 24, trailing: 24) ?? 24
+                layoutSection.contentInsets = NSDirectionalEdgeInsets(top: 16, leading: 24, bottom: 8, trailing: trailing)
                 return layoutSection
 
             case .similarArtists:
@@ -360,6 +361,16 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
                 return layoutSection
 
             case .albums, .appearsOn:
+                if let grid = (self?.collectionView as? FoldAwareCollectionView)?.foldGrid(
+                    leading: 16, trailing: 16, columnsForSide: AdaptiveLayout.shelfColumns(forWidth:)
+                ) {
+                    let layoutSection = NSCollectionLayoutSection.foldGrid(
+                        grid, spacing: 12, rowSpacing: 16, height: .estimated(240),
+                        insets: NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 16, trailing: 16)
+                    )
+                    layoutSection.boundarySupplementaryItems = [Self.sectionHeaderItem()]
+                    return layoutSection
+                }
                 let columns = AdaptiveLayout.shelfColumns(forWidth: environment.container.effectiveContentSize.width)
                 let itemSize = NSCollectionLayoutSize(
                     widthDimension: .fractionalWidth(1.0 / CGFloat(columns)),

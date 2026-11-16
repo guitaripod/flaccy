@@ -182,7 +182,7 @@ final class WantlistViewController: UIViewController {
     }
 
     private func setupCollectionView() {
-        collectionView = UICollectionView(frame: .zero, collectionViewLayout: makeLayout())
+        collectionView = FoldAwareCollectionView(frame: .zero, collectionViewLayout: makeLayout())
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .clear
         collectionView.delegate = self
@@ -260,6 +260,12 @@ final class WantlistViewController: UIViewController {
         let result: NSCollectionLayoutSection
         switch section {
         case .newReleases, .albums, .discoverAlbums:
+            if let grid = (collectionView as? FoldAwareCollectionView)?.foldGrid(leading: 21, trailing: 21) {
+                return withHeader(.foldGrid(
+                    grid, spacing: 10, rowSpacing: 12, height: .estimated(150),
+                    insets: NSDirectionalEdgeInsets(top: 4, leading: 21, bottom: 12, trailing: 21)
+                ))
+            }
             let columns = AdaptiveLayout.gridColumns(forWidth: environment.container.effectiveContentSize.width)
             let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0 / CGFloat(columns)), heightDimension: .estimated(150))
             let item = NSCollectionLayoutItem(layoutSize: itemSize)
@@ -281,7 +287,10 @@ final class WantlistViewController: UIViewController {
             result.orthogonalScrollingBehavior = .continuous
         }
         result.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 16, bottom: 12, trailing: 16)
+        return withHeader(result)
+    }
 
+    private func withHeader(_ result: NSCollectionLayoutSection) -> NSCollectionLayoutSection {
         let headerSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(34))
         let header = NSCollectionLayoutBoundarySupplementaryItem(
             layoutSize: headerSize,

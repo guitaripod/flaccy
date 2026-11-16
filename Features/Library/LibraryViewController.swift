@@ -537,7 +537,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
 
     func setupCollectionView() {
-        collectionView = UICollectionView(frame: .zero, collectionViewLayout: createLayout(for: .albums))
+        collectionView = FoldAwareCollectionView(frame: .zero, collectionViewLayout: createLayout(for: .albums))
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.delegate = self
         if DeviceKind.isPad { collectionView.dragDelegate = self }

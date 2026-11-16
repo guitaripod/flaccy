@@ -103,7 +103,7 @@ final class HomeViewController: UIViewController {
     }
 
     private func setupCollectionView() {
-        collectionView = UICollectionView(frame: .zero, collectionViewLayout: makeLayout())
+        collectionView = FoldAwareCollectionView(frame: .zero, collectionViewLayout: makeLayout())
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .clear
         collectionView.delegate = self

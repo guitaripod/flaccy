@@ -62,7 +62,8 @@ extension HomeViewController {
         let size = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(300))
         let group = NSCollectionLayoutGroup.vertical(layoutSize: size, subitems: [NSCollectionLayoutItem(layoutSize: size)])
         let section = NSCollectionLayoutSection(group: group)
-        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: pageInset, bottom: heroBottomInset, trailing: pageInset)
+        let sides = cardInsets(pageInset: pageInset)
+        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: sides.leading, bottom: heroBottomInset, trailing: sides.trailing)
         return section
     }
 
@@ -71,30 +72,69 @@ extension HomeViewController {
         dataSource.snapshot().sectionIdentifiers.contains(.promoNote) ? 8 : 22
     }
 
+    /// The line under the hero, lined up with the hero: under a hero that
+    /// stands alone it keeps the hero's own insets.
     private func promoNoteSection(pageInset: CGFloat) -> NSCollectionLayoutSection {
         let size = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(34))
         let group = NSCollectionLayoutGroup.vertical(layoutSize: size, subitems: [NSCollectionLayoutItem(layoutSize: size)])
         let section = NSCollectionLayoutSection(group: group)
-        section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: pageInset, bottom: 22, trailing: pageInset)
+        let heroStandsAlone = dataSource.snapshot().sectionIdentifiers.contains(.hero)
+        let sides = heroStandsAlone ? cardInsets(pageInset: pageInset) : (leading: pageInset, trailing: pageInset)
+        section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: sides.leading, bottom: 22, trailing: sides.trailing)
         return section
+    }
+
+    private static let cardMaximumWidth: CGFloat = 560
+
+    /// The side insets of a card that stands alone in its row (the hero on its
+    /// own, the getting-started card, a Flaccy Pro card): the page's width on a
+    /// phone, a readable width centred on a wide page, and the leading page
+    /// alone when a fold runs down it, so its buttons never sit on the hinge.
+    private func cardInsets(pageInset: CGFloat) -> (leading: CGFloat, trailing: CGFloat) {
+        if let halves = foldHalves(pageInset: pageInset) {
+            return (pageInset, pageInset + halves.gap + halves.trailing)
+        }
+        let available = contentWidth - 2 * pageInset
+        guard AdaptiveLayout.homeIsWide(contentWidth: contentWidth), available > Self.cardMaximumWidth else {
+            return (pageInset, pageInset)
+        }
+        let margin = ((available - Self.cardMaximumWidth) / 2).rounded(.down)
+        return (pageInset + margin, pageInset + margin)
     }
 
     private func promoCardSection(pageInset: CGFloat) -> NSCollectionLayoutSection {
         let size = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(280))
         let group = NSCollectionLayoutGroup.vertical(layoutSize: size, subitems: [NSCollectionLayoutItem(layoutSize: size)])
         let section = NSCollectionLayoutSection(group: group)
-        section.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: pageInset, bottom: 22, trailing: pageInset)
+        let sides = cardInsets(pageInset: pageInset)
+        section.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: sides.leading, bottom: 22, trailing: sides.trailing)
         return section
     }
 
+    /// Where a two-part row meets a fold running down Home, measured inside
+    /// the page insets, or nil when no fold runs through the page.
+    private func foldHalves(pageInset: CGFloat) -> AdaptiveLayout.FoldHalves? {
+        guard let fold = (collectionView as? FoldAwareCollectionView)?.foldSpan else { return nil }
+        let insets = collectionView.safeAreaInsets
+        let content = (insets.left + pageInset)...(collectionView.bounds.width - insets.right - pageInset)
+        return AdaptiveLayout.foldHalves(
+            content: content, fold: fold, leadingMinimum: Self.foldHalfMinimum, trailingMinimum: Self.foldHalfMinimum
+        )
+    }
+
+    private static let foldHalfMinimum: CGFloat = 300
+
     /// The wide arrangement's first row: the hero on the leading half, Jump
-    /// Back In (its title and two columns of tiles) on the trailing half.
+    /// Back In (its title and two columns of tiles) on the trailing half. With
+    /// a fold running down the page the hero ends where it begins and Jump
+    /// Back In starts where it ends.
     private func heroWithJumpSection(itemCount: Int, pageInset: CGFloat) -> NSCollectionLayoutSection {
         let half = Self.columnGap / 2
+        let halves = foldHalves(pageInset: pageInset)
         let heroItem = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(0.5), heightDimension: .estimated(300)
+            widthDimension: halves.map { .absolute($0.leading) } ?? .fractionalWidth(0.5), heightDimension: .estimated(300)
         ))
-        heroItem.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: half)
+        heroItem.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: halves == nil ? half : 0)
 
         let tileCount = max(itemCount - 2, 0)
         let rows = (tileCount + 1) / 2
@@ -114,14 +154,17 @@ extension HomeViewController {
             return row
         }
         let column = NSCollectionLayoutGroup.vertical(
-            layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(0.5), heightDimension: .absolute(columnHeight)),
+            layoutSize: NSCollectionLayoutSize(
+                widthDimension: halves.map { .absolute($0.trailing) } ?? .fractionalWidth(0.5), heightDimension: .absolute(columnHeight)
+            ),
             subitems: [titleItem] + rowGroups
         )
         column.interItemSpacing = .fixed(Self.gridSpacing)
-        column.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: half, bottom: 0, trailing: 0)
+        column.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: halves == nil ? half : 0, bottom: 0, trailing: 0)
 
         let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(300))
         let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [heroItem, column])
+        if let halves { group.interItemSpacing = .fixed(halves.gap) }
         let section = NSCollectionLayoutSection(group: group)
         section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: pageInset, bottom: heroBottomInset, trailing: pageInset)
         return section
@@ -162,7 +205,20 @@ extension HomeViewController {
         return section
     }
 
+    /// One or two glance cards across the page; a pair beside a fold puts
+    /// one card on each side of it.
     private func glanceSection(columns: Int, pageInset: CGFloat) -> NSCollectionLayoutSection {
+        if columns == 2, let halves = foldHalves(pageInset: pageInset) {
+            let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(180))
+            let cards = [halves.leading, halves.trailing].map {
+                NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(widthDimension: .absolute($0), heightDimension: .fractionalHeight(1)))
+            }
+            let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: cards)
+            group.interItemSpacing = .fixed(halves.gap)
+            let section = NSCollectionLayoutSection(group: group)
+            section.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: pageInset, bottom: 20, trailing: pageInset)
+            return section
+        }
         let itemSize = NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(1 / CGFloat(columns)), heightDimension: .fractionalHeight(1)
         )

@@ -6,10 +6,17 @@ import UniformTypeIdentifiers
 
 extension LibraryViewController {
 
-    /// A cover-wall section of square art tiles at the given column count.
+    /// A cover-wall section of square art tiles at the given column count,
+    /// or split evenly about a fold that runs down the window.
     func gridSection(
         environment: NSCollectionLayoutEnvironment, topInset: CGFloat
     ) -> NSCollectionLayoutSection {
+        if let grid = (collectionView as? FoldAwareCollectionView)?.foldGrid(leading: 20, trailing: 12) {
+            return .foldGrid(
+                grid, spacing: 10, rowSpacing: 12, height: .estimated(180),
+                insets: NSDirectionalEdgeInsets(top: topInset, leading: 20, bottom: 24, trailing: 12)
+            )
+        }
         let columns = AdaptiveLayout.gridColumns(forWidth: environment.container.effectiveContentSize.width)
         let itemSize = NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(1.0 / CGFloat(columns)),

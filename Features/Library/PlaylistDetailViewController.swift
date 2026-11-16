@@ -22,6 +22,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
     private let headerColumn = UIScrollView()
     private var headerLayoutConstraints: [NSLayoutConstraint] = []
     private var appliedHeaderStyle: AdaptiveLayout.DetailHeaderStyle?
+    private var appliedHeaderFold: ClosedRange<CGFloat>?
     private var tableLeading: NSLayoutConstraint!
     private var tableColumnLeading: NSLayoutConstraint!
     private var hasAnimatedAppearance = false
@@ -240,13 +241,16 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
 
     /// Stacked is the phone column. The banner sets a modest cover beside the
     /// play buttons so rows start high on a wider page. Side by side pins the
-    /// cover and buttons in a column and gives the other half to the tracks.
+    /// cover and buttons in a column and gives the other half to the tracks;
+    /// with a fold running down the page the column ends where it begins.
     private func applyHeaderStyle() {
         let usable = view.safeAreaLayoutGuide.layoutFrame.size
         guard usable.width > 1 else { return }
         let style = AdaptiveLayout.detailHeaderStyle(forSize: usable)
-        guard style != appliedHeaderStyle else { return }
+        let fold = view.verticalFoldSpan
+        guard style != appliedHeaderStyle || (style == .sideBySide && fold != appliedHeaderFold) else { return }
         appliedHeaderStyle = style
+        appliedHeaderFold = fold
         NSLayoutConstraint.deactivate(headerLayoutConstraints)
         headerLayoutConstraints = []
         headerColumn.removeFromSuperview()
@@ -315,8 +319,14 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
     }
 
     private func installColumnHeader(size: CGSize) {
-        let side = min(max(size.width * 0.4, 240) - 40, size.height * 0.5, 320)
-        let columnWidth = max(side + 40, 260)
+        let insets = view.safeAreaInsets
+        let fold = AdaptiveLayout.foldHalves(
+            content: insets.left...(view.bounds.width - insets.right), fold: view.verticalFoldSpan,
+            leadingMinimum: 260, trailingMinimum: 260
+        )
+        let side = min((fold?.leading ?? max(size.width * 0.4, 240)) - 40, size.height * 0.5, 320)
+        let columnWidth = fold?.leading ?? max(side + 40, 260)
+        tableColumnLeading.constant = fold?.gap ?? 0
         headerColumn.translatesAutoresizingMaskIntoConstraints = false
         headerColumn.showsVerticalScrollIndicator = false
         headerColumn.alwaysBounceVertical = false

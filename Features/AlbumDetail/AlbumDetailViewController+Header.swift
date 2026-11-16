@@ -81,15 +81,19 @@ extension AlbumDetailViewController {
     /// a column and gives the whole other half to the tracks. The banner and
     /// the column size their cover from the room, so they are rebuilt when it
     /// changes: a page pushed while the phone turned kept a cover sized for the
-    /// taller screen and hid the title and Play under the tab bar.
+    /// taller screen and hid the title and Play under the tab bar. A fold
+    /// running down the page, reported only after a first layout pass, moves
+    /// the column's edge to the fold, so it is rebuilt when that changes too.
     func applyHeaderStyle() {
         let usable = view.safeAreaLayoutGuide.layoutFrame.size
         guard usable.width > 1 else { return }
         let style = AdaptiveLayout.detailHeaderStyle(forSize: usable)
         let resized = abs(usable.width - appliedHeaderSize.width) > 1 || abs(usable.height - appliedHeaderSize.height) > 1
-        guard style != appliedHeaderStyle || (style != .stacked && resized) else { return }
+        let fold = view.verticalFoldSpan
+        guard style != appliedHeaderStyle || (style != .stacked && (resized || fold != appliedHeaderFold)) else { return }
         appliedHeaderStyle = style
         appliedHeaderSize = usable
+        appliedHeaderFold = fold
         NSLayoutConstraint.deactivate(headerLayoutConstraints)
         headerLayoutConstraints = []
         headerColumn.removeFromSuperview()
@@ -104,6 +108,17 @@ extension AlbumDetailViewController {
         tableLeading.isActive = style != .sideBySide
         tableColumnLeading.isActive = style == .sideBySide
         view.setNeedsLayout()
+    }
+
+    /// Where the header column ends and the tracks begin when a fold runs
+    /// down the page: the cover, details and buttons on the leading page,
+    /// every track on the other.
+    var headerColumnFold: AdaptiveLayout.FoldHalves? {
+        let insets = view.safeAreaInsets
+        return AdaptiveLayout.foldHalves(
+            content: insets.left...(view.bounds.width - insets.right), fold: view.verticalFoldSpan,
+            leadingMinimum: Self.headerColumnMinimumWidth, trailingMinimum: Self.headerColumnMinimumWidth
+        )
     }
 
     func installStackedHeader() {
@@ -169,10 +184,12 @@ extension AlbumDetailViewController {
     func installColumnHeader() {
         let usable = view.safeAreaLayoutGuide.layoutFrame.size
         let short = usable.height < Self.headerColumnShortHeight
+        let fold = short ? nil : headerColumnFold
         let artworkSide = short
             ? min(usable.height * 0.3, 110)
-            : min(max(usable.width * 0.4, 240) - 40, usable.height * 0.42, 340)
-        let columnWidth = max(short ? 0 : artworkSide + 40, Self.headerColumnMinimumWidth)
+            : min((fold?.leading ?? max(usable.width * 0.4, 240)) - 40, usable.height * 0.42, 340)
+        let columnWidth = fold?.leading ?? max(short ? 0 : artworkSide + 40, Self.headerColumnMinimumWidth)
+        tableColumnLeading.constant = fold?.gap ?? 0
         headerColumn.translatesAutoresizingMaskIntoConstraints = false
         headerColumn.showsVerticalScrollIndicator = false
         headerColumn.alwaysBounceVertical = false

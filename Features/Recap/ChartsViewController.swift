@@ -84,7 +84,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
     }
 
     private func setupCollectionView() {
-        collectionView = UICollectionView(frame: .zero, collectionViewLayout: makeLayout())
+        collectionView = FoldAwareCollectionView(frame: .zero, collectionViewLayout: makeLayout())
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .clear
         collectionView.delegate = self
@@ -204,6 +204,12 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
             s.orthogonalScrollingBehavior = .continuous
             result = s
         case .albums:
+            if let grid = (collectionView as? FoldAwareCollectionView)?.foldGrid(leading: sideInset + 5, trailing: sideInset + 5) {
+                return withHeader(.foldGrid(
+                    grid, spacing: 10, rowSpacing: 12, height: .estimated(150),
+                    insets: NSDirectionalEdgeInsets(top: 4, leading: sideInset + 5, bottom: 12, trailing: sideInset + 5)
+                ), for: section)
+            }
             let columns = AdaptiveLayout.gridColumns(forWidth: environment.container.effectiveContentSize.width)
             let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0 / CGFloat(columns)), heightDimension: .estimated(150))
             let item = NSCollectionLayoutItem(layoutSize: itemSize)
@@ -227,8 +233,14 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
             result = NSCollectionLayoutSection(group: group)
         }
 
-        result.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: sideInset, bottom: 12, trailing: sideInset)
+        let trailing = section == .period
+            ? (collectionView as? FoldAwareCollectionView)?.leadingPageTrailingInset(leading: sideInset, trailing: sideInset) ?? sideInset
+            : sideInset
+        result.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: sideInset, bottom: 12, trailing: trailing)
+        return withHeader(result, for: section)
+    }
 
+    private func withHeader(_ result: NSCollectionLayoutSection, for section: RecapSection) -> NSCollectionLayoutSection {
         if section.headerTitle != nil {
             let headerSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(34))
             let header = NSCollectionLayoutBoundarySupplementaryItem(

@@ -106,6 +106,30 @@ nonisolated final class AdaptiveLayoutTests: XCTestCase {
         XCTAssertEqual(clearance.trailing, 0)
     }
 
+    /// The whole inner display with nothing playing: the library runs from the
+    /// leading edge to the 84 pt bar, the fold at 455.5 to 495.5.
+    @MainActor func testAFoldGridMeetsTheFoldWithOneTileWidthOnBothSides() {
+        let grid = AdaptiveLayout.foldGrid(content: 20...855, fold: 455.5...495.5, columnsForSide: AdaptiveLayout.gridColumns(forWidth:))
+        XCTAssertEqual(grid?.columnsPerSide, 3)
+        XCTAssertEqual(grid?.sideWidth, 359.5)
+        XCTAssertEqual(grid?.gap, 40)
+        XCTAssertEqual(grid?.extraLeading, 76)
+        XCTAssertEqual(grid?.extraTrailing, 0)
+    }
+
+    @MainActor func testNoFoldGridWithoutAFoldInsideTheContent() {
+        XCTAssertNil(AdaptiveLayout.foldGrid(content: 20...855, fold: nil, columnsForSide: AdaptiveLayout.gridColumns(forWidth:)))
+        XCTAssertNil(AdaptiveLayout.foldGrid(content: 20...440, fold: 455.5...495.5, columnsForSide: AdaptiveLayout.gridColumns(forWidth:)))
+        XCTAssertNil(AdaptiveLayout.foldGrid(content: 300...700, fold: 455.5...495.5, columnsForSide: AdaptiveLayout.gridColumns(forWidth:)))
+    }
+
+    @MainActor func testFoldHalvesEndAndStartAtTheFold() {
+        let halves = AdaptiveLayout.foldHalves(content: 24...843, fold: 455.5...495.5, leadingMinimum: 300, trailingMinimum: 300)
+        XCTAssertEqual(halves, AdaptiveLayout.FoldHalves(leading: 431.5, trailing: 347.5, gap: 40))
+        XCTAssertNil(AdaptiveLayout.foldHalves(content: 24...843, fold: 455.5...495.5, leadingMinimum: 300, trailingMinimum: 360))
+        XCTAssertNil(AdaptiveLayout.foldHalves(content: 24...843, fold: nil, leadingMinimum: 0, trailingMinimum: 0))
+    }
+
     @MainActor func testAWholeIPadWindowPutsTheCoverBesideTheControls() {
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 1376, height: 1032), horizontalFold: nil), .landscape)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 1180, height: 820), horizontalFold: nil), .landscape)
