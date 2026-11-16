@@ -43,6 +43,7 @@ extension NowPlayingViewController {
         artworkGroupTrailing.isActive = true
         artworkGroupTop.isActive = mode != .landscape
         placeInfoBlock(inControls: mode == .landscape)
+        placeSecondaryControls(withArtwork: isFocusMode(mode))
         infoBlock.isHidden = mode == .landscape && centerState != .artwork
         portraitMediaTop = nil
         switch mode {
@@ -125,6 +126,8 @@ extension NowPlayingViewController {
                 queueTop,
             ]
         case .focus(let geometry):
+            let focusMediaTop = centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: Self.portraitMediaInset)
+            portraitMediaTop = focusMediaTop
             let columnGap = geometry.secondaryLeading - geometry.primaryWidth + 12
             constraints = [
                 focusLeftColumn.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -135,7 +138,7 @@ extension NowPlayingViewController {
                 focusRightColumn.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -24),
                 focusRightColumn.topAnchor.constraint(equalTo: view.topAnchor),
                 focusRightColumn.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-                centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 24),
+                focusMediaTop,
                 centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
                 centerContainer.trailingAnchor.constraint(equalTo: focusLeftColumn.trailingAnchor),
                 centerContainer.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -24),
@@ -184,13 +187,33 @@ extension NowPlayingViewController {
     }
 
     private func currentMediaClearance() -> AdaptiveLayout.MediaClearance {
-        guard isPaneMode, paneStyle == .halves, layoutMode == .portrait, centerState == .artwork else { return .none }
-        let column = portraitColumn.layoutFrame
+        let showsCover = (layoutMode == .portrait && centerState == .artwork) || isFocusLayout
+        guard isPaneMode, paneStyle == .halves, showsCover else { return .none }
+        let column = isFocusLayout ? centerContainer.frame : portraitColumn.layoutFrame
         guard column.width > 0 else { return .none }
         return AdaptiveLayout.mediaClearance(
             column: column.minX...column.maxX, safeTop: view.safeAreaInsets.top, occlusions: view.activeOcclusionFrames
         )
     }
+
+    /// In focus the volume row and the action row close the cover's page under
+    /// the title, so lyrics or the queue have the facing page down to the
+    /// scrubber and transport; everywhere else they close the controls.
+    func placeSecondaryControls(withArtwork: Bool) {
+        let rows: [UIView] = [volumeRowView, actionRowContainer]
+        guard withArtwork != (volumeRowView.superview === artworkGroup) else { return }
+        actionRowEditor?.endEditing()
+        for row in rows { row.removeFromSuperview() }
+        if withArtwork {
+            for row in rows { artworkGroup.addArrangedSubview(row) }
+            artworkGroup.setCustomSpacing(Self.focusSecondarySpacing, after: infoBlock)
+            artworkGroup.setCustomSpacing(Self.focusSecondarySpacing, after: volumeRowView)
+        } else {
+            for row in rows { bottomControls.addArrangedSubview(row) }
+        }
+    }
+
+    static let focusSecondarySpacing: CGFloat = 18
 
     /// Landscape gives the artwork a column to itself, so the title block moves
     /// to the top of the controls column; every other pose keeps it under the
@@ -240,7 +263,9 @@ extension NowPlayingViewController {
     func applyControlSpacing(compact: Bool) {
         bottomControls.spacing = compact ? 12 : 22
         bottomControls.setCustomSpacing(compact ? 14 : 28, after: transportStack)
-        bottomControls.setCustomSpacing(compact ? 18 : 34, after: volumeRowView)
+        if volumeRowView.superview === bottomControls {
+            bottomControls.setCustomSpacing(compact ? 18 : 34, after: volumeRowView)
+        }
     }
 
     /// Narrows the margins and the cover of an iPad's Now Playing column, and
