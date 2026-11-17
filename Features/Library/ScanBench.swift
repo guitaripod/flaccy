@@ -293,18 +293,11 @@ nonisolated private final class MainThreadSampler: @unchecked Sendable {
 
     private func sampleOnce() {
         guard thread_suspend(mainThread) == KERN_SUCCESS else { return }
-        var state = arm_thread_state64_t()
-        var count = mach_msg_type_number_t(MemoryLayout<arm_thread_state64_t>.size / MemoryLayout<natural_t>.size)
-        let read = withUnsafeMutablePointer(to: &state) {
-            $0.withMemoryRebound(to: natural_t.self, capacity: Int(count)) {
-                thread_get_state(mainThread, ARM_THREAD_STATE64, $0, &count)
-            }
-        }
         var frames = 0
-        if read == KERN_SUCCESS {
-            buffer[frames] = Self.strip(UInt(state.__pc)); frames += 1
-            buffer[frames] = Self.strip(UInt(state.__lr)); frames += 1
-            var framePointer = UInt(state.__fp)
+        if let registers = Self.registers(of: mainThread) {
+            buffer[frames] = Self.strip(registers.pc); frames += 1
+            buffer[frames] = Self.strip(registers.lr); frames += 1
+            var framePointer = registers.fp
             var pair: (UInt, UInt) = (0, 0)
             while frames < Self.depth, framePointer != 0, framePointer & 0x7 == 0 {
                 var copied: vm_size_t = 0
@@ -331,6 +324,24 @@ nonisolated private final class MainThreadSampler: @unchecked Sendable {
             busySamples += 1
             for pc in Set(stack) { inclusive[pc, default: 0] += 1 }
         }
+    }
+
+    /// The program counter, link register and frame pointer of a suspended thread,
+    /// or nil where the register layout is not known (the x86_64 simulator slice).
+    private static func registers(of thread: thread_act_t) -> (pc: UInt, lr: UInt, fp: UInt)? {
+        #if arch(arm64)
+        var state = arm_thread_state64_t()
+        var count = mach_msg_type_number_t(MemoryLayout<arm_thread_state64_t>.size / MemoryLayout<natural_t>.size)
+        let read = withUnsafeMutablePointer(to: &state) {
+            $0.withMemoryRebound(to: natural_t.self, capacity: Int(count)) {
+                thread_get_state(thread, ARM_THREAD_STATE64, $0, &count)
+            }
+        }
+        guard read == KERN_SUCCESS else { return nil }
+        return (UInt(state.__pc), UInt(state.__lr), UInt(state.__fp))
+        #else
+        return nil
+        #endif
     }
 
     func report(top: Int) -> [String] {
