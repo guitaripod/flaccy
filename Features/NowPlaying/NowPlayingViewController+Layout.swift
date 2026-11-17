@@ -34,6 +34,8 @@ extension NowPlayingViewController {
     /// column but ends the media region at the fold and starts the controls
     /// below it, with lyrics beside the artwork and the queue above the
     /// controls: the same controls in every pose, arranged around the hinge.
+    /// Focus gives the artwork one page of the window and the lyrics or queue
+    /// the other, both inside the centre box so each page keeps its touches.
     func activateLayoutMode(_ mode: AdaptiveLayout.PlayerLayout, foldTop: CGFloat?, foldBottom: CGFloat?) {
         NSLayoutConstraint.deactivate(modeConstraints)
         let safe = view.safeAreaLayoutGuide
@@ -129,6 +131,7 @@ extension NowPlayingViewController {
             let focusMediaTop = centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: Self.portraitMediaInset)
             portraitMediaTop = focusMediaTop
             let columnGap = geometry.secondaryLeading - geometry.primaryWidth + 12
+            artworkGroupTrailing.isActive = false
             constraints = [
                 focusLeftColumn.leadingAnchor.constraint(equalTo: view.leadingAnchor),
                 focusLeftColumn.widthAnchor.constraint(equalToConstant: geometry.primaryWidth - 12),
@@ -140,15 +143,16 @@ extension NowPlayingViewController {
                 focusRightColumn.bottomAnchor.constraint(equalTo: view.bottomAnchor),
                 focusMediaTop,
                 centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
-                centerContainer.trailingAnchor.constraint(equalTo: focusLeftColumn.trailingAnchor),
+                centerContainer.trailingAnchor.constraint(equalTo: safe.trailingAnchor),
                 centerContainer.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -24),
+                artworkGroup.trailingAnchor.constraint(equalTo: focusLeftColumn.trailingAnchor),
                 artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: centerContainer.heightAnchor, constant: -120),
                 bottomControls.leadingAnchor.constraint(equalTo: focusRightColumn.leadingAnchor),
                 bottomControls.trailingAnchor.constraint(equalTo: focusRightColumn.trailingAnchor),
                 bottomControls.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -16),
                 stateContentContainer.leadingAnchor.constraint(equalTo: focusRightColumn.leadingAnchor),
                 stateContentContainer.trailingAnchor.constraint(equalTo: safe.trailingAnchor),
-                stateContentContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 16),
+                stateContentContainer.topAnchor.constraint(equalTo: centerContainer.topAnchor),
                 stateContentContainer.bottomAnchor.constraint(equalTo: bottomControls.topAnchor, constant: -12),
             ]
         }
@@ -189,7 +193,9 @@ extension NowPlayingViewController {
     private func currentMediaClearance() -> AdaptiveLayout.MediaClearance {
         let showsCover = (layoutMode == .portrait && centerState == .artwork) || isFocusLayout
         guard isPaneMode, paneStyle == .halves, showsCover else { return .none }
-        let column = isFocusLayout ? centerContainer.frame : portraitColumn.layoutFrame
+        let column = isFocusLayout
+            ? artworkGroup.convert(artworkGroup.bounds, to: view)
+            : portraitColumn.layoutFrame
         guard column.width > 0 else { return .none }
         return AdaptiveLayout.mediaClearance(
             column: column.minX...column.maxX, safeTop: view.safeAreaInsets.top, occlusions: view.activeOcclusionFrames

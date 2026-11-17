@@ -33,7 +33,6 @@ enum AdaptiveLayout {
     static let playerRoomyLandscapeMinimumHeight: CGFloat = 500
     static let paneQueueMinimumHeight: CGFloat = 150
     static let badgesBesideTitleMinimumWidth: CGFloat = 300
-    static let actionRowSingleLineMinimumWidth: CGFloat = 310
 
     static let homeWideMinimumWidth: CGFloat = 760
     static let homeWideJumpColumns = 3

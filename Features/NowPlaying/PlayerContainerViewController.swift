@@ -139,6 +139,12 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     private let lockInGenerator = UIImpactFeedbackGenerator(style: .soft)
     private var reduceMotion: Bool { UIAccessibility.isReduceMotionEnabled }
 
+    /// The corner the card wears at full size. An iPad's window already clips
+    /// its content to the system's own rounded shape, so the player adds none
+    /// of its own there; iPhone keeps the 44-point corners of the full-screen
+    /// sheet.
+    private var fullCorner: CGFloat { DeviceKind.isPad ? 0 : MorphTuning.fullCorner }
+
     override func loadView() {
         view = OverlayView()
         view.backgroundColor = .clear
@@ -433,7 +439,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        let cornerRadius = lerp(dockCorner, MorphTuning.fullCorner, t)
+        let cornerRadius = lerp(dockCorner, fullCorner, t)
         cardView.layer.cornerRadius = cornerRadius
         cardView.layer.maskedCorners = isPaneMode && paneStyle == .column ? .rightCorners : .allCorners
         cardShadowView.frame = cardView.frame

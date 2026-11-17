@@ -4,6 +4,37 @@ import AVKit
 import Combine
 import UIKit
 
+/// The player's title block. It reports a width that has changed after a layout
+/// pass, so the badges are placed from the width the block really has instead
+/// of one measured mid-transition.
+final class InfoBlockView: UIStackView {
+
+    var onWidthChange: ((CGFloat) -> Void)?
+
+    private var lastLaidOutWidth: CGFloat = 0
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard abs(bounds.width - lastLaidOutWidth) > 0.5 else { return }
+        lastLaidOutWidth = bounds.width
+        onWidthChange?(bounds.width)
+    }
+}
+
+/// The box holding the artwork page and the lyrics or queue page. In focus it
+/// spans the window so the facing page keeps its touches, which leaves it
+/// covering gutters and the controls below the pages; those places belong to
+/// whatever sits under this box, so only its own pieces accept a touch.
+final class CenterContainerView: UIView {
+
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        for subview in subviews where subview.isUserInteractionEnabled && !subview.isHidden && subview.alpha > 0.01 {
+            if subview.frame.contains(point) { return true }
+        }
+        return false
+    }
+}
+
 extension NowPlayingViewController {
 
     /// Hosts the three exclusive center states: the artwork column (default),

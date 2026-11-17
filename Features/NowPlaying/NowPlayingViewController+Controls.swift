@@ -169,28 +169,17 @@ extension NowPlayingViewController {
         return actionRowContainer
     }
 
-    /// Lays the capsules out from the person's saved order, splitting into two
-    /// rows at accessibility text sizes or in a column too narrow for seven
-    /// round capsules, so they never overflow or squeeze into ovals.
+    /// Lays the capsules out from the person's saved order. An accessibility
+    /// text size forces two rows; at ordinary sizes the row splits itself when
+    /// its own width cannot draw every capsule round.
     func relayoutActionRow() {
-        let wraps = traitCollection.preferredContentSizeCategory.isAccessibilityCategory || actionRowIsNarrow
+        let wraps = traitCollection.preferredContentSizeCategory.isAccessibilityCategory
         actionRowEditor?.applyLayout(wraps: wraps)
     }
 
     /// Opens the jiggle for the screenshot and exercise routes.
     func beginActionRowEditing() {
         actionRowEditor?.beginEditing()
-    }
-
-    /// Re-splits the capsule row when the column it lives in crosses the width
-    /// that fits them on one line.
-    func refreshActionRowWrapping() {
-        let width = bottomControls.bounds.width
-        guard width > 1 else { return }
-        let narrow = width < AdaptiveLayout.actionRowSingleLineMinimumWidth
-        guard narrow != actionRowIsNarrow else { return }
-        actionRowIsNarrow = narrow
-        relayoutActionRow()
     }
 
     func configureActionButtons() {

@@ -72,11 +72,10 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     var centerState: CenterState = .artwork
     var bottomControls = UIStackView()
-    let infoBlock = UIStackView()
+    let infoBlock = InfoBlockView()
     let titleRow = UIStackView()
     let badgeStrip = UIStackView()
     let wrappedBadgeLine = UIStackView()
-    var actionRowIsNarrow = false
     var volumeRowView = UIView()
     var layoutMode: AdaptiveLayout.PlayerLayout = .portrait
     var modeConstraints: [NSLayoutConstraint] = []
@@ -99,7 +98,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     var laptopLyricsChild: LyricsViewController?
     var laptopQueueChild: QueueViewController?
     var stateChildController: UIViewController?
-    let centerContainer = UIView()
+    let centerContainer = CenterContainerView()
     let artworkGroup = UIStackView()
     let compactHeader = UIControl()
     let compactArtworkView = UIImageView()
@@ -221,7 +220,6 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         updateLayoutModeIfNeeded()
         applyMediaClearance()
         placeBadgeStrip()
-        refreshActionRowWrapping()
         backdropView.frame = view.bounds
         scrimLayer.frame = view.bounds
         artworkContainer.layer.shadowPath = UIBezierPath(
@@ -254,6 +252,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         setupTransport()
 
         let infoStack = infoBlock
+        infoStack.onWidthChange = { [weak self] _ in self?.placeBadgeStrip() }
         for row in [makeTitleRow(), versionRow, makeArtistAlbumRow(), playingFromLabel] { infoStack.addArrangedSubview(row) }
         infoStack.axis = .vertical
         infoStack.spacing = 4

@@ -1,13 +1,18 @@
 import UIKit
 
-/// The player's action row. It lays the capsules out itself, in one equal
-/// row or two when the column is narrow, so a drag never has to take a control
-/// out of the window: the touched view is the view being moved.
+/// The player's action row. It lays the capsules out itself, in one equal row
+/// or two when the width it was given leaves no room to draw every control
+/// round, so a drag never has to take a control out of the window: the touched
+/// view is the view being moved.
 @MainActor
 final class PlayerActionRowView: UIView {
 
     static let capsuleHeight: CGFloat = 44
     static let spacing: CGFloat = 8
+
+    /// The narrowest slot that still reads as a round capsule rather than an
+    /// oval, a few points under its height.
+    static let roundSlotMinimumWidth: CGFloat = capsuleHeight - 4
 
     private var capsules: [PlayerAction: GlassCapsule] = [:]
 
@@ -15,13 +20,20 @@ final class PlayerActionRowView: UIView {
         didSet { setNeedsLayout() }
     }
 
-    var wraps = false {
+    /// Set for an accessibility text size, where the row takes two rows
+    /// whatever width it is given.
+    var forcesWrap = false {
         didSet {
-            guard wraps != oldValue else { return }
+            guard forcesWrap != oldValue else { return }
             invalidateIntrinsicContentSize()
             setNeedsLayout()
         }
     }
+
+    /// Whether this view's own width has no room to draw the capsules round.
+    private(set) var widthWraps = false
+
+    var wraps: Bool { forcesWrap || widthWraps }
 
     /// The control following the finger, skipped by layout until it is dropped.
     var floating: PlayerAction? {
@@ -47,9 +59,24 @@ final class PlayerActionRowView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        refreshWrapForWidth()
         for action in order where action != floating {
             capsules[action]?.frame = frame(for: action)
         }
+    }
+
+    /// Splits the row at the moment its real width is known, so a row that has
+    /// just been moved between the controls column and the artwork's page never
+    /// keeps a shape it measured in the other box.
+    private func refreshWrapForWidth() {
+        guard order.count > 4, bounds.width > 1 else { return }
+        let count = CGFloat(order.count)
+        let slot = (bounds.width - Self.spacing * (count - 1)) / count
+        let next = slot < Self.roundSlotMinimumWidth
+        guard next != widthWraps else { return }
+        widthWraps = next
+        invalidateIntrinsicContentSize()
+        superview?.setNeedsLayout()
     }
 
     /// The slot an action occupies in the current arrangement, in this view's
@@ -145,13 +172,14 @@ final class PlayerActionRowEditor: NSObject, UIGestureRecognizerDelegate {
         order.actions.compactMap { controls[$0] }
     }
 
-    /// Arranges the capsules from the model, splitting into two equal rows when
-    /// the column is too narrow for seven round capsules.
+    /// Arranges the capsules from the model, forcing two equal rows for an
+    /// accessibility text size; at ordinary sizes the view splits itself from
+    /// the width it is given.
     func applyLayout(wraps: Bool) {
         if isEditing {
             endEditing()
         }
-        container.wraps = wraps
+        container.forcesWrap = wraps
         container.order = order.actions
         container.setNeedsLayout()
     }
