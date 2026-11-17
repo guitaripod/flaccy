@@ -13,12 +13,13 @@ nonisolated enum PlaylistMakerFailure: Error, Sendable, Equatable {
     case nothingFits(note: String)
     case declined
     case unavailable
+    case unavailableInRegion
 
     /// Whether asking for something else is the way forward, so the example requests are worth showing again.
     var invitesAnotherRequest: Bool {
         switch self {
         case .nothingFits, .declined: true
-        case .needsEntitlement, .emptyLibrary, .unreachable, .quotaReached, .unavailable: false
+        case .needsEntitlement, .emptyLibrary, .unreachable, .quotaReached, .unavailable, .unavailableInRegion: false
         }
     }
 }
@@ -138,6 +139,7 @@ nonisolated final class PlaylistMakerService: Sendable {
     }
 
     private func ask<Reply: Decodable>(_ step: String, _ body: some Encodable & Sendable) async -> Result<Reply, PlaylistMakerFailure> {
+        guard FlaccyModelRegion.modelsAvailable else { return .failure(.unavailableInRegion) }
         let reply: FlaccyAPIClient.ProxyReply
         do {
             reply = try await FlaccyMidgar.shared.api.postPlaylist(step: step, body)
@@ -151,6 +153,9 @@ nonisolated final class PlaylistMakerService: Sendable {
             break
         case .quotaReached(let resetsAt):
             return .failure(.quotaReached(resetsAt: resetsAt))
+        case .unavailableInRegion:
+            MidgarLog.notice("Playlist \(step) refused for the region", category: .content)
+            return .failure(.unavailableInRegion)
         case .busy, .payloadTooLarge, .unavailable:
             MidgarLog.notice("Playlist \(step) answered \(reply.status) \(errorCode ?? "")", category: .content)
             return .failure(errorCode == "request_declined" ? .declined : .unavailable)

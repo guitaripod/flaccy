@@ -74,9 +74,14 @@ extension LyricsViewController {
         return button
     }
 
+    /// Shows the Meaning button for a song with sung lines, and only where the model features work.
+    func refreshMeaningButton() {
+        meaningButton.isHidden = !FlaccyModelRegion.modelsAvailable || (lyrics.map { MeaningPrompt.sungLines($0.document).isEmpty } ?? true)
+    }
+
     /// Opens the Meaning sheet on line `line`, or on the whole song.
     func presentMeaning(line: Int?) {
-        guard let lyrics, presentedViewController == nil else { return }
+        guard FlaccyModelRegion.modelsAvailable, let lyrics, presentedViewController == nil else { return }
         lineSelectionFeedback.impactOccurred()
         LyricsMeaningViewController.present(
             song: MeaningSong(title: trackTitle, artist: artistName, album: albumName),

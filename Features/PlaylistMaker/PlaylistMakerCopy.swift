@@ -1,5 +1,6 @@
 import FlaccyCore
 import Foundation
+import MidgarCore
 
 /// The words of Make a Playlist on iPhone, iPad and Mac.
 nonisolated enum PlaylistMakerCopy {
@@ -73,6 +74,8 @@ nonisolated enum PlaylistMakerCopy {
             return String(localized: "That couldn't be made into a playlist. Describe the music you want to hear.")
         case .unavailable:
             return String(localized: "Couldn't make the playlist because Flaccy's AI is unavailable right now. Try again in a few minutes.")
+        case .unavailableInRegion:
+            return MidgarModelRegion.unavailableMessage
         }
     }
 }

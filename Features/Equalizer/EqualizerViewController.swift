@@ -23,6 +23,7 @@ final class EqualizerViewController: UIViewController {
     let backdrop = AmbientPaletteBackdropView()
     let scroll = UIScrollView()
     let stack = UIStackView()
+    weak var describeRow: UIView?
 
     let titleLabel = UILabel()
     let enableSwitch = UISwitch()
@@ -97,6 +98,10 @@ final class EqualizerViewController: UIViewController {
     var profile: EqualizerProfile { engine.profileInForce }
     var mode: EqualizerCurveView.Mode { profile.kind == .graphic ? .simple : .advanced }
 
+    @objc private func modelRegionDidChange() {
+        describeRow?.isHidden = !FlaccyModelRegion.modelsAvailable
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
@@ -108,6 +113,7 @@ final class EqualizerViewController: UIViewController {
         auditioner.didChange = { [weak self] profile in self?.auditionChanged(to: profile) }
         NotificationCenter.default.addObserver(self, selector: #selector(stateChanged), name: EqualizerEngine.stateDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(trackChanged), name: AudioPlayer.trackDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(modelRegionDidChange), name: FlaccyModelRegion.didChangeNotification, object: nil)
         updatePalette()
         refresh(animated: false)
     }

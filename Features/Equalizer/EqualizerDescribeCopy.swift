@@ -1,5 +1,6 @@
 import FlaccyCore
 import Foundation
+import MidgarCore
 
 /// Every word of Describe the Sound, written once for the iPhone and the Mac.
 enum EqualizerDescribeCopy {
@@ -64,6 +65,8 @@ enum EqualizerDescribeCopy {
             return note.isEmpty ? String(localized: "That didn't describe a sound an equalizer can shape. Say how you want the music to sound.") : note
         case .unavailable:
             return String(localized: "Couldn't shape the curve because Flaccy's AI is unavailable right now. Try again in a few minutes.")
+        case .unavailableInRegion:
+            return MidgarModelRegion.unavailableMessage
         }
     }
 }

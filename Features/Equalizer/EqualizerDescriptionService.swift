@@ -13,12 +13,13 @@ nonisolated enum EqualizerDescriptionFailure: Error, Sendable, Equatable {
     /// The sentence described nothing an equalizer can shape; the model's own sentence about it, when it gave one.
     case nothingToShape(note: String)
     case unavailable
+    case unavailableInRegion
 
     /// Whether saying it another way is the way forward, so the example sentences are worth showing again.
     var invitesAnotherSentence: Bool {
         switch self {
         case .nothingToShape: true
-        case .needsEntitlement, .unreachable, .quotaReached, .unavailable: false
+        case .needsEntitlement, .unreachable, .quotaReached, .unavailable, .unavailableInRegion: false
         }
     }
 }
@@ -34,6 +35,7 @@ nonisolated final class EqualizerDescriptionService: Sendable {
     /// The curve for `sentence`, starting from `inForce` when the sentence is about how it sounds now.
     func curve(for sentence: String, output: String, inForce: EqualizerProfile) async -> Result<DescribedEqualizer, EqualizerDescriptionFailure> {
         guard await MainActor.run(body: { PurchaseManager.shared.allowsPlayback }) else { return .failure(.needsEntitlement) }
+        guard FlaccyModelRegion.modelsAvailable else { return .failure(.unavailableInRegion) }
         let body = EqualizerDescription.request(
             sentence, language: LyricsMeaningService.languageName, output: output, device: await Self.device(), inForce: inForce)
         let reply: FlaccyAPIClient.ProxyReply
@@ -49,6 +51,9 @@ nonisolated final class EqualizerDescriptionService: Sendable {
             break
         case .quotaReached(let resetsAt):
             return .failure(.quotaReached(resetsAt: resetsAt))
+        case .unavailableInRegion:
+            MidgarLog.notice("Equalizer sentence refused for the region", category: .content)
+            return .failure(.unavailableInRegion)
         case .busy, .payloadTooLarge, .unavailable:
             MidgarLog.notice("Equalizer sentence answered \(reply.status) \(errorCode ?? "")", category: .content)
             return .failure(errorCode == "request_declined" ? .nothingToShape(note: "") : .unavailable)

@@ -44,6 +44,15 @@ final class PaywallProofTests: XCTestCase {
         )
     }
 
+    func testTheAIReviewedLineIsDroppedWhileTheModelsAreRefused() {
+        XCTAssertEqual(
+            proof().lines(limit: 5, modelsAvailable: false),
+            [.lossless(tracks: 2_619, hours: 460), .scrobbled(412), .lyrics(903), .covers(191)]
+        )
+        XCTAssertEqual(proof().lines(limit: 5, modelsAvailable: true), proof().lines(limit: 5))
+        XCTAssertEqual(proof(aiReviewedTracks: 0).lines(limit: 5, modelsAvailable: false), proof(aiReviewedTracks: 0).lines(limit: 5))
+    }
+
     func testLimitBoundsTheLines() {
         let full: [PaywallProof.Line] = [
             .lossless(tracks: 2_619, hours: 460),

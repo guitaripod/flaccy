@@ -10,6 +10,7 @@ import UserNotifications
 /// Library: root folder, storage usage, rescan and AI re-analysis, the live
 /// metadata job, and reveals.
 final class LibrarySettingsPane: SettingsPane {
+    private weak var analyzeNote: NSView?
 
     let rootLabel = NSTextField(labelWithString: "")
     let overviewView = MacLibraryOverviewView()
@@ -62,8 +63,11 @@ final class LibrarySettingsPane: SettingsPane {
         analyzeButton.bezelStyle = .rounded
         analyzeButton.target = self
         analyzeButton.action = #selector(analyzeTapped)
+        analyzeButton.isHidden = !FlaccyModelRegion.modelsAvailable
         buildActivityRow()
-        addFullWidth(explanation(String(localized: "Re-analyze cleans up titles, artists and albums from file names with AI.")))
+        let analyzeNote = explanation(String(localized: "Re-analyze cleans up titles, artists and albums from file names with AI."))
+        self.analyzeNote = analyzeNote
+        addFullWidth(analyzeNote)
         formStack.addArrangedSubview(separator())
 
         buildMetadataGroup()
@@ -153,6 +157,9 @@ final class LibrarySettingsPane: SettingsPane {
         appleMusicCheckbox.state = AppleMusicArtworkSetting.isEnabled ? .on : .off
         NotificationCenter.default.addObserver(
             self, selector: #selector(libraryChanged), name: Library.didUpdateNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(modelRegionDidChange), name: FlaccyModelRegion.didChangeNotification, object: nil
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(libraryChanged), name: LibraryRoot.didChange, object: nil
@@ -422,8 +429,13 @@ final class LibrarySettingsPane: SettingsPane {
         }
     }
 
+    @objc private func modelRegionDidChange() {
+        analyzeButton.isHidden = !FlaccyModelRegion.modelsAvailable
+        analyzeNote?.isHidden = !FlaccyModelRegion.modelsAvailable
+    }
+
     @objc func analyzeTapped() {
-        guard !isWorking, let window = view.window else { return }
+        guard FlaccyModelRegion.modelsAvailable, !isWorking, let window = view.window else { return }
         let alert = NSAlert()
         alert.messageText = String(localized: "Re-analyze Library with AI")
         alert.informativeText = String(localized: "This re-analyzes every track's metadata with AI and rewrites titles, artists, and album grouping in the database. It may take a few minutes for large libraries.")

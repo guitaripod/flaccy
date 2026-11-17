@@ -183,6 +183,7 @@ actor EnrichmentCoordinator {
             guard pause.resumesAt <= Date() else { return }
             aiPause = nil
         }
+        if scope == .aiBatch, !FlaccyModelRegion.modelsAvailable { return }
 
         while !Task.isCancelled {
             let version = scope.currentVersion
@@ -240,6 +241,10 @@ actor EnrichmentCoordinator {
                 if outcome.changedLibrary, case .album(let title, let artist)? = byKey[outcome.key] {
                     announce(title: title, artist: artist)
                 }
+                if outcome.interruption == .unavailableInRegion {
+                    stop = true
+                    continue
+                }
 
                 switch breaker.observe(Self.observation(of: outcome), now: Date()) {
                 case .carryOn:
@@ -279,6 +284,7 @@ actor EnrichmentCoordinator {
         case .quotaReached(let resetsAt)?: return .quotaReached(resetsAt: resetsAt)
         case .unavailable?: return .serviceError
         case .unreachable?: return .transport
+        case .unavailableInRegion?: return .progress
         case nil:
             switch outcome.failure {
             case .transport: return .transport

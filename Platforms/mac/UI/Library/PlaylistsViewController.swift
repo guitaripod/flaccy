@@ -4,6 +4,12 @@ import MidgarCore
 /// Playlist list: stacked-artwork mosaics, create/rename/delete via header
 /// button and context menu, double-click to open the reorderable detail.
 final class PlaylistsViewController: NSViewController {
+    private weak var makePlaylistButton: NSView?
+
+    @objc private func modelRegionDidChange() {
+        makePlaylistButton?.isHidden = !FlaccyModelRegion.modelsAvailable
+    }
+
 
     var onOpenPlaylist: ((PlaylistRecord) -> Void)?
 
@@ -85,6 +91,8 @@ final class PlaylistsViewController: NSViewController {
         makeButton.onClick = { [weak self] in
             self?.presentAsSheet(MacPlaylistMakerViewController())
         }
+        makeButton.isHidden = !FlaccyModelRegion.modelsAvailable
+        makePlaylistButton = makeButton
 
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
@@ -123,6 +131,9 @@ final class PlaylistsViewController: NSViewController {
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(searchQueryChanged(_:)), name: .flaccySearchQueryChanged, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(modelRegionDidChange), name: FlaccyModelRegion.didChangeNotification, object: nil
         )
         artworkObserver = ArtworkChangeObserver { [weak self] in self?.reload() }
         reload()

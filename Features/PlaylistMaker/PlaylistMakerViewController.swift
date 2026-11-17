@@ -289,7 +289,7 @@ final class PlaylistMakerViewController: UIViewController, UITableViewDataSource
         case .unreachable, .unavailable:
             failureButton.configuration?.title = PlaylistMakerCopy.tryAgain
             failureAction = { [weak self] in self?.makeTapped() }
-        case .emptyLibrary, .quotaReached, .nothingFits, .declined, nil:
+        case .emptyLibrary, .quotaReached, .nothingFits, .declined, .unavailableInRegion, nil:
             failureAction = nil
         }
         failureButton.superview?.isHidden = failureAction == nil

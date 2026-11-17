@@ -278,7 +278,7 @@ final class LibraryDebutView: UIView {
         let skipped = job.activity == .needsEntitlement
         let apply = {
             self.trialChip.isHidden = skipped || job.scope != .aiBatch
-                || PurchaseManager.shared.state.isPurchased
+                || PurchaseManager.shared.state.isPurchased || !FlaccyModelRegion.modelsAvailable
             self.entitlementPill.isHidden = !skipped
         }
         guard !reduceMotion else {

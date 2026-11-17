@@ -17,6 +17,7 @@ final class PaywallViewController: UIViewController {
         let symbolName: String
         let title: String
         let detail: String
+        var needsModels = false
     }
 
     private static let features: [Feature] = [
@@ -28,7 +29,8 @@ final class PaywallViewController: UIViewController {
         Feature(
             symbolName: "wand.and.stars",
             title: String(localized: "AI tag cleanup"),
-            detail: String(localized: "Scrambled filenames become real titles, artists and albums.")
+            detail: String(localized: "Scrambled filenames become real titles, artists and albums."),
+            needsModels: true
         ),
         Feature(
             symbolName: "dot.radiowaves.left.and.right",
@@ -364,7 +366,7 @@ final class PaywallViewController: UIViewController {
 
     private func makeFeatureCard() -> UIView {
         let card = PaywallCardView()
-        let stack = UIStackView(arrangedSubviews: Self.features.map(makeFeatureRow))
+        let stack = UIStackView(arrangedSubviews: Self.features.filter { !$0.needsModels || FlaccyModelRegion.modelsAvailable }.map(makeFeatureRow))
         stack.axis = .vertical
         stack.spacing = 16
         card.install(stack)
@@ -510,7 +512,7 @@ final class PaywallViewController: UIViewController {
     }
 
     private func showProof(_ proof: PaywallProof) {
-        guard proof.hasLibrary, !proof.lines().isEmpty else { return }
+        guard proof.hasLibrary, !proof.lines(modelsAvailable: FlaccyModelRegion.modelsAvailable).isEmpty else { return }
         proofCard.render(proof, state: PurchaseManager.shared.state)
         proofCard.isHidden = false
         let animator = UIViewPropertyAnimator(duration: 0.35, curve: .easeOut) {
@@ -679,7 +681,7 @@ final class PaywallProofCardView: UIView {
     func render(_ proof: PaywallProof, state: EntitlementState) {
         setTitle(for: state)
         linesStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        for line in proof.lines() {
+        for line in proof.lines(modelsAvailable: FlaccyModelRegion.modelsAvailable) {
             linesStack.addArrangedSubview(makeRow(symbolName: Self.symbolName(for: line), text: PaywallCopy.proofLine(line)))
         }
     }

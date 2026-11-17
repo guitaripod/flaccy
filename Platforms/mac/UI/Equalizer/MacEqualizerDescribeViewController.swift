@@ -314,7 +314,7 @@ final class MacEqualizerDescribeViewController: NSViewController, NSTextFieldDel
         case .unreachable, .unavailable:
             failureButton.title = PlaylistMakerCopy.tryAgain
             failureAction = { [weak self] in self?.shapeTapped() }
-        case .quotaReached, .nothingToShape, nil:
+        case .quotaReached, .nothingToShape, .unavailableInRegion, nil:
             failureAction = nil
         }
         failureButton.isHidden = failureAction == nil

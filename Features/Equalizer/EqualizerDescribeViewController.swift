@@ -443,7 +443,7 @@ final class EqualizerDescribeViewController: UIViewController, UITextViewDelegat
         case .unreachable, .unavailable:
             failureButton.configuration?.title = PlaylistMakerCopy.tryAgain
             failureAction = { [weak self] in self?.shapeTapped() }
-        case .quotaReached, .nothingToShape, nil:
+        case .quotaReached, .nothingToShape, .unavailableInRegion, nil:
             failureAction = nil
         }
         failureButton.superview?.isHidden = failureAction == nil

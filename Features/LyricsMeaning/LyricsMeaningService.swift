@@ -16,6 +16,7 @@ nonisolated enum MeaningFailure: Sendable, Equatable {
     case unreachable
     case quotaReached(resetsAt: Date)
     case unavailable
+    case unavailableInRegion
     case unreadable
 }
 
@@ -146,6 +147,7 @@ nonisolated final class LyricsMeaningService: Sendable {
     }
 
     private func ask(_ request: MeaningChatRequest) async -> MeaningReading {
+        guard FlaccyModelRegion.modelsAvailable else { return .failed(.unavailableInRegion) }
         let reply: FlaccyAPIClient.ProxyReply
         do {
             reply = try await FlaccyMidgar.shared.api.postMetadata(request)
@@ -159,6 +161,9 @@ nonisolated final class LyricsMeaningService: Sendable {
             break
         case .quotaReached(let resetsAt):
             return .failed(.quotaReached(resetsAt: resetsAt))
+        case .unavailableInRegion:
+            MidgarLog.notice("Lyric meaning refused for the region", category: .content)
+            return .failed(.unavailableInRegion)
         case .busy, .payloadTooLarge, .unavailable:
             MidgarLog.notice("Lyric meaning proxy answered \(reply.status) \(errorCode ?? "")", category: .content)
             return .failed(.unavailable)

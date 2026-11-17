@@ -18,6 +18,9 @@ public enum AIProxyReply: Equatable, Sendable {
 
     case payloadTooLarge
 
+    /// Midgar's servers refuse model calls from this country (HTTP 451): model features do not work here.
+    case unavailableInRegion
+
     /// Any other error status: the proxy answered, with nothing useful.
     case unavailable
 
@@ -34,6 +37,8 @@ public enum AIProxyReply: Equatable, Sendable {
             return .answer
         case 413:
             return .payloadTooLarge
+        case 451:
+            return .unavailableInRegion
         case 429:
             guard let errorCode, errorCode.hasSuffix(dailyLimitSuffix) else { return .busy }
             return .quotaReached(resetsAt: resetDate(retryAfter: retryAfter, now: now))

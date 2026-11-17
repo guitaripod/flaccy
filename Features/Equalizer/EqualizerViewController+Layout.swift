@@ -36,7 +36,10 @@ extension EqualizerViewController {
         stack.addArrangedSubview(makeModeControl())
         stack.addArrangedSubview(makeCurveCard())
         stack.addArrangedSubview(makePreampBlock())
-        stack.addArrangedSubview(makeDescribeRow())
+        let describeRow = makeDescribeRow()
+        self.describeRow = describeRow
+        describeRow.isHidden = !FlaccyModelRegion.modelsAvailable
+        stack.addArrangedSubview(describeRow)
         stack.addArrangedSubview(makePresetsBlock())
         stack.addArrangedSubview(makeAdvancedBlock())
         stack.addArrangedSubview(makeActionRow())
@@ -485,12 +488,16 @@ extension EqualizerViewController {
     }
 
     func moreMenuActions() -> [UIMenuElement] {
-        [
-            UIAction(title: EqualizerDescribeCopy.menuTitle, image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in self?.openDescribe() },
+        var actions: [UIMenuElement] = []
+        if FlaccyModelRegion.modelsAvailable {
+            actions.append(UIAction(title: EqualizerDescribeCopy.menuTitle, image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in self?.openDescribe() })
+        }
+        actions += [
             UIAction(title: String(localized: "Import from Text…"), image: UIImage(systemName: "square.and.arrow.down")) { [weak self] _ in self?.openImport() },
             UIAction(title: String(localized: "Export as Text"), image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in self?.exportProfile() },
             UIAction(title: String(localized: "Save as Preset…"), image: UIImage(systemName: "bookmark")) { [weak self] _ in self?.promptSave() },
             UIAction(title: String(localized: "Reset All Bands"), image: UIImage(systemName: "arrow.counterclockwise"), attributes: .destructive) { [weak self] _ in self?.resetToFlat() },
         ]
+        return actions
     }
 }

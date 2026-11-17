@@ -206,6 +206,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         ServerSyncLifecycle.shared.becameActive()
         RemoteLaunch.becameActive()
         WatchSyncService.shared.resumeIfNeeded()
+        Task { await FlaccyModelRegion.refresh() }
         Task {
             await RecapNotificationScheduler.shared.refreshSchedule()
         }

@@ -64,6 +64,8 @@ nonisolated final class FlaccyMidgar: Sendable {
             return
         }
         MidgarSignals.configure(configuration: MidgarHTTPConfiguration(appID: Self.appID))
+        FlaccyModelRegion.startRelay()
+        Task { await FlaccyModelRegion.refresh() }
         let identity = identity
         Task {
             do {

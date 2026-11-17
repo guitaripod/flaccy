@@ -28,8 +28,13 @@ extension LibraryViewController {
                 UIAction(title: String(localized: "New Playlist"), image: UIImage(systemName: "plus")) { [weak self] _ in
                     self?.createPlaylistTapped()
                 },
-                UIAction(title: PlaylistMakerCopy.menuTitle, image: UIImage(systemName: "sparkles")) { [weak self] _ in
-                    self?.makePlaylistTapped()
+                UIDeferredMenuElement.uncached { [weak self] completion in
+                    guard FlaccyModelRegion.modelsAvailable else { return completion([]) }
+                    completion([
+                        UIAction(title: PlaylistMakerCopy.menuTitle, image: UIImage(systemName: "sparkles")) { _ in
+                            self?.makePlaylistTapped()
+                        },
+                    ])
                 },
             ]))
             add.accessibilityIdentifier = "library.addPlaylist"

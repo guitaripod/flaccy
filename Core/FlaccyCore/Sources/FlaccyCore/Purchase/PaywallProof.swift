@@ -63,7 +63,8 @@ public struct PaywallProof: Equatable, Sendable {
     }
 
     /// Priority: lossless (when losslessTrackCount > 0) → plays (scrobbled or counted, > 0) → lyrics → covers → aiReviewed; zeros skipped; at most `limit`.
-    public func lines(limit: Int = 3) -> [Line] {
+    /// The AI-reviewed line is left out while the model features are refused for the device's country.
+    public func lines(limit: Int = 3, modelsAvailable: Bool = true) -> [Line] {
         var lines: [Line] = []
         if losslessTrackCount > 0 {
             lines.append(.lossless(tracks: losslessTrackCount, hours: listeningHours))
@@ -73,7 +74,7 @@ public struct PaywallProof: Equatable, Sendable {
         }
         if lyricsMatched > 0 { lines.append(.lyrics(lyricsMatched)) }
         if coversResolved > 0 { lines.append(.covers(coversResolved)) }
-        if aiReviewedTracks > 0 { lines.append(.aiReviewed(aiReviewedTracks)) }
+        if modelsAvailable, aiReviewedTracks > 0 { lines.append(.aiReviewed(aiReviewedTracks)) }
         return Array(lines.prefix(max(0, limit)))
     }
 }

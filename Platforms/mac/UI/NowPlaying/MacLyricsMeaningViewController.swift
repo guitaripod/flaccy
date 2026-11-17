@@ -172,7 +172,7 @@ final class MacLyricsMeaningViewController: NSViewController {
         case .needsEntitlement:
             actionButton.title = LyricsMeaningCopy.seePlans
             action = { (NSApp.delegate as? MacAppDelegate)?.presentPaywall() }
-        case .quotaReached:
+        case .quotaReached, .unavailableInRegion:
             action = nil
         case .unreachable, .unavailable, .unreadable:
             actionButton.title = LyricsMeaningCopy.tryAgain

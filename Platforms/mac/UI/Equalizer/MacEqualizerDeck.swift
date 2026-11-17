@@ -14,6 +14,8 @@ enum MacDeckRowAction {
 /// did; the screen decides what to play, so rows are restyled in place and
 /// rebuilt only when the person's own presets change, never under the pointer.
 final class MacEqualizerDeck: NSView {
+    private weak var describeButtonView: NSButton?
+
 
     var onPointed: ((String) -> Void)?
     var onLeft: (() -> Void)?
@@ -88,6 +90,11 @@ final class MacEqualizerDeck: NSView {
         importButton.translatesAutoresizingMaskIntoConstraints = false
 
         let describeButton = NSButton(title: EqualizerDescribeCopy.menuTitle, target: self, action: #selector(describePressed))
+        describeButton.isHidden = !FlaccyModelRegion.modelsAvailable
+        describeButtonView = describeButton
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(modelRegionDidChange), name: FlaccyModelRegion.didChangeNotification, object: nil
+        )
         describeButton.isBordered = false
         describeButton.image = NSImage(systemSymbolName: "wand.and.stars", accessibilityDescription: nil)
         describeButton.imagePosition = .imageLeading
@@ -264,7 +271,12 @@ final class MacEqualizerDeck: NSView {
     }
 
     @objc private func describePressed() {
+        guard FlaccyModelRegion.modelsAvailable else { return }
         onDescribe?()
+    }
+
+    @objc private func modelRegionDidChange() {
+        describeButtonView?.isHidden = !FlaccyModelRegion.modelsAvailable
     }
 
     @objc private func morePressed(_ sender: NSButton) {

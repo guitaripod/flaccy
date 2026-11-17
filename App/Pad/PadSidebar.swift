@@ -84,15 +84,10 @@ final class PadSidebar: NSObject {
         discoverGroup.sidebarAppearance = .rootSection
         super.init()
 
-        playlistsGroup.sidebarActions = [
-            UIAction(title: String(localized: "New Playlist"), image: UIImage(systemName: "plus")) { [weak self] _ in
-                self?.createPlaylist()
-            },
-            UIAction(title: PlaylistMakerCopy.menuTitle, image: UIImage(systemName: "sparkles")) { [weak self] _ in
-                guard let tabs = self?.tabs else { return }
-                tabs.library.makePlaylistTapped(presentingFrom: tabs)
-            },
-        ]
+        playlistsGroup.sidebarActions = playlistActions()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(modelRegionDidChange), name: FlaccyModelRegion.didChangeNotification, object: nil
+        )
         discoverGroup.sidebarActions = [
             UIAction(title: String(localized: "Year in Music"), image: UIImage(systemName: "calendar.badge.clock")) { [weak tabs] _ in
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -201,6 +196,26 @@ final class PadSidebar: NSObject {
     func playlistID(for tab: UITab) -> Int64? {
         guard tab.identifier.hasPrefix(Identifier.playlistPrefix) else { return nil }
         return Int64(tab.identifier.dropFirst(Identifier.playlistPrefix.count))
+    }
+
+    /// New Playlist, and Make a Playlist only where the model features work.
+    private func playlistActions() -> [UIAction] {
+        var actions = [
+            UIAction(title: String(localized: "New Playlist"), image: UIImage(systemName: "plus")) { [weak self] _ in
+                self?.createPlaylist()
+            },
+        ]
+        if FlaccyModelRegion.modelsAvailable {
+            actions.append(UIAction(title: PlaylistMakerCopy.menuTitle, image: UIImage(systemName: "sparkles")) { [weak self] _ in
+                guard let tabs = self?.tabs else { return }
+                tabs.library.makePlaylistTapped(presentingFrom: tabs)
+            })
+        }
+        return actions
+    }
+
+    @objc private func modelRegionDidChange() {
+        playlistsGroup.sidebarActions = playlistActions()
     }
 
     private func createPlaylist() {

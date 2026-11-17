@@ -1,5 +1,6 @@
 import FlaccyCore
 import Foundation
+import MidgarCore
 import Testing
 @testable import flaccy
 
@@ -21,8 +22,13 @@ struct EqualizerDescribeTests {
         #expect(EqualizerDescribeCopy.failure(.nothingToShape(note: "")) == "That didn't describe a sound an equalizer can shape. Say how you want the music to sound.")
     }
 
+    @Test func aRefusalForTheRegionShowsMidgarsNeutralLine() {
+        #expect(EqualizerDescribeCopy.failure(.unavailableInRegion) == MidgarModelRegion.unavailableMessage)
+    }
+
     @Test func onlyASentenceThatDescribedNoSoundInvitesAnother() {
         #expect(EqualizerDescriptionFailure.nothingToShape(note: "").invitesAnotherSentence)
+        #expect(!EqualizerDescriptionFailure.unavailableInRegion.invitesAnotherSentence)
         for failure in [EqualizerDescriptionFailure.needsEntitlement, .unreachable, .unavailable, .quotaReached(resetsAt: Date())] {
             #expect(!failure.invitesAnotherSentence)
         }

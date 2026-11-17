@@ -159,6 +159,9 @@ final class LyricsPanelViewController: NSViewController {
         meaningButton.isHidden = true
         meaningButton.target = self
         meaningButton.action = #selector(meaningTapped(_:))
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(modelRegionDidChange), name: FlaccyModelRegion.didChangeNotification, object: nil
+        )
 
         let timingControls = NSStackView(views: [meaningButton, shareButton, timingNoteChip, timingButton])
         timingControls.orientation = .horizontal
@@ -188,6 +191,10 @@ final class LyricsPanelViewController: NSViewController {
             timingControls.topAnchor.constraint(equalTo: view.topAnchor, constant: 8),
             timingControls.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
         ])
+    }
+
+    @objc private func modelRegionDidChange() {
+        if !FlaccyModelRegion.modelsAvailable { meaningButton.isHidden = true }
     }
 
     override func viewDidLoad() {
@@ -405,7 +412,7 @@ final class LyricsPanelViewController: NSViewController {
             lyrics = found
             shareableLyrics = found
             shareButton.isHidden = false
-            meaningButton.isHidden = MeaningPrompt.sungLines(found.document).isEmpty
+            meaningButton.isHidden = !FlaccyModelRegion.modelsAvailable || MeaningPrompt.sungLines(found.document).isEmpty
             document = found.document
             timingButton.isHidden = false
             showTimingNote(for: found.document)
@@ -419,7 +426,7 @@ final class LyricsPanelViewController: NSViewController {
             plainTextView.isHidden = false
             shareableLyrics = found
             shareButton.isHidden = false
-            meaningButton.isHidden = MeaningPrompt.sungLines(found.document).isEmpty
+            meaningButton.isHidden = !FlaccyModelRegion.modelsAvailable || MeaningPrompt.sungLines(found.document).isEmpty
             showTimingNote(for: found.document)
             scrollToTop()
             return
@@ -484,10 +491,12 @@ final class LyricsPanelViewController: NSViewController {
     private func lineMenu(forLine index: Int) -> NSMenu? {
         guard MeaningPrompt.focus(document, index: index) != nil else { return nil }
         let menu = NSMenu()
-        let explain = menu.addItem(withTitle: LyricsMeaningCopy.explainLine, action: #selector(explainLine(_:)), keyEquivalent: "")
-        explain.image = NSImage(systemSymbolName: "text.book.closed", accessibilityDescription: nil)
-        explain.target = self
-        explain.representedObject = index
+        if FlaccyModelRegion.modelsAvailable {
+            let explain = menu.addItem(withTitle: LyricsMeaningCopy.explainLine, action: #selector(explainLine(_:)), keyEquivalent: "")
+            explain.image = NSImage(systemSymbolName: "text.book.closed", accessibilityDescription: nil)
+            explain.target = self
+            explain.representedObject = index
+        }
         if LyricShareClip.isSelectable(index, in: document) {
             let share = menu.addItem(withTitle: LyricShareCopy.fromLine, action: #selector(shareFromLine(_:)), keyEquivalent: "")
             share.image = NSImage(systemSymbolName: "quote.bubble", accessibilityDescription: nil)
@@ -512,7 +521,7 @@ final class LyricsPanelViewController: NSViewController {
     @discardableResult
     func showMeaning(line: Int?) -> NSPopover? {
         meaningPopover?.close()
-        guard let current = lyrics ?? shareableLyrics, let track = player.currentTrack else { return nil }
+        guard FlaccyModelRegion.modelsAvailable, let current = lyrics ?? shareableLyrics, let track = player.currentTrack else { return nil }
         let anchor: NSView
         let edge: NSRectEdge
         if let line {

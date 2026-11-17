@@ -254,7 +254,7 @@ final class MacPlaylistMakerViewController: NSViewController, NSTableViewDataSou
         case .unreachable, .unavailable:
             failureButton.title = PlaylistMakerCopy.tryAgain
             failureAction = { [weak self] in self?.makeTapped() }
-        case .emptyLibrary, .quotaReached, .nothingFits, .declined, nil:
+        case .emptyLibrary, .quotaReached, .nothingFits, .declined, .unavailableInRegion, nil:
             failureAction = nil
         }
         failureButton.isHidden = failureAction == nil

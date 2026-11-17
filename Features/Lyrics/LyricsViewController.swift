@@ -69,6 +69,9 @@ final class LyricsViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(modelRegionDidChange), name: FlaccyModelRegion.didChangeNotification, object: nil
+        )
         overrideUserInterfaceStyle = .dark
         view.backgroundColor = .clear
         setupContent()
@@ -100,6 +103,10 @@ final class LyricsViewController: UIViewController {
             bottom: view.bounds.height * (1 - Self.activeLineAnchor),
             right: 0
         )
+    }
+
+    @objc private func modelRegionDidChange() {
+        refreshMeaningButton()
     }
 
     func startTrackObservation() {
@@ -259,7 +266,7 @@ final class LyricsViewController: UIViewController {
         if found.document.hasSynced || found.document.plain != nil {
             lyrics = found
             shareButton.isHidden = !isCurrentTrack
-            meaningButton.isHidden = MeaningPrompt.sungLines(found.document).isEmpty
+            refreshMeaningButton()
         }
         if found.document.hasSynced {
             showSyncedLyrics(found)

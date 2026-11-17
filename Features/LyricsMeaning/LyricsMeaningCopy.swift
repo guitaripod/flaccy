@@ -1,5 +1,6 @@
 import FlaccyCore
 import Foundation
+import MidgarCore
 
 /// The words of the Meaning sheet on iPhone and Mac. The Linux client carries
 /// the same English in `linux/src/meaning/copy.rs`, apart from where a reading
@@ -50,6 +51,8 @@ nonisolated enum LyricsMeaningCopy {
             return String(localized: "Couldn't explain this because Flaccy's AI is unavailable right now. Try again in a few minutes.")
         case .unreadable:
             return String(localized: "Couldn't explain this because the AI's answer couldn't be read. Try again.")
+        case .unavailableInRegion:
+            return MidgarModelRegion.unavailableMessage
         }
     }
 }

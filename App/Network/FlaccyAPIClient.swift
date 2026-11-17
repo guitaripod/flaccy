@@ -81,6 +81,7 @@ nonisolated struct FlaccyAPIClient: Sendable {
         request.httpBody = try JSONEncoder().encode(body)
         let (data, response) = try await aiSession.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        MidgarModelRegion.shared.note(statusCode: http.statusCode)
         return ProxyReply(
             status: http.statusCode,
             body: data,

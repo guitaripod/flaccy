@@ -754,7 +754,7 @@ final class MacPaywallProofCard: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func render(_ proof: PaywallProof, state: EntitlementState) {
-        let rendered = proof.lines()
+        let rendered = proof.lines(modelsAvailable: FlaccyModelRegion.modelsAvailable)
         guard proof.hasLibrary, !rendered.isEmpty else {
             isHidden = true
             return

@@ -148,6 +148,7 @@ extension EqualizerViewController {
     }
 
     func openDescribe() {
+        guard FlaccyModelRegion.modelsAvailable else { return }
         navigationController?.pushViewController(EqualizerDescribeViewController(accent: accent), animated: true)
     }
 }

@@ -299,6 +299,10 @@ nonisolated enum AIIdentificationTask {
         let matched = if let identified = analysis.music { await apply(identified, to: tracks, in: db) } else { 0 }
         if matched > 0 { try? db.sweepOrphanedAlbumEnrichment() }
 
+        if analysis.interruption == .unavailableInRegion {
+            return EnrichmentTasks.outcome(entity, record: record, attempted: false, interruption: .unavailableInRegion)
+        }
+
         if let interruption = analysis.interruption {
             EnrichmentPolicy.apply(to: &record, scope: .aiBatch, resolved: [], failure: .transport, now: now)
             try? db.upsertEnrichmentRecord(record)

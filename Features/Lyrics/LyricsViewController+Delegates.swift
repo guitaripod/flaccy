@@ -43,12 +43,15 @@ extension LyricsViewController: UITableViewDelegate {
         guard MeaningPrompt.focus(document, index: indexPath.row) != nil else { return nil }
         let row = indexPath.row
         let shareable = isCurrentTrack
+        let explainable = FlaccyModelRegion.modelsAvailable
+        guard explainable || shareable else { return nil }
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-            var actions = [
-                UIAction(title: LyricsMeaningCopy.explainLine, image: UIImage(systemName: "text.book.closed")) { _ in
+            var actions: [UIAction] = []
+            if explainable {
+                actions.append(UIAction(title: LyricsMeaningCopy.explainLine, image: UIImage(systemName: "text.book.closed")) { _ in
                     self?.presentMeaning(line: row)
-                }
-            ]
+                })
+            }
             if shareable {
                 actions.append(UIAction(title: LyricShareCopy.fromLine, image: UIImage(systemName: "quote.bubble")) { _ in
                     self?.presentLyricShare(line: row)

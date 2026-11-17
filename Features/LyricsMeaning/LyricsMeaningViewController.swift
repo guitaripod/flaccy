@@ -169,7 +169,7 @@ final class LyricsMeaningViewController: UIViewController {
                 guard let self else { return }
                 PaywallViewController.presentSheet(from: self)
             }
-        case .quotaReached:
+        case .quotaReached, .unavailableInRegion:
             action = nil
         case .unreachable, .unavailable, .unreadable:
             actionButton.configuration?.title = LyricsMeaningCopy.tryAgain

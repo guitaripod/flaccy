@@ -199,7 +199,7 @@ nonisolated enum HomeFeedBuilder {
         var proof: [PaywallProof.Line] = []
         if inputs.ownTrackCount > 0, inputs.phase.hasProof {
             let snapshot = PurchaseManager.proofSnapshot(playsAreScrobbled: inputs.playsAreScrobbled, database: database)
-            if snapshot.hasLibrary { proof = snapshot.lines() }
+            if snapshot.hasLibrary { proof = snapshot.lines(modelsAvailable: FlaccyModelRegion.modelsAvailable) }
         }
         let card = HomePromo.card(for: HomePromo.Facts(
             phase: inputs.phase,

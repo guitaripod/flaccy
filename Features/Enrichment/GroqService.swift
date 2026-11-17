@@ -41,6 +41,7 @@ nonisolated enum AIInterruption: Sendable, Equatable {
     case unreachable
     case quotaReached(resetsAt: Date)
     case unavailable
+    case unavailableInRegion
 }
 
 /// What an analysis managed before it stopped. `music` holds whatever was
@@ -74,6 +75,9 @@ final class GroqService: MetadataClassifying {
 
     nonisolated func analyzeLibrary(tracks: [TrackContext]) async -> AIAnalysis {
         guard !tracks.isEmpty else { return .nothing }
+        guard FlaccyModelRegion.modelsAvailable else {
+            return AIAnalysis(music: nil, interruption: .unavailableInRegion)
+        }
         guard await Self.hasActiveEntitlement() else {
             MidgarLog.info("Skipping AI analysis: no active entitlement", category: .content)
             return .nothing
@@ -202,7 +206,7 @@ final class GroqService: MetadataClassifying {
     }
 
     nonisolated func classifyGenre(artist: String, album: String, trackTitles: [String]) async -> GenreClassification? {
-        guard await Self.hasActiveEntitlement() else { return nil }
+        guard FlaccyModelRegion.modelsAvailable, await Self.hasActiveEntitlement() else { return nil }
         let tracks = trackTitles.joined(separator: ", ")
 
         let request = ChatRequest(
@@ -260,6 +264,9 @@ final class GroqService: MetadataClassifying {
                     MidgarLog.error("AI proxy \(proxyReply.status): \(body.prefix(200))", category: .content)
                 }
                 return .interrupted(.unavailable)
+            case .unavailableInRegion:
+                MidgarLog.info("AI proxy refused the region; model features stop here", category: .content)
+                return .interrupted(.unavailableInRegion)
             }
 
             let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)

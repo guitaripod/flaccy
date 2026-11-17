@@ -70,6 +70,11 @@ final class AIProxyReplyTests: XCTestCase {
         }
     }
 
+    func testARefusalForTheCountryIsItsOwnVerdict() {
+        XCTAssertEqual(classify(451, "unavailable_in_region"), .unavailableInRegion)
+        XCTAssertEqual(classify(451), .unavailableInRegion)
+    }
+
     func testTheLimitCodeMustSayDailyToBeTreatedAsSpent() {
         XCTAssertEqual(classify(500, "ip_daily_limit_reached"), .unavailable)
     }

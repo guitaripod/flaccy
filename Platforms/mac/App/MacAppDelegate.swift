@@ -217,6 +217,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     @objc private func appDidBecomeActive() {
         RemoteLaunch.becameActive()
         LibraryRoot.shared.retryFallbackResolutionIfNeeded()
+        Task { await FlaccyModelRegion.refresh() }
         Task {
             await MacRecapNotificationScheduler.shared.refreshSchedule()
         }
