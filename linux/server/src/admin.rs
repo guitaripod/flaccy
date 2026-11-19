@@ -33,17 +33,24 @@ pub(crate) fn say(text: &str) {
 /// `flaccy-server enroll ...`
 #[derive(Args, Debug)]
 pub struct EnrollArgs {
-    /// The user the new device belongs to; the first admin when left out. On a server with no users yet, this creates the first admin.
+    /// Account the device joins. Not the device's name.
+    ///
+    /// Must already exist (`flaccy-server user list`), except on a server with no accounts yet, where this creates the admin. Omit it to use the first admin. The phone or iPad sends its own name when it connects; see that name with `flaccy-server device list`.
     #[arg(long)]
     pub user: Option<String>,
-    /// How clients reach this server; default http://<this machine's name>:<port> on the tailnet, and with
-    /// `lan = true` this network's https address, alone or as the fallback.
+    /// Address the device uses to reach this server.
+    ///
+    /// Default is `http://<this machine's name>:<port>` on the tailnet. With `lan = true` the default is this network's https address, alone or as the fallback. Pass an https URL when something in front of the server terminates TLS.
     #[arg(long)]
     pub url: Option<String>,
-    /// How long the code works: seconds, or a number with s, m or h.
+    /// How long the code works: a number of seconds, or a number with s, m or h.
+    ///
+    /// From 1 second to 24h. A bare number is seconds. Default is 10m. The code works once, even if time remains.
     #[arg(long, default_value = "10m")]
     pub ttl: String,
-    /// Print one JSON object instead of text and a QR code.
+    /// Print one JSON object and no QR code.
+    ///
+    /// Fields: link, code, url, user, expiresAt. `code` and `link` are secrets.
     #[arg(long)]
     pub json: bool,
 }
@@ -51,36 +58,64 @@ pub struct EnrollArgs {
 /// `flaccy-server user ...`
 #[derive(Subcommand, Debug)]
 pub enum UserAction {
-    /// Add a user.
+    /// Add an account. The name is the account, not a device.
+    ///
+    /// The device that later enrolls for this account sends its own name.
+    #[command(after_help = "\
+Examples:
+  flaccy-server user add sam
+  flaccy-server user add sam --role guest")]
     Add {
+        /// Account name, 1 to 80 printable characters. Not a device name.
         name: String,
-        /// admin, member, guest or pending.
+        /// Role: admin, member, guest or pending. Default member.
+        ///
+        /// admin can do everything. member keeps their own playlists, loves, ratings and listens, and can edit shared playlists. guest reads what is shared and stores nothing. pending may do nothing until an admin sets a role.
         #[arg(long, default_value = "member")]
         role: String,
     },
-    /// List users with their roles.
+    /// List accounts: name, role, id.
     List,
-    /// Change a user's role.
-    Role { name: String, role: String },
+    /// Change an account's role. Refuses to demote the last admin.
+    ///
+    /// The role is admin, member, guest or pending.
+    #[command(after_help = "\
+Examples:
+  flaccy-server user role sam admin")]
+    Role {
+        /// Account name from `user list`.
+        name: String,
+        /// New role: admin, member, guest or pending.
+        role: String,
+    },
 }
 
 /// `flaccy-server device ...`
 #[derive(Subcommand, Debug)]
 pub enum DeviceAction {
-    /// List devices, revoked ones included.
+    /// List devices, revoked ones included and marked.
+    ///
+    /// Columns: id, account, the name the device sent, platform, last seen. `revoke` takes the id, not the name.
     List {
-        /// Only this user's devices.
+        /// Only this account's devices. An account from `user list`, not a device name.
         #[arg(long)]
         user: Option<String>,
     },
-    /// Revoke a device; it is refused from its next request.
-    Revoke { id: String },
+    /// Revoke a device by the id from `device list`. It is refused from its next request.
+    ///
+    /// Revoking twice says it was already revoked. The argument is the id, not the device's name.
+    Revoke {
+        /// Device id from `device list`.
+        id: String,
+    },
 }
 
 /// `flaccy-server audit ...`
 #[derive(Subcommand, Debug)]
 pub enum AuditAction {
-    /// Check that no audit entry was edited or removed.
+    /// Walk the hash chain of account, device and role changes.
+    ///
+    /// Prints the entry count when nothing was edited or removed. Names the first broken entry and exits 1 when something was.
     Verify,
 }
 

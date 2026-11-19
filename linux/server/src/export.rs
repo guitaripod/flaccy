@@ -28,24 +28,24 @@ const UNSAFE_NAME_CHARS: &str = "/\\:*?\"<>|";
 /// What to write.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub enum Format {
-    /// One document: playlists with their entries, loves, ratings, preferences and player sessions.
+    /// One document: playlists with entries, loves, ratings, preferences and player sessions.
     Json,
-    /// One `.m3u8` file per playlist.
+    /// One .m3u8 file per playlist, paths relative to the output folder.
     M3u8,
-    /// Listens, one JSON object per line, in the shape ListenBrainz imports.
+    /// Listens, one JSON object per line, oldest first, in the shape ListenBrainz imports. Suppressed plays are left out.
     Jsonl,
 }
 
 /// `flaccy-server export ...`
 #[derive(Args, Debug)]
 pub struct ExportArgs {
-    /// The user whose data to export.
+    /// Account whose data to export. A name from `user list`, not a device name.
     #[arg(long)]
     pub user: String,
-    /// json, m3u8 or jsonl.
+    /// json (one document), m3u8 (one file per playlist) or jsonl (listens for ListenBrainz).
     #[arg(long, value_enum)]
     pub format: Format,
-    /// The folder to write into; it is created when missing.
+    /// Folder to write into. Created when missing. Never receives tokens or Last.fm keys.
     #[arg(long)]
     pub out: PathBuf,
 }

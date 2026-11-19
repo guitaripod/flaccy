@@ -42,18 +42,24 @@ const TAILSCALE_DOWNLOAD: &str = "tailscale.com/download";
 #[derive(Args, Clone, Debug, Default)]
 pub struct SetupArgs {
     /// Take every default and ask nothing.
+    ///
+    /// Music folder defaults to ~/Music, the account name to your login name, the port to 4545. Sharing on this network follows the usual question, unless `--no-lan` is set.
     #[arg(long)]
     pub yes: bool,
-    /// The folder your music lives in.
+    /// Music folder, instead of asking. Ignored when a configuration file already exists.
     #[arg(long)]
     pub music: Option<PathBuf>,
-    /// Your name on this server.
+    /// Account the enrollment code is for, instead of asking.
+    ///
+    /// On a server with no accounts this creates the admin. Otherwise the account must already exist. Not a device name.
     #[arg(long)]
     pub name: Option<String>,
-    /// The port to listen on.
+    /// Port to listen on, instead of 4545. Ignored when a configuration file already exists.
     #[arg(long)]
     pub port: Option<u16>,
     /// Share only over Tailscale, not with devices on this network.
+    ///
+    /// Refuses to run when Tailscale is not connected, because nothing else could reach the server.
     #[arg(long)]
     pub no_lan: bool,
 }

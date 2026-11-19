@@ -20,33 +20,52 @@ use crate::sync;
 /// `flaccy-server lastfm ...`
 #[derive(Subcommand, Debug)]
 pub enum LastfmAction {
-    /// Link the server's own Last.fm session for a user, so plays from other OpenSubsonic apps are scrobbled.
+    /// Link this server's own Last.fm session so plays from other OpenSubsonic apps are scrobbled.
+    ///
+    /// Prints a page to open. Sign in to Last.fm, allow Flaccy, then press Enter here. Flaccy apps scrobble for themselves and are not sent by this. Needs `lastfm_api_key` or FLACCY_LASTFM_KEY.
+    #[command(after_help = "\
+Examples:
+  flaccy-server lastfm connect --user marcus")]
     Connect {
-        /// The Flaccy user the session belongs to.
+        /// Account the session belongs to. A name from `user list`, not a Last.fm profile and not a device name.
         #[arg(long)]
         user: String,
     },
-    /// Remove the server's Last.fm session for a user and forget the unsent queue.
+    /// Remove the server's Last.fm session for an account and drop plays not yet sent.
+    #[command(after_help = "\
+Examples:
+  flaccy-server lastfm disconnect --user marcus")]
     Disconnect {
-        /// The Flaccy user.
+        /// Account from `user list`.
         #[arg(long)]
         user: String,
     },
-    /// Show the history sync and the relay.
+    /// Show the history sync and the scrobble relay.
+    ///
+    /// `--json` prints one document. A missing API key is reported, not fetched.
+    #[command(after_help = "\
+Examples:
+  flaccy-server lastfm status
+  flaccy-server lastfm status --user marcus --json")]
     Status {
-        /// Only this user.
+        /// Only this account. A name from `user list`.
         #[arg(long)]
         user: Option<String>,
         /// Print one JSON document instead of text.
         #[arg(long)]
         json: bool,
     },
-    /// Set the Last.fm account whose listening history the server brings in for a user.
+    /// Set the Last.fm profile whose public listening history the server brings in.
+    ///
+    /// The positional name is the profile as shown on Last.fm, not the Flaccy account.
+    #[command(after_help = "\
+Examples:
+  flaccy-server lastfm account --user marcus my_lastfm")]
     Account {
-        /// The Flaccy user.
+        /// Account the history is brought in for. A name from `user list`.
         #[arg(long)]
         user: String,
-        /// The Last.fm account name.
+        /// Last.fm profile name, as shown on the profile. Not the Flaccy account.
         name: String,
     },
 }
