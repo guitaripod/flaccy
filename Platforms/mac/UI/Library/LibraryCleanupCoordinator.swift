@@ -20,10 +20,11 @@ enum LibraryCleanup {
     /// Builds an un-consolidated album/track snapshot straight from full track
     /// records (with codec/bit-depth for accurate quality ranking). The plan
     /// must see raw edition variants — `Library.shared.albums` is already
-    /// display-consolidated by default, which would hide every merge.
+    /// display-consolidated by default, which would hide every merge. Songs on a
+    /// server are left out: they have no file to trash and the server owns their tags.
     nonisolated private static func rawLibrarySnapshot() -> (albums: [Album], tracks: [Track]) {
         guard let records = try? DatabaseManager.shared.fetchAllTracks() else { return ([], []) }
-        let tracks = records.map { Track.from(record: $0, artwork: nil) }
+        let tracks = records.filter { $0.remoteServer == nil }.map { Track.from(record: $0, artwork: nil) }
         var order: [String] = []
         var byKey: [String: [Track]] = [:]
         for track in tracks {

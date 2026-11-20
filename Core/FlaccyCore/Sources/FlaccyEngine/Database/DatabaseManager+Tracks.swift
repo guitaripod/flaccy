@@ -273,7 +273,7 @@ extension DatabaseManager {
             }
             for retitle in retitles {
                 try db.execute(
-                    sql: "UPDATE tracks SET albumTitle = ?, artist = ? WHERE albumTitle = ? AND artist = ?",
+                    sql: "UPDATE tracks SET albumTitle = ?, artist = ? WHERE albumTitle = ? AND artist = ? AND remoteServer IS NULL",
                     arguments: [retitle.toTitle, retitle.toArtist, retitle.fromTitle, retitle.fromArtist]
                 )
             }

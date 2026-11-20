@@ -1385,7 +1385,7 @@ impl Db {
         to_artist: &str,
     ) -> Result<usize, rusqlite::Error> {
         self.conn.execute(
-            "UPDATE tracks SET albumTitle = ?1, artist = ?2 WHERE albumTitle = ?3 AND artist = ?4",
+            "UPDATE tracks SET albumTitle = ?1, artist = ?2 WHERE albumTitle = ?3 AND artist = ?4 AND remoteServer IS NULL",
             params![to_title, to_artist, from_title, from_artist],
         )
     }
@@ -3587,6 +3587,34 @@ mod cleanup_tests {
             .flat_map(|group| group.losers.iter().map(|loser| loser.rel_path.clone()))
             .collect();
         (retitles, keeper_updates, merges, loser_rel_paths)
+    }
+
+    /// A server's songs keep the album the server files them under: fusing editions rewrites only the
+    /// songs in the music folder, since the next sync would undo a rewrite of a server's row anyway.
+    #[test]
+    fn cleanup_retitles_leave_server_songs_alone() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        let deluxe = "Aurora (Deluxe Edition)";
+        insert(db, "aurora-deluxe/01.flac", "Opening", "Aurora Band", deluxe, 1, 200.0, "flac", Some(16), Some(44100));
+        insert(db, "remote://home/s1", "Opening", "Aurora Band", deluxe, 1, 200.0, "flac", Some(16), Some(44100));
+        db.conn
+            .execute("UPDATE tracks SET remoteServer = 'home' WHERE fileURL = 'remote://home/s1'", [])
+            .expect("mark the server row");
+        let retitles = [AlbumRetitle {
+            from_title: deluxe.into(),
+            from_artist: "Aurora Band".into(),
+            to_title: "Aurora".into(),
+            to_artist: "Aurora Band".into(),
+        }];
+        db.apply_cleanup(&retitles, &[], &[], &[]).expect("cleanup");
+        let album = |path: &str| -> String {
+            db.conn
+                .query_row("SELECT albumTitle FROM tracks WHERE fileURL = ?1", [path], |row| row.get(0))
+                .expect("row")
+        };
+        assert_eq!(album("aurora-deluxe/01.flac"), "Aurora");
+        assert_eq!(album("remote://home/s1"), deluxe);
     }
 
     /// End-to-end proof of the "Clean Up Library" apply path against a real
