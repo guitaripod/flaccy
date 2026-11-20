@@ -133,7 +133,7 @@ nonisolated enum RemoteCopy {
     static var downloadAction: String { String(localized: "Download") }
     static var removeDownloadAction: String { String(localized: "Remove Download") }
 
-    private static func byteText(_ bytes: Int64) -> String {
+    static func byteText(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         formatter.allowsNonnumericFormatting = false

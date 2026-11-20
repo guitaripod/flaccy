@@ -44,11 +44,17 @@ extension DatabaseManager {
     }
 
     /// Removes the songs of a server from the library and keeps the server, its sign-in and the playlist places that held them,
-    /// so showing the music again brings every place back. Returns the paths of the songs that were removed.
+    /// so showing the music again brings every place back, along with each song's plays, love and the day it was added, which
+    /// for a song moved from this device are the person's own. Returns the paths of the songs that were removed.
     @discardableResult
     public func deleteRemoteTracks(serverID: String) throws -> [String] {
         try dbQueue.write { db in
             let paths = try String.fetchAll(db, sql: "SELECT fileURL FROM tracks WHERE remoteServer = ?", arguments: [serverID])
+            try db.execute(sql: """
+                INSERT OR REPLACE INTO hiddenRemoteState (fileURL, playCount, lastPlayed, loved, dateAdded)
+                SELECT fileURL, playCount, lastPlayed, loved, dateAdded FROM tracks
+                WHERE remoteServer = ? AND (playCount > 0 OR lastPlayed IS NOT NULL OR loved = 1)
+                """, arguments: [serverID])
             _ = try TrackRecord.filter(Column("remoteServer") == serverID).deleteAll(db)
             try db.execute(sql: "UPDATE remoteServers SET lastSyncedAt = NULL WHERE id = ?", arguments: [serverID])
             try Self.sweepOrphanedAlbumEnrichment(in: db)
@@ -159,6 +165,7 @@ extension DatabaseManager {
                 let path = RemoteTrackPath(serverID: change.serverID, songID: songID).path
                 try Self.newRemoteRow(path: path, serverID: change.serverID, facts: facts, now: change.now)
                     .insert(db, onConflict: .ignore)
+                try Self.restoreHiddenState(path: path, in: db)
             }
             for (songID, facts) in change.updates {
                 let path = RemoteTrackPath(serverID: change.serverID, songID: songID).path
@@ -263,6 +270,22 @@ extension DatabaseManager {
             """, arguments: StatementArguments(values))
     }
 
+    /// Gives a song the plays, love and added day it had before its server's music was hidden.
+    private static func restoreHiddenState(path: String, in db: Database) throws {
+        guard let state = try Row.fetchOne(
+            db, sql: "SELECT playCount, lastPlayed, loved, dateAdded FROM hiddenRemoteState WHERE fileURL = ?", arguments: [path]
+        ) else { return }
+        let values: [(any DatabaseValueConvertible)?] = [
+            state["playCount"] as Int, state["lastPlayed"] as Date?, state["loved"] as Bool, state["dateAdded"] as Date, path,
+        ]
+        try db.execute(sql: """
+            UPDATE tracks SET playCount = MAX(playCount, ?), lastPlayed = COALESCE(?, lastPlayed),
+                loved = CASE WHEN ? THEN 1 ELSE loved END, dateAdded = MIN(dateAdded, ?)
+            WHERE fileURL = ?
+            """, arguments: StatementArguments(values))
+        try db.execute(sql: "DELETE FROM hiddenRemoteState WHERE fileURL = ?", arguments: [path])
+    }
+
     private static func bumpRevision(path: String, now: Date, in db: Database) throws {
         try db.execute(
             sql: "UPDATE tracks SET revision = revision + 1, revisedAt = ? WHERE fileURL = ?",
@@ -274,6 +297,8 @@ extension DatabaseManager {
         for path in paths {
             _ = try PlaylistTrackRecord.filter(Column("trackFileURL") == path).deleteAll(db)
             _ = try TrackRecord.filter(Column("fileURL") == path).deleteAll(db)
+            try db.execute(sql: "DELETE FROM serverMoves WHERE remotePath = ? AND done = 1", arguments: [path])
+            try db.execute(sql: "DELETE FROM hiddenRemoteState WHERE fileURL = ?", arguments: [path])
         }
     }
 }

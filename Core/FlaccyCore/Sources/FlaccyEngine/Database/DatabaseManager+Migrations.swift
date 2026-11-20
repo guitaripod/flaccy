@@ -387,6 +387,26 @@ extension DatabaseManager {
             }
         }
 
+        migrator.registerMigration("v24") { db in
+            try db.create(table: "serverMoves", options: [.withoutRowID]) { t in
+                t.column("localPath", .text).primaryKey()
+                t.column("remotePath", .text).notNull()
+                t.column("keepOnDevice", .boolean).notNull()
+                t.column("isPair", .boolean).notNull()
+                t.column("done", .boolean).notNull().defaults(to: false)
+                t.column("fileSize", .integer)
+                t.column("movedAt", .datetime).notNull()
+            }
+            try db.create(index: "serverMoves_on_remotePath", on: "serverMoves", columns: ["remotePath"])
+            try db.create(table: "hiddenRemoteState", options: [.withoutRowID]) { t in
+                t.column("fileURL", .text).primaryKey()
+                t.column("playCount", .integer).notNull()
+                t.column("lastPlayed", .datetime)
+                t.column("loved", .boolean).notNull()
+                t.column("dateAdded", .datetime).notNull()
+            }
+        }
+
         return migrator
     }
 }

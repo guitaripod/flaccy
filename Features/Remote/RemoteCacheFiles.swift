@@ -11,8 +11,11 @@ nonisolated struct RemoteCacheSidecar: Codable, Equatable, Sendable {
     var validator: String?
     var ranges: ByteRangeSet
     var lastUsed: Double
-    /// The download quality the server converted the file to, nil for the server's own file.
+    /// The download quality the server converted the file to, `deviceCopy` for the device's own
+    /// file of the song kept in its place, nil for the server's own file.
     var conversion: String?
+
+    static let deviceCopy = "device"
 
     init(
         file: String, total: Int64?, validator: String? = nil, ranges: ByteRangeSet = ByteRangeSet(), lastUsed: Date,

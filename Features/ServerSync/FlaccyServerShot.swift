@@ -7,7 +7,8 @@ import UIKit
 /// Opens the Flaccy Server screens for a picture, or drives the whole Add sheet unattended on a real phone.
 ///
 /// Launch with `--shot-flaccy-server <scenario>` and `FLACCY_SHOT_SERVER=<url>|<code>`, where the scenario is `idle`, `filled`,
-/// `checking`, `wrong-code`, `unreachable`, `connected`, `servers`, `detail`, `love-two` or `merge`. The driver logs `SERVER SHOT READY: <scenario>`
+/// `checking`, `wrong-code`, `unreachable`, `connected`, `servers`, `detail`, `love-two`, `merge`, `move-offer` (the offer to play the
+/// songs on this device from the server, as it opens after the first sync) or `move-done` (that offer accepted, with loved songs kept). The driver logs `SERVER SHOT READY: <scenario>`
 /// once the screen is on display. Launch with `--drive-flaccy-server` and a `flaccy://server` link (a URL payload, or `FLACCY_DRIVE_LINK` where the system asks before opening one) to have the Add sheet that
 /// the link opens press Connect by itself, then log what the connection did.
 @MainActor
@@ -91,7 +92,20 @@ enum FlaccyServerShot {
             fill(model, code: seed?.code)
             await model.connect()
             await waitForSync()
+            await dismissMoveOffer(on: nav)
             await open(scenario, nav: nav)
+        case "move-offer", "move-done":
+            fill(model, code: seed?.code)
+            await model.connect()
+            guard await waitForMoveOffer(on: nav) else {
+                MidgarLog.error("SERVER SHOT FAILED: the move offer never opened", category: .sync)
+                return
+            }
+            if scenario == "move-done", let record = FlaccyServerLibrary.record(),
+               case .offer(let offer) = ServerMoveService.shared.phase(for: record.id) {
+                await ServerMoveService.shared.start(offer, choice: .stream(keepLoved: true))
+                try? await Task.sleep(for: .seconds(1))
+            }
         default:
             MidgarLog.error("SERVER SHOT FAILED: unknown scenario \(scenario)", category: .sync)
             return
@@ -113,6 +127,44 @@ enum FlaccyServerShot {
             try? await Task.sleep(for: .seconds(1))
         }
         try? await Task.sleep(for: .seconds(2))
+    }
+
+    private static func topmost(over nav: UINavigationController) -> UIViewController? {
+        var top: UIViewController? = nav
+        while let presented = top?.presentedViewController { top = presented }
+        return top
+    }
+
+    /// Waits for the offer the way a person meets it: the merge summary of the connection first, closed with OK, then the offer.
+    private static func waitForMoveOffer(on nav: UINavigationController) async -> Bool {
+        for _ in 0..<240 {
+            if let summary = topmost(over: nav) as? ServerMergeSummaryViewController, !summary.isBeingPresented {
+                try? await Task.sleep(for: .seconds(1))
+                summary.dismiss(animated: true)
+            }
+            if topmost(over: nav) is ServerMoveViewController {
+                try? await Task.sleep(for: .seconds(1))
+                return true
+            }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        return false
+    }
+
+    /// Closes the sheets a connection opens by itself, the merge summary and then the move offer, so another screen can open.
+    private static func dismissMoveOffer(on nav: UINavigationController) async {
+        var quiet = 0
+        for _ in 0..<60 where quiet < 6 {
+            try? await Task.sleep(for: .milliseconds(500))
+            guard let top = topmost(over: nav), top is ServerMergeSummaryViewController || top is ServerMoveViewController,
+                  !top.isBeingPresented
+            else {
+                quiet += 1
+                continue
+            }
+            quiet = 0
+            top.dismiss(animated: false)
+        }
     }
 
     private static func fill(_ model: AddFlaccyServerViewModel, code: String?) {

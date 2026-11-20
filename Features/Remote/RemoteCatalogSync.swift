@@ -54,6 +54,14 @@ actor RemoteCatalogSync {
         return try await task.value
     }
 
+    /// Posted on the main queue when a server's songs reached the library for the first time, with the server id as the object.
+    static let firstSyncDidFinish = Notification.Name("RemoteCatalogSyncFirstSyncDidFinish")
+
+    @MainActor
+    private static func announceFirstSync(serverID: String) {
+        NotificationCenter.default.post(name: firstSyncDidFinish, object: serverID)
+    }
+
     func cancel(serverID: String) {
         running[serverID]?.cancel()
         running[serverID] = nil
@@ -78,14 +86,14 @@ actor RemoteCatalogSync {
 
     private func performSync(serverID: String) async throws -> RemoteSyncReport {
         let record = try? DatabaseManager.shared.fetchRemoteServer(id: serverID)
-        RemoteSyncStatus.shared.begin(
-            serverID: serverID, name: record?.name ?? serverID, isFirstSync: record?.lastSyncedAt == nil
-        )
+        let isFirstSync = record?.lastSyncedAt == nil
+        RemoteSyncStatus.shared.begin(serverID: serverID, name: record?.name ?? serverID, isFirstSync: isFirstSync)
         do {
             let report = try await runSync(serverID: serverID)
             await ServerSyncService.engine.resolveGhosts()
             RemoteAvailability.shared.setReachable(serverID: serverID, true)
             RemoteSyncStatus.shared.finish(serverID: serverID, failure: nil)
+            if isFirstSync { await Self.announceFirstSync(serverID: serverID) }
             return report
         } catch is CancellationError {
             RemoteSyncStatus.shared.finish(serverID: serverID, failure: nil)
@@ -129,7 +137,7 @@ actor RemoteCatalogSync {
             updates: entries(diff.updated),
             newVersions: entries(diff.newVersions),
             removedSongIDs: diff.removed,
-            playStates: songs.map(Self.playState(of:)),
+            playStates: Self.playStates(of: songs, serverID: serverID),
             now: started
         )
         try database.applyRemoteCatalog(change)
@@ -226,7 +234,7 @@ actor RemoteCatalogSync {
             updates: [],
             newVersions: [],
             removedSongIDs: [],
-            playStates: unseen.map(Self.playState(of:)),
+            playStates: Self.playStates(of: unseen, serverID: serverID),
             now: now
         )
         try DatabaseManager.shared.applyRemoteCatalog(change)
@@ -331,13 +339,22 @@ extension RemoteCatalogSync {
         )
     }
 
-    nonisolated static func playState(of child: SubsonicResponse.Child) -> RemoteSongPlayState {
+    nonisolated static func playState(of child: SubsonicResponse.Child, starWish: Bool? = nil) -> RemoteSongPlayState {
         RemoteSongPlayState(
             songID: child.id,
-            starred: child.starred != nil,
+            starred: starWish ?? (child.starred != nil),
             playCount: child.playCount,
             played: child.played.flatMap(parseDate)
         )
+    }
+
+    /// The play state of each song as the server reports it, except a love or unlove made here that has not
+    /// reached the server yet, which the catalog must not undo.
+    nonisolated static func playStates(of songs: [SubsonicResponse.Child], serverID: String) -> [RemoteSongPlayState] {
+        let wishes = RemoteServerReports.pending()
+        return songs.map { child in
+            playState(of: child, starWish: wishes[RemoteTrackPath(serverID: serverID, songID: child.id).path])
+        }
     }
 
     /// The codec names the library's own files carry, derived from the suffix; a `.m4a` with a bit depth is lossless.

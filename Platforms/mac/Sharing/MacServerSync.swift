@@ -10,6 +10,7 @@ final class MacServerSync {
     static let shared = MacServerSync()
 
     private let mergePresenter = MacServerMergePresenter()
+    private let movePresenter = MacServerMovePresenter()
     private var observers: [NSObjectProtocol] = []
 
     func start() {

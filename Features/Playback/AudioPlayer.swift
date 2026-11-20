@@ -39,6 +39,8 @@ protocol AudioPlaying: AnyObject {
     func jumpToIndex(_ index: Int)
     func removeFromQueue(at index: Int)
     func handleDeletedTracks(_ urls: Set<URL>)
+    func replaceMovedTracks(_ replacements: [URL: Track])
+    var trackURLsInUse: [URL] { get }
     func moveInQueue(from sourceIndex: Int, to destinationIndex: Int)
     func insertNext(_ track: Track)
     func addToQueue(_ track: Track)

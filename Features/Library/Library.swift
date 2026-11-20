@@ -309,6 +309,7 @@ final class Library: LibraryProviding {
 
         emitProgress(force: true) { $0.phase = .findingFiles }
         if albums.isEmpty { listingScan = LiveListingPace(began: .now) }
+        await ServerMoveService.shared.finishMovedFiles()
         let sync = await syncFilesWithDatabase()
         endListingScan()
         let syncChanged = sync.changed
@@ -524,15 +525,20 @@ final class Library: LibraryProviding {
     }
 
     /// Every audio file under the library root by relative path, or nil when
-    /// the folder cannot be walked. `found` hears the running count.
+    /// the folder cannot be walked. `found` hears the running count. A file
+    /// whose song already plays from a server and is on its way out of the
+    /// folder is not a song of the folder any more.
     nonisolated private func audioPathsOnDisk(found: (Int) -> Void = { _ in }) -> Set<String>? {
         guard let enumerator = FileManager.default.enumerator(
             at: documentsDirectory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
         ) else { return nil }
+        let leaving = (try? db.pendingServerMoveLocalPaths()) ?? []
         var paths = Set<String>()
         while let fileURL = enumerator.nextObject() as? URL {
             guard Self.audioExtensions.contains(fileURL.pathExtension.lowercased()) else { continue }
-            paths.insert(relativePath(for: fileURL))
+            let path = relativePath(for: fileURL)
+            guard !leaving.contains(path) else { continue }
+            paths.insert(path)
             found(paths.count)
         }
         return paths

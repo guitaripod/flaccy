@@ -140,8 +140,15 @@ final class ServersSettingsPane: SettingsPane {
         let rename = button(String(localized: "Rename\u{2026}"), symbol: "pencil") { [weak self] in self?.promptRename(server) }
         let remove = button(String(localized: "Remove\u{2026}"), symbol: "trash") { [weak self] in self?.confirmRemove(server) }
         refresh.isEnabled = !server.isSyncing
+        let move = button(String(localized: "Play Here\u{2026}"), symbol: "arrow.down.right.and.arrow.up.left") { [weak self] in
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            self?.presentAsSheet(ServerMovePanelViewController(serverID: server.id))
+        }
+        move.setAccessibilityLabel(ServerMoveCopy.menuAction(server: server.name))
+        move.toolTip = ServerMoveCopy.menuAction(server: server.name)
+        move.setAccessibilityIdentifier("settings.server.move")
 
-        let row = NSStackView(views: [icon, text, NSView(), refresh, rename, remove])
+        let row = NSStackView(views: [icon, text, NSView(), refresh, move, rename, remove])
         row.orientation = .horizontal
         row.alignment = .top
         row.spacing = 8

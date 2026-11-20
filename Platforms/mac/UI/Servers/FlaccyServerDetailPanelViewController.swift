@@ -66,6 +66,10 @@ final class FlaccyServerDetailPanelViewController: NSViewController {
         add(section(String(localized: "Library")))
         add(row(String(localized: "Songs"), trailing: secondary(model.songs)))
         add(toggleRow(model.libraryToggleTitle, isOn: model.isLibraryShown, id: "flaccyServer.library", action: #selector(libraryToggled(_:))))
+        if model.moveRow != .hidden {
+            add(section(ServerMoveCopy.sectionHeader))
+            add(moveRow())
+        }
         add(section(String(localized: "Sync")))
         if model.isPro {
             add(toggleRow(model.syncToggleTitle, isOn: model.isSyncOn, id: "flaccyServer.sync", action: #selector(syncToggled(_:))))
@@ -141,6 +145,33 @@ final class FlaccyServerDetailPanelViewController: NSViewController {
         stack.orientation = .horizontal
         stack.alignment = .centerY
         return stack
+    }
+
+    private func moveRow() -> NSView {
+        let title = NSTextField(labelWithString: model.moveTitle)
+        title.font = .systemFont(ofSize: 13)
+        let text = NSStackView(views: [title, secondary(model.moveValue)])
+        text.orientation = .vertical
+        text.alignment = .leading
+        text.spacing = 1
+        var views: [NSView] = [text, NSView()]
+        if case .offer = model.moveRow {
+            let review = PanelButton(title: String(localized: "Review\u{2026}")) { [weak self] in self?.presentMove() }
+            review.bezelStyle = .rounded
+            review.controlSize = .small
+            review.setAccessibilityLabel(ServerMoveCopy.menuAction(server: model.name))
+            review.setAccessibilityIdentifier("flaccyServer.move")
+            views.append(review)
+        }
+        let stack = NSStackView(views: views)
+        stack.orientation = .horizontal
+        stack.alignment = .centerY
+        return stack
+    }
+
+    private func presentMove() {
+        haptic()
+        presentAsSheet(ServerMovePanelViewController(serverID: model.serverID))
     }
 
     private func proRow() -> NSView {

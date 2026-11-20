@@ -584,10 +584,36 @@ extension RemoteStreamCache {
         RemoteAvailability.shared.setComplete(entry.song.path, completeFileURL(for: entry.song) != nil)
     }
 
-    /// Puts a converted download in place as the song's kept file: whole, outside the cache
-    /// limit, and the file playback, lyrics and the watch read from now on. A copy that is
-    /// still being read keeps serving its reader and is left to the cache.
+    /// Puts a converted download in place as the song's kept file.
     private func install(_ file: URL, suffix: String, quality: RemoteDownloadQuality, for song: RemoteTrackPath) throws -> URL {
+        let destination = try keep(
+            file, suffix: suffix, conversion: quality.rawValue, byCopying: false, discardingOnFailure: true, for: song
+        )
+        RemoteLog.info("Downloaded \(song.path) as \(quality.rawValue)")
+        return destination
+    }
+
+    /// Makes a song's own file on this device the kept download of the same song on a server, so it
+    /// plays offline without being downloaded again. On the Mac the file is copied, since the folder
+    /// it sits in is the person's; on iPhone and iPad it moves within the app's own storage.
+    @discardableResult
+    func adoptDeviceCopy(_ file: URL, for song: RemoteTrackPath, byCopying: Bool) throws -> URL {
+        let suffix = file.pathExtension.isEmpty ? "audio" : file.pathExtension.lowercased()
+        let destination = try keep(
+            file, suffix: suffix, conversion: RemoteCacheSidecar.deviceCopy, byCopying: byCopying, discardingOnFailure: false,
+            for: song
+        )
+        RemoteLog.info("Kept this device's copy as the download of \(song.path)")
+        return destination
+    }
+
+    /// Puts a file in place as the song's kept file: whole, outside the cache limit, and the file
+    /// playback, lyrics and the watch read from now on. A copy that is still being read keeps
+    /// serving its reader and is left to the cache. A file that cannot be put in place is deleted
+    /// only when it is a download of the app's own (`discardingOnFailure`), never the person's.
+    private func keep(
+        _ file: URL, suffix: String, conversion: String, byCopying: Bool, discardingOnFailure: Bool, for song: RemoteTrackPath
+    ) throws -> URL {
         let directory = RemoteCacheLayout.directory(in: pinnedRoot, song: song)
         let fileName = song.escapedSongID + "." + suffix
         let destination = directory.appendingPathComponent(fileName)
@@ -602,15 +628,20 @@ extension RemoteStreamCache {
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             Self.excludeFromBackup(directory)
-            try Self.move(file, to: destination)
+            if byCopying {
+                try? FileManager.default.removeItem(at: destination)
+                try FileManager.default.copyItem(at: file, to: destination)
+            } else {
+                try Self.move(file, to: destination)
+            }
         } catch {
-            try? FileManager.default.removeItem(at: file)
+            if discardingOnFailure { try? FileManager.default.removeItem(at: file) }
             throw RemoteFailure.storage
         }
         let size = (try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
         var ranges = ByteRangeSet()
         ranges.insert(0..<size)
-        let sidecar = RemoteCacheSidecar(file: fileName, total: size, ranges: ranges, lastUsed: Date(), conversion: quality.rawValue)
+        let sidecar = RemoteCacheSidecar(file: fileName, total: size, ranges: ranges, lastUsed: Date(), conversion: conversion)
         let sidecarURL = RemoteCacheLayout.sidecarURL(in: pinnedRoot, song: song)
         let entry = Entry(song: song, audioURL: destination, sidecarURL: sidecarURL, sidecar: sidecar, isPinned: true)
         entry.pinReasons = reasons
@@ -618,7 +649,6 @@ extension RemoteStreamCache {
         persist(entry)
         markPinned(song, true)
         RemoteAvailability.shared.setComplete(song.path, true)
-        RemoteLog.info("Downloaded \(song.path) as \(quality.rawValue), \(size) bytes")
         return destination
     }
 

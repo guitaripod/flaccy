@@ -26,11 +26,15 @@ final class ServerMergeReporter {
     nonisolated private static let settleTimeout: Duration = .seconds(180)
 
     private(set) var pending: ServerMergeSummary?
+    /// Whether the first sync after connecting is still being waited for, so another sheet can let this one go first.
+    private(set) var isSettling = false
     private var task: Task<Void, Never>?
 
     func begin(serverID: String) {
         task?.cancel()
+        isSettling = true
         task = Task { [weak self] in
+            defer { if !Task.isCancelled { self?.isSettling = false } }
             guard await Self.firstSyncSettled() else { return }
             _ = try? await RemoteCatalogSync.shared.sync(serverID: serverID)
             await ServerSyncService.engine.resolveGhosts()
@@ -48,7 +52,13 @@ final class ServerMergeReporter {
 
     func cancel() {
         task?.cancel()
+        isSettling = false
         pending = nil
+    }
+
+    /// Whether the merge summary has yet to show or is waiting to be taken, so the move offer waits for it.
+    var isAhead: Bool {
+        isSettling || pending != nil
     }
 
     private static func firstSyncSettled() async -> Bool {

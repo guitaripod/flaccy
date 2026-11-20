@@ -51,6 +51,25 @@ extension PlaybackEngine {
         postOnMain(PlaybackEngine.queueDidChange)
     }
 
+    /// Swaps queued songs for the same songs at a new address, a song that now plays from a server,
+    /// keeping the order, the position and the item already playing, which finishes from what it opened.
+    public func replaceTracks(_ replacements: [URL: Track]) {
+        guard !replacements.isEmpty,
+              queue.contains(where: { replacements[$0.fileURL] != nil })
+                || originalQueue.contains(where: { replacements[$0.fileURL] != nil })
+        else { return }
+        queue = queue.map { replacements[$0.fileURL] ?? $0 }
+        originalQueue = originalQueue.map { replacements[$0.fileURL] ?? $0 }
+        resyncPreloadedItems()
+        saveQueueState()
+        postOnMain(PlaybackEngine.queueDidChange)
+    }
+
+    /// The songs whose files the player has open: the one playing and the one waiting behind it.
+    public var trackURLsInUse: [URL] {
+        [playingItem, preloadedItem].compactMap { $0?.sourceTrackURL }
+    }
+
     public func toggleShuffle() {
         shuffleEnabled.toggle()
         host?.playFeedback(.light)

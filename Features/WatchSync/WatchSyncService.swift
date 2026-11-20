@@ -68,6 +68,8 @@ final class WatchSyncService: NSObject {
 
     private var trackIndex: [String: Track]?
     private var stemCache: [URL: String] = [:]
+    private var formerPaths: [String: String]?
+    private var serverMoveObserver: NSObjectProtocol?
     private var sizeCache: [String: Int64] = [:]
 
     override init() {
@@ -84,6 +86,7 @@ final class WatchSyncService: NSObject {
         super.init()
         observeEnrichmentJob()
         observeLibrary()
+        observeServerMoves()
         observeRevisions()
         observeAccent()
         ContinuedWork.watchSync.onExpiration = { [weak self] _ in self?.suspendPreparation() }
@@ -329,7 +332,7 @@ final class WatchSyncService: NSObject {
     }
 
     func relativePath(for url: URL) -> String {
-        if let song = RemoteTrackPath(assetURL: url) { return Self.watchPath(of: song) }
+        if let song = RemoteTrackPath(assetURL: url) { return formerWatchPath(of: song) ?? Self.watchPath(of: song) }
         let documents = FileManager.default
             .urls(for: .documentDirectory, in: .userDomainMask)[0]
             .standardizedFileURL.path
@@ -337,6 +340,21 @@ final class WatchSyncService: NSObject {
         guard path.hasPrefix(documents) else { return canonicalSyncPath(url.lastPathComponent) }
         let relative = String(path.dropFirst(documents.count))
         return canonicalSyncPath(relative.hasPrefix("/") ? String(relative.dropFirst()) : relative)
+    }
+
+    /// The watch path a song had while its file was on this iPhone, for a song that now plays from a server, so the copy
+    /// already on the watch stays the same song; the server's suffix replaces the old one, since a new copy is made from it.
+    private func formerWatchPath(of song: RemoteTrackPath) -> String? {
+        if formerPaths == nil { formerPaths = (try? DatabaseManager.shared.serverMoveFormerPaths()) ?? [:] }
+        guard let former = formerPaths?[song.path] else { return nil }
+        let stem = SyncStem.of(former)
+        guard let suffix = RemoteSongDirectory.shared.source(for: song)?.suffix else { return stem }
+        return "\(stem).\(suffix)"
+    }
+
+    /// The songs on this iPhone that are on the watch, by library path.
+    func localPathsOnWatch() -> Set<String> {
+        Set(Library.shared.allTracks.filter { $0.fileURL.isFileURL && isSynced($0) }.map { LibraryPaths.relativePath(of: $0.fileURL) })
     }
 
     /// Where a song from a server sits among the watch's files: one folder per server, the song's
@@ -599,6 +617,20 @@ final class WatchSyncService: NSObject {
                 WatchSyncSizing.invalidate()
                 self?.refreshRequestedFromLibrary()
                 self?.pump()
+            }
+        }
+    }
+
+    /// Songs that started playing from a server keep the watch path they had, so they are looked up again before the
+    /// library reload that announces them.
+    private func observeServerMoves() {
+        serverMoveObserver = NotificationCenter.default.addObserver(
+            forName: ServerMoveService.didMove, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.formerPaths = nil
+                self?.trackIndex = nil
+                self?.stemCache.removeAll()
             }
         }
     }

@@ -126,6 +126,11 @@ extension SettingsViewController {
             UIAction(title: String(localized: "Refresh"), image: UIImage(systemName: "arrow.clockwise")) { [weak self] _ in
                 self?.refreshServer(server)
             },
+            UIAction(title: ServerMoveCopy.menuAction(server: server.name), image: UIImage(systemName: "arrow.down.right.and.arrow.up.left")) { [weak self] _ in
+                guard let self else { return }
+                self.impactLight.impactOccurred()
+                ServerMoveViewController.present(serverID: server.id, from: self.presenter)
+            },
             UIAction(title: String(localized: "Rename"), image: UIImage(systemName: "pencil")) { [weak self] _ in
                 self?.promptRename(server)
             },

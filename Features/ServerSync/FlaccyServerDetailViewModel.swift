@@ -21,6 +21,13 @@ final class FlaccyServerDetailViewModel {
         case failed(String)
     }
 
+    /// The row about the songs on this device that the server also holds.
+    enum MoveRow: Equatable {
+        case hidden
+        case offer(songs: Int, bytes: Int64)
+        case moving(done: Int, total: Int)
+    }
+
     var onChange: (() -> Void)?
     var onProRequested: (() -> Void)?
 
@@ -28,6 +35,8 @@ final class FlaccyServerDetailViewModel {
     private(set) var name: String
     private(set) var address: String
     private(set) var devices: DevicesState = .loading
+    private(set) var moveRow: MoveRow = .hidden
+    private var moveRefresh: Task<Void, Never>?
     private var observers: [NSObjectProtocol] = []
     private let engine = ServerSyncService.engine
 
@@ -109,12 +118,56 @@ final class FlaccyServerDetailViewModel {
                 MainActor.assumeIsolated { self?.reloadRecord() }
             })
         }
+        for name in [ServerMoveService.didChange, Library.didUpdateNotification] {
+            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.refreshMoveRow() }
+            })
+        }
         Task { await loadDevices() }
+        refreshMoveRow()
+    }
+
+    var moveTitle: String {
+        ServerMoveCopy.rowTitle(server: name)
+    }
+
+    var moveValue: String {
+        switch moveRow {
+        case .hidden: ""
+        case .offer(let songs, let bytes): ServerMoveCopy.rowValue(songs: songs, bytes: bytes)
+        case .moving(let done, let total): ServerMoveCopy.progress(done: done, total: total)
+        }
+    }
+
+    /// Works the row out again: the move's progress while one runs, otherwise what a move would do now, hidden when the
+    /// server holds none of the songs here or this device cannot move them.
+    func refreshMoveRow() {
+        if case .moving(let done, let total) = ServerMoveService.shared.phase(for: serverID) {
+            moveRefresh?.cancel()
+            set(moveRow: .moving(done: done, total: total))
+            return
+        }
+        moveRefresh?.cancel()
+        let serverID = serverID
+        moveRefresh = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            let offer = await ServerMoveService.shared.quietOffer(serverID: serverID)
+            guard !Task.isCancelled else { return }
+            self?.set(moveRow: offer.map { .offer(songs: $0.songs, bytes: $0.bytes) } ?? .hidden)
+        }
+    }
+
+    private func set(moveRow row: MoveRow) {
+        guard row != moveRow else { return }
+        moveRow = row
+        onChange?()
     }
 
     func stop() {
         observers.forEach(NotificationCenter.default.removeObserver)
         observers.removeAll()
+        moveRefresh?.cancel()
     }
 
     func loadDevices() async {

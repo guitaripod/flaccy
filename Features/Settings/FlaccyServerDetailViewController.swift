@@ -8,6 +8,7 @@ final class FlaccyServerDetailViewController: UITableViewController {
     nonisolated enum Section: Int, Hashable, CaseIterable {
         case status
         case library
+        case onThisDevice
         case sync
         case devices
         case disconnect
@@ -18,6 +19,7 @@ final class FlaccyServerDetailViewController: UITableViewController {
         case lastSynced(String)
         case songs(String)
         case libraryToggle(title: String, isOn: Bool)
+        case move(title: String, value: String, isMoving: Bool)
         case syncToggle(title: String, isOn: Bool)
         case proSync(String)
         case devicesLoading
@@ -73,6 +75,7 @@ final class FlaccyServerDetailViewController: UITableViewController {
         switch section {
         case .status: String(localized: "Status")
         case .library: String(localized: "Library")
+        case .onThisDevice: ServerMoveCopy.sectionHeader
         case .sync: String(localized: "Sync")
         case .devices: String(localized: "Devices")
         case .disconnect: nil
@@ -87,6 +90,12 @@ final class FlaccyServerDetailViewController: UITableViewController {
             return rows
         case .library:
             return [.songs(model.songs), .libraryToggle(title: model.libraryToggleTitle, isOn: model.isLibraryShown)]
+        case .onThisDevice:
+            switch model.moveRow {
+            case .hidden: return []
+            case .offer: return [.move(title: model.moveTitle, value: model.moveValue, isMoving: false)]
+            case .moving: return [.move(title: model.moveTitle, value: model.moveValue, isMoving: true)]
+            }
         case .sync:
             return model.isPro ? [.syncToggle(title: model.syncToggleTitle, isOn: model.isSyncOn)] : [.proSync(model.proRowTitle)]
         case .devices:
@@ -103,8 +112,10 @@ final class FlaccyServerDetailViewController: UITableViewController {
     private func applySnapshot(animated: Bool) {
         var snapshot = NSDiffableDataSourceSnapshot<Section, Row>()
         for section in Section.allCases {
+            let items = rows(in: section)
+            guard !items.isEmpty else { continue }
             snapshot.appendSections([section])
-            snapshot.appendItems(rows(in: section), toSection: section)
+            snapshot.appendItems(items, toSection: section)
         }
         dataSource.apply(snapshot, animatingDifferences: animated)
     }
@@ -164,6 +175,17 @@ final class FlaccyServerDetailViewController: UITableViewController {
                 self?.syncChanged(on)
             }
             cell.accessibilityIdentifier = "flaccyServer.syncRow"
+        case .move(let title, let value, let isMoving):
+            content = .subtitleCell()
+            content.text = title
+            content.secondaryText = value
+            content.secondaryTextProperties.color = .secondaryLabel
+            content.image = UIImage(systemName: isMoving ? "arrow.triangle.2.circlepath" : "arrow.down.right.and.arrow.up.left")
+            content.imageProperties.tintColor = .systemIndigo
+            cell.accessoryType = isMoving ? .none : .disclosureIndicator
+            cell.selectionStyle = .default
+            cell.accessibilityTraits = isMoving ? [.staticText, .updatesFrequently] : .button
+            cell.accessibilityIdentifier = "flaccyServer.move"
         case .proSync(let title):
             content = .cell()
             content.text = title
@@ -234,6 +256,7 @@ final class FlaccyServerDetailViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
         switch dataSource.itemIdentifier(for: indexPath) {
         case .proSync, .disconnect: true
+        case .move?: true
         case .device(let device)?: device.isCurrent
         default: false
         }
@@ -243,6 +266,7 @@ final class FlaccyServerDetailViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
         switch dataSource.itemIdentifier(for: indexPath) {
         case .proSync: presentPaywall()
+        case .move?: presentMove()
         case .disconnect: confirmDisconnect()
         case .device(let device)?: promptRename(device)
         default: break
@@ -258,6 +282,11 @@ final class FlaccyServerDetailViewController: UITableViewController {
             done(true)
         }
         return UISwipeActionsConfiguration(actions: [remove])
+    }
+
+    private func presentMove() {
+        impact.impactOccurred()
+        ServerMoveViewController.present(serverID: model.serverID, from: self)
     }
 
     private func presentPaywall() {

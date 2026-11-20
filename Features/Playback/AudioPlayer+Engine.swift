@@ -53,6 +53,8 @@ extension AudioPlayer {
     func jumpToIndex(_ index: Int) { engine.jumpToIndex(index) }
     func removeFromQueue(at index: Int) { engine.removeFromQueue(at: index) }
     func handleDeletedTracks(_ urls: Set<URL>) { engine.handleDeletedTracks(urls) }
+    func replaceMovedTracks(_ replacements: [URL: Track]) { engine.replaceTracks(replacements) }
+    var trackURLsInUse: [URL] { engine.trackURLsInUse }
 
     func moveInQueue(from sourceIndex: Int, to destinationIndex: Int) {
         engine.moveInQueue(from: sourceIndex, to: destinationIndex)

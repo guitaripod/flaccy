@@ -10,6 +10,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private var rootController: RootContainerViewController?
     private var deferredPaywallObserver: NSObjectProtocol?
     private var mergePresenter: ServerMergePresenter?
+    private var movePresenter: ServerMovePresenter?
     private var commandTarget: AppCommandTarget?
     private var audioFileDrop: AudioFileDrop?
     private let folderPoller = LibraryFolderPoller()
@@ -46,6 +47,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         tabs.library.adoptDebutHost(rootVC.view)
         self.window = window
         mergePresenter = ServerMergePresenter(window: window)
+        movePresenter = ServerMovePresenter(window: window)
         let commands = AppCommandTarget(window: window, tabs: tabs, player: playerContainer, root: rootVC)
         commands.becomeCurrent()
         commandTarget = commands
@@ -57,6 +59,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         RemoteExercise.runIfRequested()
         ServerSyncExercise.runIfRequested()
         ServerSyncReseedExercise.runIfRequested()
+        ServerMoveExercise.runIfRequested()
         RemoteShot.runIfRequested(tabs: tabs)
         FlaccyServerShot.runIfRequested(tabs: tabs)
         PaywallShot.runIfRequested(in: window)
