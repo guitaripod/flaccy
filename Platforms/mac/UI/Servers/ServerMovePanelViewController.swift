@@ -6,6 +6,8 @@ import MidgarCore
 /// the choice between freeing the room and keeping them downloaded, the move with its progress, and what it did.
 final class ServerMovePanelViewController: NSViewController {
 
+    private static let width: CGFloat = 460
+
     private let serverID: String
     private let content = NSStackView()
     private var choice = ServerMoveChoice.stream(keepLoved: true)
@@ -31,13 +33,14 @@ final class ServerMovePanelViewController: NSViewController {
         content.spacing = 12
         content.edgeInsets = NSEdgeInsets(top: 24, left: 24, bottom: 20, right: 24)
         content.translatesAutoresizingMaskIntoConstraints = false
+        content.setHuggingPriority(.required, for: .vertical)
         view.addSubview(content)
         NSLayoutConstraint.activate([
             content.topAnchor.constraint(equalTo: view.topAnchor),
             content.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             content.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             content.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            view.widthAnchor.constraint(equalToConstant: 460),
+            view.widthAnchor.constraint(equalToConstant: Self.width),
         ])
         observer = NotificationCenter.default.addObserver(forName: ServerMoveService.didChange, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.render() }
@@ -131,6 +134,16 @@ final class ServerMovePanelViewController: NSViewController {
                 },
             ]))
         }
+        fitSheet()
+    }
+
+    /// The sheet is as tall as what it says, so the result after a move does not sit in the offer's height.
+    private func fitSheet() {
+        content.layoutSubtreeIfNeeded()
+        let size = NSSize(width: Self.width, height: content.fittingSize.height)
+        preferredContentSize = size
+        guard let window = view.window, window.contentRect(forFrameRect: window.frame).size != size else { return }
+        window.setContentSize(size)
     }
 
     private func renderOffer(_ offer: ServerMoveOffer) {
@@ -281,6 +294,10 @@ final class ServerMovePanelViewController: NSViewController {
 @MainActor
 final class MacServerMovePresenter {
 
+    /// How many half-second looks the offer gives a merge summary that has yet to show, so a summary that never found a
+    /// window cannot hold the offer back for good.
+    private static let mergePatience = 120
+
     private var observers: [NSObjectProtocol] = []
     private var announced: Set<String> = []
 
@@ -310,8 +327,9 @@ final class MacServerMovePresenter {
             return
         }
         let summaryShown = NSApp.windows.contains { $0.isVisible && $0.contentViewController is ServerMergeSummaryPanelViewController }
-        guard let window = NSApp.mainWindow ?? NSApp.keyWindow, let host = window.contentViewController, window.attachedSheet == nil,
-              !summaryShown, !ServerMergeReporter.shared.isAhead
+        let summaryAhead = ServerMergeReporter.shared.isAhead && attempt < Self.mergePatience
+        guard let window = MacSheetHost.window, let host = window.contentViewController, window.attachedSheet == nil,
+              !summaryShown, !summaryAhead
         else {
             guard attempt < 400 else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.present(serverID: serverID, attempt: attempt + 1) }
@@ -327,9 +345,10 @@ final class MacServerMovePresenter {
         for (serverID, phase) in ServerMoveService.shared.phases {
             guard case .finished(let summary) = phase, !announced.contains(serverID) else { continue }
             announced.insert(serverID)
-            let window = NSApp.keyWindow ?? NSApp.mainWindow
-            guard !(window?.attachedSheet?.contentViewController is ServerMovePanelViewController) else { continue }
-            MacToast.show(ServerMoveCopy.finished(songs: summary.moved, server: summary.serverName), style: .success, in: window)
+            guard !NSApp.windows.contains(where: { $0.isVisible && $0.contentViewController is ServerMovePanelViewController }) else {
+                continue
+            }
+            MacToast.show(ServerMoveCopy.finished(songs: summary.moved, server: summary.serverName), style: .success, in: MacSheetHost.window)
             ServerMoveService.shared.reset(serverID: serverID)
         }
         announced = announced.filter { serverID in

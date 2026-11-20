@@ -6,7 +6,7 @@ import MidgarCore
 
 /// Drives moving songs on this device to a Flaccy Server end to end and logs `SERVER MOVE EXERCISE PASSED` or
 /// `SERVER MOVE EXERCISE FAILED: <step>`. Launch with `--exercise-server-move` and `FLACCY_EXERCISE_SERVER=<flaccy://server link>`
-/// on a simulator whose Documents hold `MoveExercise/`: AAC copies of three of the server's songs with the server's tags, a second
+/// (add `--skip-keychain` on an unsigned Mac build) on a simulator, or a Mac library folder, that holds `MoveExercise/`: AAC copies of three of the server's songs with the server's tags, a second
 /// copy of the first in `MoveExercise/Copy/`, and `MoveExercise/Only Here.m4a`, a song the server does not have.
 ///
 /// It connects through the real setup path, lets the first sync list the server's songs, loves the first song, plays the second
@@ -27,6 +27,7 @@ enum ServerMoveExercise {
     static let recoverArgument = "--exercise-server-move-recover"
 
     static func runIfRequested() {
+        if CommandLine.arguments.contains("--skip-keychain") { RemoteCredentialStore.shared.useMemoryBackend() }
         if CommandLine.arguments.contains(crashArgument) { return runStep("CRASH", stageCrash) }
         if CommandLine.arguments.contains(recoverArgument) { return runStep("RECOVERY", checkRecovery) }
         guard CommandLine.arguments.contains(launchArgument) else { return }

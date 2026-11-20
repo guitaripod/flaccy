@@ -98,7 +98,7 @@ final class MacServerMergePresenter {
     }
 
     private func present(attempt: Int = 0) {
-        guard let window = NSApp.keyWindow ?? NSApp.mainWindow, let host = window.contentViewController, window.attachedSheet == nil else {
+        guard let window = MacSheetHost.window, let host = window.contentViewController, window.attachedSheet == nil else {
             guard attempt < 20 else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.present(attempt: attempt + 1) }
             return

@@ -19,6 +19,8 @@ enum DebugDrive {
         }
         DebugStatsDrive.runIfRequested()
         DebugArtworkDrive.runIfRequested(window: window)
+        DebugServerMoveDrive.runIfRequested(window: window)
+        ServerMoveExercise.runIfRequested()
         if let target = value(after: "--dump-log") {
             Task {
                 try? await Task.sleep(for: .seconds(8))

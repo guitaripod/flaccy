@@ -482,6 +482,10 @@ final class ServerMoveOptionCard: UIControl {
 @MainActor
 final class ServerMovePresenter {
 
+    /// How many half-second looks the offer gives a merge summary that has yet to show, so a summary that never found a
+    /// screen cannot hold the offer back for good.
+    private static let mergePatience = 120
+
     private weak var window: UIWindow?
     private var observers: [NSObjectProtocol] = []
     private var announced: Set<String> = []
@@ -516,7 +520,7 @@ final class ServerMovePresenter {
             return
         }
         let waiting = top.isBeingDismissed || top.isBeingPresented || top is ServerMergeSummaryViewController
-            || ServerMergeReporter.shared.isAhead
+            || (ServerMergeReporter.shared.isAhead && attempt < Self.mergePatience)
         guard !waiting else {
             guard attempt < 400 else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.present(serverID: serverID, attempt: attempt + 1) }
