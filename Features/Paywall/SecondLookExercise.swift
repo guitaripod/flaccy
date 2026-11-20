@@ -9,7 +9,8 @@ import UIKit
 #endif
 
 /// Walks a waiting second look on a real device: launch with
-/// `--trial-day 38 --exercise-second-look` on one that holds music of its own.
+/// `--trial-day 38 --exercise-second-look` on one that holds music of its own,
+/// and add `--unpaid` where the Apple Account owns Flaccy.
 /// It checks that the look waits with playback open and Home showing its
 /// card, presses the card's Play My Music, and checks that seven free days and
 /// the welcome-back window began with that play. `SecondLookExercise PASS/FAIL`
@@ -17,7 +18,9 @@ import UIKit
 /// and iPad, kept out of the music in Documents, and to the capture folder on
 /// the Mac. Under
 /// `--trial-day` nothing reaches the Keychain, the signals or the pending
-/// reminders, so the device's own trial is exactly as it was afterwards.
+/// reminders, so the device's own trial is exactly as it was afterwards, and
+/// the queue it was playing from is put back as it was found: the exercise
+/// ends the app once it has passed, and the next launch resumes from it.
 @MainActor
 enum SecondLookExercise {
 
@@ -44,6 +47,8 @@ enum SecondLookExercise {
         await pause(5)
         capture("second-look-card")
 
+        AudioPlayer.shared.saveQueueState()
+        let queueAsFound = savedQueue()
         pressPlayMyMusic()
         check("the play starts the second look", await settles(within: 15) { manager.isSecondLook })
         check("seven free days are counting", manager.state == .trial(daysRemaining: TrialRunway.lengthDays))
@@ -54,8 +59,34 @@ enum SecondLookExercise {
         )
         await pause(4)
         capture("second-look-started")
-        if AudioPlayer.shared.isPlaying { AudioPlayer.shared.togglePlayPause() }
+        putBack(queueAsFound)
         finish(reason: nil)
+        await pause(1)
+        exit(0)
+    }
+
+    private static let queueKeyPrefix = "flaccy.queue."
+
+    /// Everything the player keeps to resume from, as it stood before the
+    /// exercise replaced the queue with the whole library shuffled.
+    private static func savedQueue() -> [String: Any] {
+        UserDefaults.standard.dictionaryRepresentation().filter { $0.key.hasPrefix(queueKeyPrefix) }
+    }
+
+    /// Stops the music the exercise started and writes back the queue, the
+    /// song and the position the person left. A player that holds a queue
+    /// takes none back, so the exercise then ends the app before anything can
+    /// save the shuffled one over it, and the next launch opens where they were.
+    private static func putBack(_ queue: [String: Any]) {
+        if AudioPlayer.shared.isPlaying { AudioPlayer.shared.togglePlayPause() }
+        let defaults = UserDefaults.standard
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(queueKeyPrefix) {
+            defaults.removeObject(forKey: key)
+        }
+        for (key, value) in queue {
+            defaults.set(value, forKey: key)
+        }
+        CFPreferencesAppSynchronize(kCFPreferencesCurrentApplication)
     }
 
     private static var welcomeBackWindowIsOpen: Bool {

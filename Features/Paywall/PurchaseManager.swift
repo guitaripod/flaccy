@@ -113,6 +113,18 @@ final class PurchaseManager {
         #endif
     }
 
+    /// True under the DEBUG `--unpaid` flag beside `--trial-day`: a purchase
+    /// the store reports is set aside in memory, so the runway can be walked
+    /// on a device whose Apple Account owns Flaccy. The clock it then follows
+    /// is already a fiction, so nothing durable comes of it.
+    private var purchaseIsSetAside: Bool {
+        #if DEBUG
+        trialDayOverrideActive && CommandLine.arguments.contains("--unpaid")
+        #else
+        false
+        #endif
+    }
+
     /// Whether the App Store last returned the welcome-back product cheaper than
     /// Lifetime, remembered across launches so an offline consent or foreground
     /// still schedules the welcome-back reminder, and forgotten once a fetch
@@ -633,7 +645,7 @@ final class PurchaseManager {
 
     private func apply(_ entitlements: [MidgarEntitlement]) {
         readTrialStartIfNeeded()
-        if let pro = entitlements.first(where: { $0.name == FlaccyProducts.entitlement }) {
+        if let pro = entitlements.first(where: { $0.name == FlaccyProducts.entitlement }), !purchaseIsSetAside {
             setState(.purchased(Self.plan(for: pro)))
         } else {
             setState(trialState())
