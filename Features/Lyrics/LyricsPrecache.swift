@@ -267,9 +267,10 @@ actor LyricsPrecache {
         if let tallies, Date().timeIntervalSince(tallies.taken) < Self.tallyLifetime { return tallies.plays }
         let recentSince = Date().addingTimeInterval(-30 * Self.day)
         var plays: [String: Tally] = [:]
-        for listen in (try? DatabaseManager.shared.fetchListens()) ?? [] {
-            plays[listen.key, default: Tally()].total += 1
-            if listen.timestamp >= recentSince { plays[listen.key, default: Tally()].recent += 1 }
+        if let tallies = try? DatabaseManager.shared.playTallies(since: [recentSince], countingArtists: false) {
+            for (key, total) in tallies.total {
+                plays[key] = Tally(recent: tallies.since[0][key] ?? 0, total: total)
+            }
         }
         tallies = (Date(), plays)
         return plays

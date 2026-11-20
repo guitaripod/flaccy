@@ -145,7 +145,7 @@ nonisolated enum HomeFeedBuilder {
         let promo = promoCard(inputs.promo, database: database)
         guard !inputs.tracks.isEmpty else { return HomeFeed.empty.with(promo: promo.card, proofLines: promo.proof) }
         let index = AlbumIndex(albums: inputs.albums)
-        let hasHistory = ((try? database.scrobbleCount(submittedOnly: false)) ?? 0) > 0
+        let hasHistory = (try? database.hasLivePlays()) ?? false
 
         let resume = resumeCard(inputs, index: index)
         let canResume = resume.map { $0.point.isResumable(now: inputs.now) } ?? false
@@ -254,11 +254,8 @@ nonisolated enum HomeFeedBuilder {
     }
 
     nonisolated private static func historyAlbums(database: DatabaseManager, index: AlbumIndex) -> [RecentContexts.Entry] {
-        let rows = (try? database.lastPlayedByAlbum()) ?? []
+        let rows = (try? database.recentlyPlayedAlbums(limit: 60, since: HomePlay.earliestDated)) ?? []
         return rows
-            .filter { $0.lastPlayed >= HomePlay.earliestDated }
-            .sorted { $0.lastPlayed > $1.lastPlayed }
-            .prefix(60)
             .compactMap { row in
                 guard let album = index.album(title: row.albumTitle, artist: row.artist) else { return nil }
                 return RecentContexts.Entry(context: albumContext(album), playedAt: row.lastPlayed)

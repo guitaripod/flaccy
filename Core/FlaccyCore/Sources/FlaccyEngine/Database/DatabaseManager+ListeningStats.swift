@@ -69,6 +69,70 @@ extension DatabaseManager {
         }
     }
 
+    /// Plays per song as the mixes and the lyrics lane count them, folded by the database: every
+    /// play's `ListenHistory.trackKey` with its count overall and since each of `windows`, and
+    /// plays per artist as credited. The same numbers as counting `fetchListens()` row by row,
+    /// without decoding a row per play: a hundred and sixty thousand plays decoded one by one
+    /// held the database for over a second on every Home build.
+    public func playTallies(since windows: [Date], countingArtists: Bool = true) throws -> PlayTallies {
+        try dbQueue.read { db in
+            let sums = windows.indices.map { "SUM(timestamp >= ?) AS w\($0)" }.joined(separator: ", ")
+            let columns = sums.isEmpty ? "COUNT(*) AS c" : "COUNT(*) AS c, \(sums)"
+            var arguments = StatementArguments()
+            for window in windows { arguments += [window] }
+            var tallies = PlayTallies(windowCount: windows.count)
+            let keyed = try Row.fetchCursor(db, sql: """
+                SELECT titleKey, artistKey, \(columns) FROM scrobbles
+                WHERE titleKey <> '' AND artistKey <> ''
+                GROUP BY titleKey, artistKey
+            """, arguments: arguments)
+            while let row = try keyed.next() {
+                tallies.add(
+                    key: Self.trackKey(titleKey: row["titleKey"], artistKey: row["artistKey"]),
+                    row: row, windows: windows.count)
+            }
+            let unkeyed = try Row.fetchCursor(db, sql: """
+                SELECT trackTitle, artist, \(columns) FROM scrobbles
+                WHERE titleKey = '' OR artistKey = ''
+                GROUP BY trackTitle, artist
+            """, arguments: arguments)
+            while let row = try unkeyed.next() {
+                tallies.add(
+                    key: ListenHistory.trackKey(title: row["trackTitle"], artist: row["artist"]),
+                    row: row, windows: windows.count)
+            }
+            guard countingArtists else { return tallies }
+            let artists = try Row.fetchCursor(db, sql: "SELECT artist, COUNT(*) AS c FROM scrobbles GROUP BY artist")
+            while let row = try artists.next() {
+                let artist: String = row["artist"]
+                tallies.artists[artist.lowercased(), default: 0] += row["c"] as Int
+            }
+            return tallies
+        }
+    }
+
+    /// The most recently played albums, newest first, each with its last play: walks the dated
+    /// plays backwards on the timestamp index and stops at `limit` distinct albums, instead of
+    /// grouping the whole history to sort it.
+    public func recentlyPlayedAlbums(limit: Int, since earliest: Date) throws -> [(albumTitle: String, artist: String, lastPlayed: Date)] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchCursor(db, sql: """
+                SELECT albumTitle, artist, timestamp FROM scrobbles
+                WHERE suppressed = 0 AND timestamp >= ?
+                ORDER BY timestamp DESC
+            """, arguments: [earliest])
+            var seen = Set<String>()
+            var albums: [(albumTitle: String, artist: String, lastPlayed: Date)] = []
+            while albums.count < limit, let row = try rows.next() {
+                let title: String = row["albumTitle"]
+                let artist: String = row["artist"]
+                guard seen.insert(title + "\u{0}" + artist).inserted else { continue }
+                albums.append((albumTitle: title, artist: artist, lastPlayed: row["timestamp"]))
+            }
+            return albums
+        }
+    }
+
     private static func trackKey(titleKey: String, artistKey: String) -> String {
         titleKey + "\u{0}" + artistKey
     }
@@ -365,6 +429,14 @@ extension DatabaseManager {
                 totals.serverTracks += row["serverTracks"] as Int
             }
             return totals
+        }
+    }
+
+    /// Whether any play is on record, answered by the first row the partial index on live plays
+    /// holds rather than by counting a history of a hundred thousand plays.
+    public func hasLivePlays() throws -> Bool {
+        try dbQueue.read { db in
+            try Bool.fetchOne(db, sql: "SELECT EXISTS(SELECT 1 FROM scrobbles WHERE suppressed = 0)") ?? false
         }
     }
 

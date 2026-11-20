@@ -38,24 +38,17 @@ nonisolated enum SuggestedPlaylistService {
             poolByKey[k] = track
         }
 
-        let rows = (try? DatabaseManager.shared.fetchListens()) ?? []
-        guard !rows.isEmpty else { return [] }
-
         let now = Date()
         let recentCutoff = now.addingTimeInterval(-90 * 86400)
         let monthCutoff = now.addingTimeInterval(-30 * 86400)
+        guard let tallies = try? DatabaseManager.shared.playTallies(since: [recentCutoff, monthCutoff]),
+              !tallies.total.isEmpty
+        else { return [] }
 
-        var allCounts: [String: Int] = [:]
-        var recentCounts: [String: Int] = [:]
-        var monthCounts: [String: Int] = [:]
-        var artistCounts: [String: Int] = [:]
-        for row in rows {
-            let k = row.key
-            allCounts[k, default: 0] += 1
-            artistCounts[row.artist.lowercased(), default: 0] += 1
-            if row.timestamp >= recentCutoff { recentCounts[k, default: 0] += 1 }
-            if row.timestamp >= monthCutoff { monthCounts[k, default: 0] += 1 }
-        }
+        let allCounts = tallies.total
+        let recentCounts = tallies.since[0]
+        let monthCounts = tallies.since[1]
+        let artistCounts = tallies.artists
 
         var suggestions: [SuggestedPlaylist] = []
         if let heavy = heavyRotation(poolByKey: poolByKey, monthCounts: monthCounts, allCounts: allCounts) {
