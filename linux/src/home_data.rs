@@ -178,7 +178,7 @@ pub fn fetch(
         })
         .collect();
     let mixes = if with_mixes {
-        crate::suggested::build(&pool, &db.fetch_all_scrobble_rows(), now)
+        crate::suggested::build(&pool, &db.fetch_all_scrobble_rows(), now, offset)
     } else {
         previous_mixes
     };

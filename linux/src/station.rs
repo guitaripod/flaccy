@@ -173,12 +173,15 @@ pub fn library_radio(
     station
 }
 
-/// Crate Dig: underplayed tracks from albums the listener already knows.
+/// Crate Dig: underplayed tracks from albums the listener already knows. A
+/// `day` orders it for that whole day, as Home's mix wants; without one it is
+/// shuffled afresh, as a station wants.
 pub fn crate_dig(
     pool: &[Track],
     play_counts: &[(String, String, i64)],
     excluding: &std::collections::HashSet<String>,
     limit: usize,
+    day: Option<i64>,
 ) -> Vec<Track> {
     let mut count_by_key: HashMap<String, i64> = HashMap::new();
     for (title, artist, count) in play_counts {
@@ -235,13 +238,24 @@ pub fn crate_dig(
         .map(|(t, w)| (t.rel_path.as_str(), *w))
         .collect();
     let candidates: Vec<&Track> = scored.into_iter().map(|(t, _)| t).collect();
-    let weighted = weighted_shuffle(candidates, |track| {
-        *weight_map.get(track.rel_path.as_str()).unwrap_or(&0.1)
-    });
+    let weight_of = |track: &&Track| *weight_map.get(track.rel_path.as_str()).unwrap_or(&0.1);
+    let weighted = match day {
+        Some(day) => flaccy_shared::day_order::ordered(candidates, day, |track| crate_name(track), weight_of),
+        None => weighted_shuffle(candidates, weight_of),
+    };
     let mut station =
         spaced_by_artist(weighted.into_iter().take(limit * 2).cloned().collect());
     station.truncate(limit);
     station
+}
+
+fn crate_name(track: &Track) -> String {
+    format!(
+        "{}\u{0}{}\u{0}{}",
+        track.title.to_lowercase(),
+        track.artist.to_lowercase(),
+        track.album.to_lowercase()
+    )
 }
 
 /// History-aware shuffle weight matching iOS: max(0.05, age/(age+3d)) where
@@ -402,7 +416,7 @@ mod tests {
             play_counts.push((format!("deep{i}"), "ArtistA".into(), 0));
         }
         let excluding = std::collections::HashSet::new();
-        let dig = crate_dig(&pool, &play_counts, &excluding, 20);
+        let dig = crate_dig(&pool, &play_counts, &excluding, 20, None);
         assert!(!dig.is_empty());
         assert!(dig.iter().all(|t| t.title.starts_with("deep")));
     }

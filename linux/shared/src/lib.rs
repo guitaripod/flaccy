@@ -14,6 +14,7 @@ pub mod album_credit;
 pub mod artwork_framing;
 pub mod artwork_local;
 pub mod audio_payload;
+pub mod day_order;
 pub mod enrichment_job;
 pub mod equalizer;
 pub mod home;

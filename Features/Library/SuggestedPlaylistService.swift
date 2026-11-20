@@ -28,8 +28,20 @@ nonisolated enum SuggestedPlaylistService {
     private static let maxTracks = 50
     private static let minTracks = 8
 
-    static func build(pool: [Track]) -> [SuggestedPlaylist] {
-        guard !pool.isEmpty else { return [] }
+    static func build(pool: [Track], now: Date = Date(), database: DatabaseManager = .shared) -> [SuggestedPlaylist] {
+        guard !pool.isEmpty, let tallies = try? database.playTallies(since: tallyWindows(now: now)) else { return [] }
+        return build(pool: pool, tallies: tallies, now: now)
+    }
+
+    /// The windows `build(pool:tallies:now:)` expects its tallies counted
+    /// since: the last ninety days, then the last thirty.
+    static func tallyWindows(now: Date) -> [Date] {
+        [now.addingTimeInterval(-90 * 86400), now.addingTimeInterval(-30 * 86400)]
+    }
+
+    /// The mixes from tallies already read for `tallyWindows(now:)`.
+    static func build(pool: [Track], tallies: PlayTallies, now: Date) -> [SuggestedPlaylist] {
+        guard !pool.isEmpty, !tallies.total.isEmpty, tallies.since.count == 2 else { return [] }
 
         let keys = pool.map { key($0.title, $0.artist) }
         var poolByKey: [String: Track] = [:]
@@ -38,12 +50,7 @@ nonisolated enum SuggestedPlaylistService {
             poolByKey[k] = track
         }
 
-        let now = Date()
-        let recentCutoff = now.addingTimeInterval(-90 * 86400)
-        let monthCutoff = now.addingTimeInterval(-30 * 86400)
-        guard let tallies = try? DatabaseManager.shared.playTallies(since: [recentCutoff, monthCutoff]),
-              !tallies.total.isEmpty
-        else { return [] }
+        let day = DayStableOrder.day(of: now, secondsFromGMT: TimeZone.current.secondsFromGMT(for: now))
 
         let allCounts = tallies.total
         let recentCounts = tallies.since[0]
@@ -54,7 +61,7 @@ nonisolated enum SuggestedPlaylistService {
         if let heavy = heavyRotation(poolByKey: poolByKey, monthCounts: monthCounts, allCounts: allCounts) {
             suggestions.append(heavy)
         }
-        if let dig = crateDig(pool: pool, keys: keys, allCounts: allCounts) {
+        if let dig = crateDig(pool: pool, keys: keys, allCounts: allCounts, day: day) {
             suggestions.append(dig)
         }
         if let repeatArtist = onRepeat(pool: pool, keys: keys, artistCounts: artistCounts, allCounts: allCounts) {
@@ -63,15 +70,16 @@ nonisolated enum SuggestedPlaylistService {
         if let rediscover = rediscover(poolByKey: poolByKey, allCounts: allCounts, recentCounts: recentCounts) {
             suggestions.append(rediscover)
         }
-        if let spin = tonightsSpin(pool: pool, keys: keys, allCounts: allCounts, recentCounts: recentCounts) {
+        if let spin = tonightsSpin(pool: pool, keys: keys, allCounts: allCounts, recentCounts: recentCounts, day: day) {
             suggestions.append(spin)
         }
         return suggestions
     }
 
     /// Underplayed tracks from albums you already love — the crate-digging
-    /// privilege of owning full albums instead of streaming singles.
-    private static func crateDig(pool: [Track], keys: [String], allCounts: [String: Int]) -> SuggestedPlaylist? {
+    /// privilege of owning full albums instead of streaming singles, in the
+    /// day's order so the mix and its cover hold until tomorrow.
+    private static func crateDig(pool: [Track], keys: [String], allCounts: [String: Int], day: Int64) -> SuggestedPlaylist? {
         var pairs: [(key: String, count: Int)] = []
         var seen = Set<String>()
         for (track, k) in zip(pool, keys) {
@@ -79,7 +87,7 @@ nonisolated enum SuggestedPlaylistService {
             pairs.append((k, allCounts[k] ?? track.playCount))
         }
         let tracks = StationBuilder.crateDig(
-            pool: pool, keys: keys, playCounts: pairs, excluding: [], limit: maxTracks
+            pool: pool, keys: keys, playCounts: pairs, excluding: [], limit: maxTracks, day: day
         )
         guard tracks.count >= minTracks else { return nil }
         return SuggestedPlaylist(
@@ -90,10 +98,11 @@ nonisolated enum SuggestedPlaylistService {
     }
 
     /// One full album you own but haven't spun recently — album-night mode.
-    /// Picks with a day-stable seed so the suggestion holds for the evening
-    /// instead of reshuffling on every library refresh.
+    /// Picked in the day's order, so the suggestion holds for the evening on
+    /// every rebuild of Home and only moves on when the day does or the album
+    /// stops qualifying.
     private static func tonightsSpin(
-        pool: [Track], keys: [String], allCounts: [String: Int], recentCounts: [String: Int]
+        pool: [Track], keys: [String], allCounts: [String: Int], recentCounts: [String: Int], day: Int64
     ) -> SuggestedPlaylist? {
         var albums: [String: [Int]] = [:]
         for (index, track) in pool.enumerated() {
@@ -117,11 +126,11 @@ nonisolated enum SuggestedPlaylistService {
         }
         guard !candidates.isEmpty else { return nil }
 
-        let daySeed = Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
-        let ranked = StationBuilder.weightedShuffle(candidates) { candidate in
-            let mix = stableMix(daySeed, candidate.title, candidate.artist)
-            return candidate.weight * (0.5 + mix)
-        }
+        let ranked = DayStableOrder.ordered(
+            candidates, day: day,
+            name: { "\($0.title.lowercased())\u{0}\($0.artist.lowercased())" },
+            weight: \.weight
+        )
         guard let pick = ranked.first else { return nil }
         let subtitle = pick.artist.isEmpty
             ? String(localized: "Full album night")
@@ -140,13 +149,7 @@ nonisolated enum SuggestedPlaylistService {
         let subtitle = useMonth
             ? String(localized: "Your most-played this month")
             : String(localized: "The songs you keep coming back to")
-        let ordered = counts
-            .compactMap { entry -> (track: Track, count: Int)? in
-                guard let track = poolByKey[entry.key] else { return nil }
-                return (track, entry.value)
-            }
-            .sorted { $0.count > $1.count }
-            .map(\.track)
+        let ordered = orderedOwnedTracks(poolByKey: poolByKey, counts: counts)
         let tracks = Array(StationBuilder.spacedByArtist(Array(ordered.prefix(maxTracks * 2))).prefix(maxTracks))
         guard tracks.count >= minTracks else { return nil }
         return SuggestedPlaylist(
@@ -158,7 +161,7 @@ nonisolated enum SuggestedPlaylistService {
     private static func onRepeat(
         pool: [Track], keys: [String], artistCounts: [String: Int], allCounts: [String: Int]
     ) -> SuggestedPlaylist? {
-        let ranked = artistCounts.sorted { $0.value > $1.value }
+        let ranked = artistCounts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
         let leaders = Set(ranked.prefix(8).map(\.key))
         var ownedByArtist: [String: [(track: Track, plays: Int)]] = [:]
         for (track, k) in zip(pool, keys) {
@@ -184,14 +187,10 @@ nonisolated enum SuggestedPlaylistService {
     private static func rediscover(
         poolByKey: [String: Track], allCounts: [String: Int], recentCounts: [String: Int]
     ) -> SuggestedPlaylist? {
-        let ordered = allCounts
-            .filter { $0.value >= 3 && (recentCounts[$0.key] ?? 0) == 0 }
-            .compactMap { entry -> (track: Track, count: Int)? in
-                guard let track = poolByKey[entry.key] else { return nil }
-                return (track, entry.value)
-            }
-            .sorted { $0.count > $1.count }
-            .map(\.track)
+        let ordered = orderedOwnedTracks(
+            poolByKey: poolByKey,
+            counts: allCounts.filter { $0.value >= 3 && (recentCounts[$0.key] ?? 0) == 0 }
+        )
         let tracks = Array(StationBuilder.spacedByArtist(Array(ordered.prefix(maxTracks * 2))).prefix(maxTracks))
         guard tracks.count >= minTracks else { return nil }
         return SuggestedPlaylist(
@@ -201,17 +200,15 @@ nonisolated enum SuggestedPlaylistService {
         )
     }
 
-    private static func key(_ title: String, _ artist: String) -> String {
-        SpellingMemo.listenKeys.key(title: title, artist: artist)
+    /// The owned songs among `counts`, most played first and equal counts by
+    /// key, so a dictionary's launch-to-launch order never reshuffles a mix.
+    private static func orderedOwnedTracks(poolByKey: [String: Track], counts: [String: Int]) -> [Track] {
+        counts
+            .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+            .compactMap { poolByKey[$0.key] }
     }
 
-    /// Deterministic 0…1 mix for day-stable Tonight's Spin ranking (Swift's
-    /// Hasher is process-randomized and can't be used for this).
-    private static func stableMix(_ daySeed: Int, _ title: String, _ artist: String) -> Double {
-        var hash: UInt64 = 5381 &+ UInt64(daySeed)
-        for byte in "\(title.lowercased())\u{0}\(artist.lowercased())".utf8 {
-            hash = ((hash &<< 5) &+ hash) &+ UInt64(byte)
-        }
-        return Double(hash % 10_000) / 10_000.0
+    private static func key(_ title: String, _ artist: String) -> String {
+        SpellingMemo.listenKeys.key(title: title, artist: artist)
     }
 }

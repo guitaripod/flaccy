@@ -1,6 +1,7 @@
 use crate::db::ScrobbleRow;
 use crate::library::Track;
 use crate::station;
+use flaccy_shared::day_order;
 use std::collections::HashMap;
 
 const MAX_TRACKS: usize = 50;
@@ -18,8 +19,10 @@ pub struct SuggestedPlaylist {
 
 /// Port of the iOS SuggestedPlaylistService: Heavy Rotation, Crate Dig,
 /// On Repeat, Rediscover, and Tonight's Spin from local scrobble history
-/// intersected with the tracks the user actually owns.
-pub fn build(pool: &[Track], rows: &[ScrobbleRow], now_unix: i64) -> Vec<SuggestedPlaylist> {
+/// intersected with the tracks the user actually owns. `offset` is the local
+/// UTC offset in seconds, which decides the listening day Tonight's Spin and
+/// Crate Dig hold for.
+pub fn build(pool: &[Track], rows: &[ScrobbleRow], now_unix: i64, offset: i32) -> Vec<SuggestedPlaylist> {
     if pool.is_empty() || rows.is_empty() {
         return Vec::new();
     }
@@ -31,6 +34,7 @@ pub fn build(pool: &[Track], rows: &[ScrobbleRow], now_unix: i64) -> Vec<Suggest
             .or_insert_with(|| track.clone());
     }
 
+    let day = day_order::day_of(now_unix, i64::from(offset));
     let recent_cutoff = now_unix - 90 * 86_400;
     let month_cutoff = now_unix - 30 * 86_400;
 
@@ -54,7 +58,7 @@ pub fn build(pool: &[Track], rows: &[ScrobbleRow], now_unix: i64) -> Vec<Suggest
     if let Some(heavy) = heavy_rotation(&pool_by_key, &month_counts, &all_counts) {
         suggestions.push(heavy);
     }
-    if let Some(dig) = crate_dig(pool, &all_counts) {
+    if let Some(dig) = crate_dig(pool, &all_counts, day) {
         suggestions.push(dig);
     }
     if let Some(repeat_artist) = on_repeat(pool, &artist_counts, &all_counts) {
@@ -63,7 +67,7 @@ pub fn build(pool: &[Track], rows: &[ScrobbleRow], now_unix: i64) -> Vec<Suggest
     if let Some(rediscover) = rediscover(&pool_by_key, &all_counts, &recent_counts) {
         suggestions.push(rediscover);
     }
-    if let Some(spin) = tonights_spin(pool, &all_counts, &recent_counts, now_unix) {
+    if let Some(spin) = tonights_spin(pool, &all_counts, &recent_counts, day) {
         suggestions.push(spin);
     }
     suggestions
@@ -175,7 +179,9 @@ fn rediscover(
     })
 }
 
-fn crate_dig(pool: &[Track], all_counts: &HashMap<String, i64>) -> Option<SuggestedPlaylist> {
+/// Underplayed tracks from albums you already love, in the day's order so the
+/// mix and its cover hold until tomorrow.
+fn crate_dig(pool: &[Track], all_counts: &HashMap<String, i64>, day: i64) -> Option<SuggestedPlaylist> {
     let mut pairs: Vec<(String, String, i64)> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for track in pool {
@@ -190,7 +196,7 @@ fn crate_dig(pool: &[Track], all_counts: &HashMap<String, i64>) -> Option<Sugges
         pairs.push((track.title.clone(), track.artist.clone(), count));
     }
     let excluding = std::collections::HashSet::new();
-    let tracks = station::crate_dig(pool, &pairs, &excluding, MAX_TRACKS);
+    let tracks = station::crate_dig(pool, &pairs, &excluding, MAX_TRACKS, Some(day));
     if tracks.len() < MIN_TRACKS {
         return None;
     }
@@ -203,11 +209,14 @@ fn crate_dig(pool: &[Track], all_counts: &HashMap<String, i64>) -> Option<Sugges
     })
 }
 
+/// One full album you own but haven't spun recently, picked in the day's order
+/// so the suggestion holds for the evening on every rebuild of Home and only
+/// moves on when the day does or the album stops qualifying.
 fn tonights_spin(
     pool: &[Track],
     all_counts: &HashMap<String, i64>,
     recent_counts: &HashMap<String, i64>,
-    now_unix: i64,
+    day: i64,
 ) -> Option<SuggestedPlaylist> {
     let mut albums: HashMap<String, Vec<Track>> = HashMap::new();
     for track in pool {
@@ -219,7 +228,6 @@ fn tonights_spin(
         albums.entry(k).or_default().push(track.clone());
     }
 
-    let day_seed = now_unix / 86_400;
     let mut candidates: Vec<(Vec<Track>, f64, String, String)> = Vec::new();
     for group in albums.values() {
         if group.len() < 5 {
@@ -266,10 +274,12 @@ fn tonights_spin(
         return None;
     }
 
-    let ranked = station::weighted_shuffle(candidates, |candidate| {
-        let mix = stable_mix(day_seed, &candidate.2, &candidate.3);
-        candidate.1 * (0.5 + mix)
-    });
+    let ranked = day_order::ordered(
+        candidates,
+        day,
+        |candidate| format!("{}\u{0}{}", candidate.2.to_lowercase(), candidate.3.to_lowercase()),
+        |candidate| candidate.1,
+    );
     let pick = ranked.into_iter().next()?;
     let subtitle = if pick.3.is_empty() {
         "Full album night".to_string()
@@ -283,18 +293,6 @@ fn tonights_spin(
         icon_name: "media-optical-cd-audio-symbolic",
         tracks: pick.0,
     })
-}
-
-fn stable_mix(day_seed: i64, title: &str, artist: &str) -> f64 {
-    let mut hash: u64 = 5381u64.wrapping_add(day_seed as u64);
-    let bytes = format!("{}\u{0}{}", title.to_lowercase(), artist.to_lowercase());
-    for byte in bytes.bytes() {
-        hash = hash
-            .wrapping_shl(5)
-            .wrapping_add(hash)
-            .wrapping_add(byte as u64);
-    }
-    (hash % 10_000) as f64 / 10_000.0
 }
 
 #[cfg(test)]
@@ -340,8 +338,8 @@ mod tests {
 
     #[test]
     fn empty_inputs_produce_nothing() {
-        assert!(build(&[], &[], NOW).is_empty());
-        assert!(build(&[track("t", "a")], &[], NOW).is_empty());
+        assert!(build(&[], &[], NOW, 0).is_empty());
+        assert!(build(&[track("t", "a")], &[], NOW, 0).is_empty());
     }
 
     #[test]
@@ -357,7 +355,7 @@ mod tests {
                 rows.push(row(&t.title, &t.artist, NOW - 86_400));
             }
         }
-        let result = build(&pool, &rows, NOW);
+        let result = build(&pool, &rows, NOW, 0);
         let heavy = result
             .iter()
             .find(|p| p.id == "heavy-rotation")
@@ -377,7 +375,7 @@ mod tests {
         for t in &pool {
             rows.push(row(&t.title, &t.artist, NOW - 200 * 86_400));
         }
-        let result = build(&pool, &rows, NOW);
+        let result = build(&pool, &rows, NOW, 0);
         let heavy = result
             .iter()
             .find(|p| p.id == "heavy-rotation")
@@ -394,7 +392,7 @@ mod tests {
         for t in &pool {
             rows.push(row(&t.title, &t.artist, NOW - 86_400));
         }
-        let result = build(&pool, &rows, NOW);
+        let result = build(&pool, &rows, NOW, 0);
         let repeat = result
             .iter()
             .find(|p| p.id == "on-repeat")
@@ -420,12 +418,64 @@ mod tests {
         for _ in 0..5 {
             rows.push(row(&fresh.title, &fresh.artist, NOW - 86_400));
         }
-        let result = build(&pool, &rows, NOW);
+        let result = build(&pool, &rows, NOW, 0);
         let rediscover = result
             .iter()
             .find(|p| p.id == "rediscover")
             .expect("rediscover");
         assert!(rediscover.tracks.iter().all(|t| t.title != "fresh"));
         assert_eq!(rediscover.tracks.len(), 10);
+    }
+
+    fn album(name: &str, artist: &str, songs: usize) -> Vec<Track> {
+        (0..songs)
+            .map(|n| {
+                let mut song = track(&format!("{name} {n}"), artist);
+                song.album = name.to_string();
+                song.track_number = n as i32 + 1;
+                song.rel_path = format!("{artist}/{name}/{n}.flac");
+                song
+            })
+            .collect()
+    }
+
+    fn shelf() -> (Vec<Track>, Vec<ScrobbleRow>) {
+        let mut pool = Vec::new();
+        let mut rows = Vec::new();
+        for index in 0..12 {
+            let songs = album(&format!("Album {index}"), &format!("Artist {index}"), 6);
+            for _ in 0..6 {
+                rows.push(row(&songs[0].title, &songs[0].artist, NOW - 200 * 86_400));
+            }
+            pool.extend(songs);
+        }
+        (pool, rows)
+    }
+
+    fn day_picks(pool: &[Track], rows: &[ScrobbleRow], at: i64) -> (String, Vec<String>) {
+        let mixes = build(pool, rows, at, 0);
+        let spin = mixes.iter().find(|mix| mix.id == "tonights-spin").expect("tonight's spin");
+        let dig = mixes.iter().find(|mix| mix.id == "crate-dig").expect("crate dig");
+        (
+            spin.title.clone(),
+            dig.tracks.iter().map(|song| song.rel_path.clone()).collect(),
+        )
+    }
+
+    #[test]
+    fn tonights_spin_and_crate_dig_hold_for_the_listening_day() {
+        let (pool, rows) = shelf();
+        let first = day_picks(&pool, &rows, NOW);
+        for _ in 0..5 {
+            assert_eq!(day_picks(&pool, &rows, NOW), first);
+        }
+        assert_eq!(day_picks(&pool, &rows, NOW + 20 * 3_600), first);
+        let mut reversed = pool.clone();
+        reversed.reverse();
+        assert_eq!(day_picks(&reversed, &rows, NOW), first);
+        let later: Vec<String> = (1..8)
+            .map(|days| day_picks(&pool, &rows, NOW + days * 86_400).0)
+            .collect();
+        assert!(later.iter().any(|title| *title != first.0));
     }
 }

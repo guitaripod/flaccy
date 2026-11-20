@@ -132,13 +132,15 @@ nonisolated enum StationBuilder {
     }
 
     /// Crate Dig over a pool whose listen keys are already folded, `keys[i]`
-    /// being `pool[i]`'s.
+    /// being `pool[i]`'s. A `day` orders it for that whole day, as Home's mix
+    /// wants; without one it is shuffled afresh, as a station wants.
     static func crateDig(
         pool: [Track],
         keys: [String],
         playCounts: [(key: String, count: Int)],
         excluding: Set<URL>,
-        limit: Int
+        limit: Int,
+        day: Int64? = nil
     ) -> [Track] {
         var countByKey: [String: Int] = [:]
         for entry in playCounts { countByKey[entry.key] = entry.count }
@@ -163,8 +165,17 @@ nonisolated enum StationBuilder {
         }
         guard !scored.isEmpty else { return [] }
 
-        let weighted = weightedShuffle(scored) { $0.weight }.map(\.track)
+        let weighted = ordered(scored, day: day).map(\.track)
         return Array(spacedByArtist(Array(weighted.prefix(limit * 2))).prefix(limit))
+    }
+
+    private static func ordered(_ scored: [(track: Track, weight: Double)], day: Int64?) -> [(track: Track, weight: Double)] {
+        guard let day else { return weightedShuffle(scored) { $0.weight } }
+        return DayStableOrder.ordered(scored, day: day, name: { crateName($0.track) }, weight: \.weight)
+    }
+
+    private static func crateName(_ track: Track) -> String {
+        "\(track.title.lowercased())\u{0}\(track.artist.lowercased())\u{0}\(track.albumTitle.lowercased())"
     }
 
     private static func trackKey(_ title: String, _ artist: String) -> String {
