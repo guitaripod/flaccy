@@ -74,16 +74,7 @@ impl Target {
             Target::Mp3 => vec!["-c:a", "libmp3lame", "-b:a", &rate, "-f", "mp3"],
             Target::Opus => vec!["-c:a", "libopus", "-b:a", &rate, "-f", "ogg"],
             Target::Aac => vec!["-c:a", "aac", "-b:a", &rate, "-f", "adts"],
-            Target::Mp4 => vec![
-                "-c:a",
-                "aac",
-                "-b:a",
-                &rate,
-                "-movflags",
-                "frag_keyframe+empty_moov+default_base_moof",
-                "-f",
-                "mp4",
-            ],
+            Target::Mp4 => vec!["-c:a", "aac", "-b:a", &rate, "-movflags", "+faststart", "-f", "mp4"],
         };
         pieces.into_iter().map(str::to_string).collect()
     }
@@ -111,9 +102,12 @@ fn busy_response() -> Response {
 }
 
 /// Starts ffmpeg on `input` and streams its output as the response body. There
-/// is no length and no range support: the stream is produced as it plays. At
-/// most [`CONCURRENT_CONVERSIONS`] run at once; a request that finds them all
-/// busy for [`QUEUE_WAIT`] is answered `503` with `Retry-After`.
+/// is no length and no range support: the stream is produced as it plays. An
+/// `mp4` is the exception: it is converted whole first and sent with its length,
+/// because only a finished file carries the edit list that trims the encoder's
+/// priming, which a player needs to join songs without a gap. At most
+/// [`CONCURRENT_CONVERSIONS`] run at once; a request that finds them all busy
+/// for [`QUEUE_WAIT`] is answered `503` with `Retry-After`.
 pub async fn stream(
     program: &str,
     input: &Path,
@@ -148,22 +142,17 @@ pub async fn stream(
         .arg(input)
         .args(["-map", "0:a:0", "-vn", "-map_metadata", "-1"])
         .args(target.codec_arguments(kbps))
-        .arg("pipe:1")
         .stdin(Stdio::null())
-        .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .kill_on_drop(true);
-    let mut child = command.spawn().map_err(|err| {
-        if err.kind() == std::io::ErrorKind::NotFound {
-            ApiError::generic(
-                "Converting a song needs ffmpeg and it is not installed on the server. Install ffmpeg (for example `pacman -S ffmpeg` or `apt install ffmpeg`) and make sure it is on the PATH of flaccy-server, or ask for format=raw to get the original file",
-            )
-        } else {
-            ApiError::generic(format!(
-                "Could not start ffmpeg to convert the song: {err}. Check that ffmpeg is executable by the user running flaccy-server, or ask for format=raw to get the original file"
-            ))
-        }
-    })?;
+    if target == Target::Mp4 {
+        let body = convert_whole(command, slot).await?;
+        response.headers_mut().insert(header::CONTENT_LENGTH, HeaderValue::from(body.length));
+        *response.body_mut() = Body::from_stream(ReaderStream::new(body.file));
+        return Ok(response);
+    }
+    command.arg("pipe:1").stdout(Stdio::piped());
+    let mut child = command.spawn().map_err(spawn_error)?;
     let stdout = child.stdout.take().ok_or_else(|| {
         ApiError::generic("ffmpeg started without an output pipe. This is a bug in flaccy-server; ask for format=raw to get the original file meanwhile")
     })?;
@@ -173,6 +162,60 @@ pub async fn stream(
     });
     *response.body_mut() = Body::from_stream(ReaderStream::new(stdout));
     Ok(response)
+}
+
+/// A finished conversion: the open file and its length. Its path is already
+/// removed, so the bytes go away with the response.
+struct ConvertedFile {
+    file: tokio::fs::File,
+    length: u64,
+}
+
+/// Runs `command` into a temporary file, holding `slot` until ffmpeg exits.
+async fn convert_whole(mut command: Command, slot: SemaphorePermit<'static>) -> Result<ConvertedFile, ApiError> {
+    let path = conversion_path();
+    command.arg("-y").arg(&path).stdout(Stdio::null());
+    let status = command.spawn().map_err(spawn_error)?.wait().await;
+    drop(slot);
+    let converted = async {
+        if !status.as_ref().is_ok_and(|status| status.success()) {
+            return Err(ApiError::generic(
+                "ffmpeg could not convert the song to mp4. Check that the file plays, or ask for format=raw to get the original file",
+            ));
+        }
+        let file = tokio::fs::File::open(&path).await.map_err(conversion_storage_error)?;
+        let length = file.metadata().await.map_err(conversion_storage_error)?.len();
+        Ok(ConvertedFile { file, length })
+    }
+    .await;
+    let _ = tokio::fs::remove_file(&path).await;
+    converted
+}
+
+/// A fresh path in the system's temporary folder for one conversion.
+fn conversion_path() -> std::path::PathBuf {
+    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let serial = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    std::env::temp_dir().join(format!("flaccy-server-{}-{serial}.m4a", std::process::id()))
+}
+
+fn conversion_storage_error(err: std::io::Error) -> ApiError {
+    ApiError::generic(format!(
+        "Could not read the converted song from the temporary folder: {err}. Check that the server can write to {}, or ask for format=raw to get the original file",
+        std::env::temp_dir().display()
+    ))
+}
+
+fn spawn_error(err: std::io::Error) -> ApiError {
+    if err.kind() == std::io::ErrorKind::NotFound {
+        ApiError::generic(
+            "Converting a song needs ffmpeg and it is not installed on the server. Install ffmpeg (for example `pacman -S ffmpeg` or `apt install ffmpeg`) and make sure it is on the PATH of flaccy-server, or ask for format=raw to get the original file",
+        )
+    } else {
+        ApiError::generic(format!(
+            "Could not start ffmpeg to convert the song: {err}. Check that ffmpeg is executable by the user running flaccy-server, or ask for format=raw to get the original file"
+        ))
+    }
 }
 
 #[cfg(test)]

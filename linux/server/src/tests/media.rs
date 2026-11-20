@@ -187,6 +187,16 @@ async fn ffmpeg_converts_to_the_format_asked_for() {
 
     let limited = server.get(&format!("{}&maxBitRate=64", stream_uri(&id))).await;
     assert_eq!(limited.header("content-type"), "audio/mpeg");
+
+    let mp4 = server.get(&format!("{}&format=mp4&maxBitRate=256", stream_uri(&id))).await;
+    assert_eq!(mp4.status, StatusCode::OK);
+    assert_eq!(mp4.header("content-type"), "audio/mp4");
+    assert_eq!(mp4.header("content-length"), mp4.body.len().to_string());
+    assert_eq!(&mp4.body[4..8], b"ftyp", "not an mp4 file");
+    let moov = mp4.body.windows(4).position(|window| window == b"moov");
+    let mdat = mp4.body.windows(4).position(|window| window == b"mdat");
+    assert!(moov.is_some() && moov < mdat, "the mp4 is not one whole file with its index first");
+    assert!(mp4.body.windows(4).any(|window| window == b"elst"), "the mp4 lost the edit list that trims the priming");
 }
 
 fn png(width: u32, height: u32) -> Vec<u8> {
