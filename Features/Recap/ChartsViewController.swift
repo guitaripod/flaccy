@@ -68,7 +68,16 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         bindViewModel()
 
         RecapLibraryIndexCache.shared.prepare()
-        viewModel.load(period: viewModel.selectedPeriod)
+    }
+
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        viewModel.setOnScreen(true)
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        viewModel.setOnScreen(false)
     }
 
     private func setupBackdrop() {

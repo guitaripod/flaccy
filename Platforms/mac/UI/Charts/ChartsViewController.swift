@@ -129,7 +129,16 @@ final class ChartsViewController: NSViewController {
 
         setLoading(true)
         RecapLibraryIndexCache.shared.prepare()
-        viewModel.load(period: viewModel.selectedPeriod)
+    }
+
+    override func viewWillAppear() {
+        super.viewWillAppear()
+        viewModel.setOnScreen(true)
+    }
+
+    override func viewDidDisappear() {
+        super.viewDidDisappear()
+        viewModel.setOnScreen(false)
     }
 
     deinit {

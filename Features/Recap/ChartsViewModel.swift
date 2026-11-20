@@ -23,6 +23,8 @@ final class ChartsViewModel {
     private var snapshotCache: [ChartPeriod: (revision: Int, data: RecapData)] = [:]
 
     private var observers: [NSObjectProtocol] = []
+    private var isOnScreen = false
+    private var owesLoad = true
 
     init(initialPeriod: ChartPeriod = .allTime) {
         selectedPeriod = initialPeriod
@@ -50,12 +52,32 @@ final class ChartsViewModel {
     private func handleAuthChange() {
         cachedUserInfo = nil
         snapshotCache.removeAll()
-        load(period: selectedPeriod)
+        loadIfOnScreen()
     }
 
     /// Redraws the visible period when the sync stored new plays: the snapshot
     /// cache keys on the scrobble revision, so only a changed history recomputes.
     private func handleHistoryChange() {
+        loadIfOnScreen()
+    }
+
+    /// The Recap is shown or put away. A history of a hundred and sixty thousand plays takes
+    /// seconds of a core and the database to fold, and every play the sync records changed it, so
+    /// a Recap nobody was looking at — the iPad keeps every tab's screen alive — recomputed
+    /// itself every few minutes while music played, and at launch beside Home's first frame.
+    /// It now only notes that it is behind, and catches up as it comes on screen.
+    func setOnScreen(_ onScreen: Bool) {
+        isOnScreen = onScreen
+        guard onScreen, owesLoad else { return }
+        owesLoad = false
+        load(period: selectedPeriod)
+    }
+
+    private func loadIfOnScreen() {
+        guard isOnScreen else {
+            owesLoad = true
+            return
+        }
         load(period: selectedPeriod)
     }
 
