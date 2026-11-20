@@ -494,12 +494,30 @@ pub fn song_key(title: &str, artist: &str) -> String {
     )
 }
 
-/// Remembers the `song_key` of every spelling it is asked about, because
-/// folding a title is the costly step of a pass over a whole library and the
-/// Songs list asks again on every keystroke.
+/// Copies tagged with different artists count as one song only when they sit
+/// on the same album at the same track number and last within this many
+/// seconds of each other, as a transcode of the same file does.
+pub const OTHER_ARTIST_DURATION_TOLERANCE: f64 = 1.0;
+
+/// The identity of a recording on its release regardless of who it is
+/// credited to: the album and the title with re-release decoration removed.
+/// With the track number it tells "Various Artists" and the real performer of
+/// one song on one compilation apart from two different songs.
+pub fn recording_key(title: &str, album: &str) -> String {
+    format!(
+        "{}\u{0}{}",
+        consolidation_base_title(album),
+        base_title_with(title, &SONG_EDITION_KEYWORDS)
+    )
+}
+
+/// Remembers the `song_key` and `recording_key` of every spelling it is asked
+/// about, because folding a title is the costly step of a pass over a whole
+/// library and the Songs list asks again on every keystroke.
 #[derive(Default)]
 pub struct SongKeyMemo {
     keys: HashMap<(String, String), String>,
+    recordings: HashMap<(String, String), String>,
 }
 
 impl SongKeyMemo {
@@ -507,6 +525,12 @@ impl SongKeyMemo {
         self.keys
             .entry((title.to_string(), artist.to_string()))
             .or_insert_with(|| song_key(title, artist))
+    }
+
+    pub fn recording(&mut self, title: &str, album: &str) -> &str {
+        self.recordings
+            .entry((title.to_string(), album.to_string()))
+            .or_insert_with(|| recording_key(title, album))
     }
 }
 
@@ -519,7 +543,9 @@ pub struct DuplicateSongs {
 
 /// Finds the copies of every song in `tracks` that should be hidden behind one
 /// keeper. Same song means the same `song_key` with lengths that chain together
-/// within `SONG_DURATION_TOLERANCE`. The keeper is the copy `prefers` ranks
+/// within `SONG_DURATION_TOLERANCE`, or the same album, track number and title
+/// under another artist credit with lengths within
+/// `OTHER_ARTIST_DURATION_TOLERANCE`. The keeper is the copy `prefers` ranks
 /// highest (the one the person loved or plays), then the highest fidelity, then
 /// the oldest row. Songs on a server and songs in the music folder are one
 /// pool: a server's copy is as much a duplicate as a local one.
@@ -528,27 +554,111 @@ pub fn collapsing_duplicate_songs<'a>(
     memo: &mut SongKeyMemo,
     prefers: impl Fn(&Track) -> i32,
 ) -> DuplicateSongs {
-    let mut by_key: HashMap<String, Vec<&Track>> = HashMap::new();
-    for track in tracks.into_iter().filter(|track| !track.title.is_empty()) {
-        let key = memo.key(&track.title, &track.artist).to_string();
-        by_key.entry(key).or_default().push(track);
-    }
-    let mut found = DuplicateSongs::default();
-    for mut members in by_key.into_values().filter(|members| members.len() >= 2) {
-        members.sort_by(|a, b| a.duration.total_cmp(&b.duration));
-        let mut cluster: Vec<&Track> = Vec::new();
-        for track in members {
-            let breaks = cluster
-                .last()
-                .is_some_and(|last| track.duration - last.duration > SONG_DURATION_TOLERANCE);
-            if breaks {
-                hide_copies(std::mem::take(&mut cluster), &prefers, &mut found);
-            }
-            cluster.push(track);
+    let tracks: Vec<&Track> = tracks.into_iter().filter(|track| !track.title.is_empty()).collect();
+    let mut by_song: HashMap<String, Vec<usize>> = HashMap::new();
+    let mut by_recording: HashMap<String, Vec<usize>> = HashMap::new();
+    for (index, track) in tracks.iter().enumerate() {
+        by_song
+            .entry(memo.key(&track.title, &track.artist).to_string())
+            .or_default()
+            .push(index);
+        if track.track_number > 0 {
+            let recording = format!("{}\u{0}{}", memo.recording(&track.title, &track.album), track.track_number);
+            by_recording.entry(recording).or_default().push(index);
         }
-        hide_copies(cluster, &prefers, &mut found);
+    }
+    let durations: Vec<f64> = tracks.iter().map(|track| track.duration).collect();
+    let mut groups = DuplicateGrouping::new(tracks.len());
+    groups.chain(by_song.into_values(), &durations, SONG_DURATION_TOLERANCE);
+    groups.chain(by_recording.into_values(), &durations, OTHER_ARTIST_DURATION_TOLERANCE);
+    let mut found = DuplicateSongs::default();
+    for members in groups.clusters() {
+        hide_copies(members.into_iter().map(|index| tracks[index]).collect(), &prefers, &mut found);
     }
     found
+}
+
+/// The album as Clean Library shows its page: each song once, keeping the copy
+/// the person loved, then the highest fidelity. The album comes back whole when
+/// nothing on it repeats.
+pub fn each_song_once(album: &Album) -> Album {
+    let found = collapsing_duplicate_songs(&album.tracks, &mut SongKeyMemo::default(), |track| {
+        i32::from(track.loved)
+    });
+    Album {
+        tracks: album
+            .tracks
+            .iter()
+            .filter(|track| !found.hidden.contains(&track.rel_path))
+            .cloned()
+            .collect(),
+        ..album.clone()
+    }
+}
+
+/// Joins the copies of a song found by any of the duplicate rules into one
+/// cluster, so a file that matches a server song by artist and title and
+/// another copy by album and track number all stand behind one keeper.
+struct DuplicateGrouping {
+    parent: Vec<usize>,
+    joined: HashSet<usize>,
+}
+
+impl DuplicateGrouping {
+    fn new(count: usize) -> Self {
+        DuplicateGrouping {
+            parent: (0..count).collect(),
+            joined: HashSet::new(),
+        }
+    }
+
+    /// Joins, within each group, the songs whose lengths follow each other within `tolerance`.
+    fn chain(&mut self, groups: impl IntoIterator<Item = Vec<usize>>, durations: &[f64], tolerance: f64) {
+        for mut members in groups.into_iter().filter(|members| members.len() >= 2) {
+            members.sort_by(|a, b| durations[*a].total_cmp(&durations[*b]));
+            for pair in members.windows(2) {
+                if durations[pair[1]] - durations[pair[0]] <= tolerance {
+                    self.join(pair[0], pair[1]);
+                }
+            }
+        }
+    }
+
+    /// The groups of two or more songs, each listed by index.
+    fn clusters(&mut self) -> Vec<Vec<usize>> {
+        let mut by_root: HashMap<usize, Vec<usize>> = HashMap::new();
+        let joined: Vec<usize> = self.joined.iter().copied().collect();
+        for index in joined {
+            let root = self.root(index);
+            by_root.entry(root).or_default().push(index);
+        }
+        by_root
+            .into_values()
+            .filter(|members| members.len() >= 2)
+            .map(|mut members| {
+                members.sort_unstable();
+                members
+            })
+            .collect()
+    }
+
+    fn join(&mut self, a: usize, b: usize) {
+        self.joined.insert(a);
+        self.joined.insert(b);
+        let (root_a, root_b) = (self.root(a), self.root(b));
+        if root_a != root_b {
+            self.parent[root_a.max(root_b)] = root_a.min(root_b);
+        }
+    }
+
+    fn root(&mut self, index: usize) -> usize {
+        let mut current = index;
+        while self.parent[current] != current {
+            self.parent[current] = self.parent[self.parent[current]];
+            current = self.parent[current];
+        }
+        current
+    }
 }
 
 /// Ranks one run of copies and records every one but the keeper as hidden.
@@ -1003,6 +1113,80 @@ mod tests {
 
     fn collapse(tracks: &[Track]) -> DuplicateSongs {
         collapsing_duplicate_songs(tracks, &mut SongKeyMemo::default(), |_| 0)
+    }
+
+    fn credited(title: &str, artist: &str, album: &str, number: i32, duration: f64, id: i64) -> Track {
+        let mut track = detailed_track(title, artist, album, number, "flac", Some(16), Some(44_100));
+        track.id = id;
+        track.duration = duration;
+        track
+    }
+
+    #[test]
+    fn the_same_recording_under_another_artist_credit_collapses() {
+        let tracks = [
+            credited("Harbor Lights", "Various Artists", "Night Ferry", 3, 200.4, 1),
+            credited("Harbor Lights", "Corvid & Crane", "Night Ferry", 3, 200.0, 2),
+        ];
+        let found = collapse(&tracks);
+        assert_eq!(found.hidden.len(), 1);
+        assert_eq!(found.copies.values().next().map(Vec::len), Some(1));
+    }
+
+    #[test]
+    fn another_artist_credit_needs_the_same_track_number() {
+        let tracks = [
+            credited("Harbor Lights", "Various Artists", "Night Ferry", 3, 200.0, 1),
+            credited("Harbor Lights", "Corvid & Crane", "Night Ferry", 4, 200.0, 2),
+        ];
+        assert!(collapse(&tracks).hidden.is_empty());
+    }
+
+    #[test]
+    fn another_artist_credit_needs_lengths_within_a_second() {
+        let tracks = [
+            credited("Harbor Lights", "Various Artists", "Night Ferry", 3, 200.0, 1),
+            credited("Harbor Lights", "Corvid & Crane", "Night Ferry", 3, 201.5, 2),
+        ];
+        assert!(collapse(&tracks).hidden.is_empty());
+    }
+
+    #[test]
+    fn another_artist_credit_on_another_album_stays_separate() {
+        let tracks = [
+            credited("Harbor Lights", "Various Artists", "Night Ferry", 3, 200.0, 1),
+            credited("Harbor Lights", "Corvid & Crane", "Roost", 3, 200.0, 2),
+        ];
+        assert!(collapse(&tracks).hidden.is_empty());
+    }
+
+    #[test]
+    fn both_rules_join_into_one_song() {
+        let tracks = [
+            credited("Harbor Lights", "Various Artists", "Night Ferry", 3, 200.4, 1),
+            credited("Harbor Lights", "Corvid & Crane", "Night Ferry", 3, 200.0, 2),
+            credited("Harbor Lights", "Corvid & Crane", "Harbor Lights - Single", 1, 201.0, 3),
+        ];
+        let found = collapse(&tracks);
+        assert_eq!(found.hidden.len(), 2);
+        assert_eq!(found.copies.values().next().map(Vec::len), Some(2));
+    }
+
+    #[test]
+    fn an_album_page_shows_each_song_once_keeping_the_loved_copy() {
+        let mut server = credited("Harbor Lights", "Corvid & Crane", "Night Ferry", 3, 200.2, 2);
+        server.rel_path = "remote://home/s3".into();
+        server.loved = true;
+        let mut page = album("Night Ferry", "Corvid & Crane", 0);
+        page.tracks = vec![
+            credited("Low Tide", "Corvid & Crane", "Night Ferry", 2, 180.0, 1),
+            credited("Harbor Lights", "Corvid & Crane", "Night Ferry", 3, 200.0, 3),
+            server,
+        ];
+        let shown = each_song_once(&page);
+        let paths: Vec<&str> = shown.tracks.iter().map(|track| track.rel_path.as_str()).collect();
+        assert_eq!(paths, ["Corvid & Crane/Night Ferry/2-Low Tide.flac", "remote://home/s3"]);
+        assert_eq!(each_song_once(&album("Roost", "Corvid & Crane", 4)).tracks.len(), 4);
     }
 
     fn survivors(tracks: &[Track], found: &DuplicateSongs) -> Vec<i64> {

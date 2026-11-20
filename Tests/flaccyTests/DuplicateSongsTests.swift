@@ -50,6 +50,41 @@ nonisolated final class DuplicateSongsTests: XCTestCase {
         XCTAssertEqual(LibraryHygiene.collapsingDuplicateSongs([first, second]).tracks.count, 2)
     }
 
+    @MainActor func testSameRecordingUnderAnotherArtistCreditCollapses() {
+        let compilation = track("Harbor Lights", artist: "Various Artists", album: "Night Ferry", duration: 200.4, id: 1, number: 3)
+        let performer = track("Harbor Lights", artist: "Corvid & Crane", album: "Night Ferry", duration: 200, id: 2, number: 3)
+        let result = LibraryHygiene.collapsingDuplicateSongs([compilation, performer])
+        XCTAssertEqual(result.tracks.count, 1)
+        XCTAssertEqual(result.copies.values.first?.count, 1)
+    }
+
+    @MainActor func testAnotherArtistCreditNeedsTheSameTrackNumber() {
+        let first = track("Harbor Lights", artist: "Various Artists", album: "Night Ferry", id: 1, number: 3)
+        let second = track("Harbor Lights", artist: "Corvid & Crane", album: "Night Ferry", id: 2, number: 4)
+        XCTAssertEqual(LibraryHygiene.collapsingDuplicateSongs([first, second]).tracks.count, 2)
+    }
+
+    @MainActor func testAnotherArtistCreditNeedsLengthsWithinASecond() {
+        let first = track("Harbor Lights", artist: "Various Artists", album: "Night Ferry", duration: 200, id: 1, number: 3)
+        let second = track("Harbor Lights", artist: "Corvid & Crane", album: "Night Ferry", duration: 201.5, id: 2, number: 3)
+        XCTAssertEqual(LibraryHygiene.collapsingDuplicateSongs([first, second]).tracks.count, 2)
+    }
+
+    @MainActor func testAnotherArtistCreditOnAnotherAlbumStaysSeparate() {
+        let first = track("Harbor Lights", artist: "Various Artists", album: "Night Ferry", id: 1, number: 3)
+        let second = track("Harbor Lights", artist: "Corvid & Crane", album: "Roost", id: 2, number: 3)
+        XCTAssertEqual(LibraryHygiene.collapsingDuplicateSongs([first, second]).tracks.count, 2)
+    }
+
+    @MainActor func testBothRulesJoinIntoOneSong() {
+        let compilation = track("Harbor Lights", artist: "Various Artists", album: "Night Ferry", duration: 200.4, id: 1, number: 3)
+        let performer = track("Harbor Lights", artist: "Corvid & Crane", album: "Night Ferry", duration: 200, id: 2, number: 3)
+        let single = track("Harbor Lights", artist: "Corvid & Crane", album: "Harbor Lights - Single", duration: 201, id: 3, number: 1)
+        let result = LibraryHygiene.collapsingDuplicateSongs([compilation, performer, single])
+        XCTAssertEqual(result.tracks.count, 1)
+        XCTAssertEqual(result.copies.values.first?.count, 2)
+    }
+
     @MainActor func testKeeperIsTheHighestFidelityCopy() {
         let lossy = track("Glass Harbor", album: "Hits", codec: "MP3", bitDepth: nil, id: 1)
         let hiRes = track("Glass Harbor", album: "Tidewater", codec: "FLAC", bitDepth: 24, id: 2)

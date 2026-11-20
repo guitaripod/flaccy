@@ -501,7 +501,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 AppEvent::NaturalEnd(_) => view.on_play_ended(),
                 AppEvent::RemoteChanged => view.refresh_sources(),
                 AppEvent::SearchChanged(_) => view.on_search_changed(),
-                AppEvent::HideDuplicatesChanged => view.on_hide_duplicates_changed(),
+                AppEvent::CleanLibraryChanged => view.on_hide_duplicates_changed(),
                 AppEvent::LocateCurrent => view.locate_current(),
                 _ => {}
             });
@@ -610,26 +610,26 @@ impl View {
         header.upcast()
     }
 
-    /// The switch for Hide Duplicate Songs, beside the buttons that act on the
-    /// list: it is the same setting Preferences holds.
+    /// The switch for Clean Library, beside the buttons that act on the list:
+    /// it is the same setting Preferences holds.
     fn duplicates_button(self: &Rc<Self>) -> gtk::ToggleButton {
         let button = self.duplicates_toggle.clone();
         button.set_icon_name("edit-copy-symbolic");
         button.add_css_class("flat");
         button.add_css_class("circular");
-        button.set_tooltip_text(Some("Hide duplicate songs"));
+        button.set_tooltip_text(Some("Clean Library: each song once"));
         button.set_active(self.hides_duplicates());
         let view = Rc::downgrade(self);
         button.connect_toggled(move |button| {
             if let Some(view) = view.upgrade() {
-                view.ui.core.set_hide_duplicate_songs(button.is_active());
+                view.ui.core.set_clean_library(button.is_active());
             }
         });
         button
     }
 
     fn hides_duplicates(&self) -> bool {
-        self.ui.core.config.borrow().hide_duplicate_songs
+        self.ui.core.config.borrow().clean_library
     }
 
     /// Runs the list through the filter again, after deciding which copies of

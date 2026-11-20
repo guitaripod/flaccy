@@ -369,7 +369,7 @@ final class SettingsViewController: UITableViewController {
         return [
             (.libraryHeadline, [.libraryOverview(libraryOverview)]),
             (.libraryAdd, [.importFiles, .rescanLibrary]),
-            (.libraryOrganize, [.groupAlbumEditions, .hideDuplicateSongs]),
+            (.libraryOrganize, [.cleanLibrary]),
             (.libraryDetails, details),
             (.libraryOverview, overview),
         ]
@@ -430,8 +430,10 @@ final class SettingsViewController: UITableViewController {
             Entry(Page.library.title, in: .library),
             Entry(String(localized: "Import Files"), in: .library),
             Entry(String(localized: "Rescan Library"), in: .library),
-            Entry(String(localized: "Group Album Editions"), in: .library),
-            Entry(String(localized: "Hide Duplicate Songs"), in: .library),
+            Entry(
+                LibraryOrganizeCopy.cleanLibraryTitle, in: .library,
+                aliases: [String(localized: "Hide Duplicate Songs"), String(localized: "Group Album Editions")]
+            ),
             Entry(String(localized: "Metadata"), in: .library),
             Entry(String(localized: "Use Apple Music artwork"), in: .library),
             Entry(String(localized: "Storage Used"), in: .library),
@@ -539,7 +541,7 @@ final class SettingsViewController: UITableViewController {
 
     func isSelectable(_ row: Row) -> Bool {
         switch row {
-        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
+        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .cleanLibrary,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
              .downloadQuality, .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
             return false
@@ -582,7 +584,7 @@ final class SettingsViewController: UITableViewController {
         case .addServer: handleAddServerTap()
         case .server(let server): handleServerTap(server)
         case .clearCache: handleClearCacheTap()
-        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
+        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .cleanLibrary,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
              .downloadQuality, .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
             break

@@ -142,7 +142,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         ui.core
             .hub
             .subscribe_widget(&scroll, move |_, event| match event {
-                AppEvent::LibraryReloaded | AppEvent::HideDuplicatesChanged => state.refresh(true),
+                AppEvent::LibraryReloaded | AppEvent::CleanLibraryChanged => state.refresh(true),
                 AppEvent::ScrobbleRecorded | AppEvent::HistorySynced { .. } => state.refresh(false),
                 AppEvent::TrackChanged(_)
                 | AppEvent::PlayingChanged(_)
@@ -179,7 +179,7 @@ impl State {
             Vec::new()
         };
         let previous = self.fetched.borrow().mixes.clone();
-        let hide_duplicates = self.ui.core.config.borrow().hide_duplicate_songs;
+        let hide_duplicates = self.ui.core.config.borrow().clean_library;
         let db_path = self.ui.core.db_path.clone();
         let now = chrono::Utc::now().timestamp();
         let offset = local_offset();

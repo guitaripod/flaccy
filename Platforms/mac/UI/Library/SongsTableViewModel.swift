@@ -351,12 +351,14 @@ final class SongsTableViewModel {
         let filter = self.filter
         let range = mostPlayedRange
         let derived = self.derived
+        let clean = CleanLibrarySetting.isEnabled
         publishTask?.cancel()
         publishTask = Task.detached(priority: .userInitiated) { [weak self] in
             guard !Task.isCancelled else { return }
             let pivot = Self.pivoted(rows, by: filter, range: range, derived: derived, now: Date())
             guard !Task.isCancelled else { return }
-            let result = Self.sorted(Self.filtered(pivot, query: query), tiers: tiers)
+            let found = Self.filtered(pivot, query: query)
+            let result = Self.sorted(clean ? Self.eachSongOnce(found) : found, tiers: tiers)
             guard !Task.isCancelled else { return }
             await MainActor.run { [weak self] in
                 guard let self, self.publishGeneration == generation else { return }
@@ -436,6 +438,17 @@ final class SongsTableViewModel {
         return rows.filter {
             fold("\($0.track.title)\n\($0.track.artist)\n\($0.track.albumTitle)").contains(query)
         }
+    }
+
+    /// One row per song for Clean Library, keeping the copy the person loved, then the one they played, as the iPhone's
+    /// Songs list does, so a pivot never loses a row to a twin with no history.
+    nonisolated private static func eachSongOnce(_ rows: [Row]) -> [Row] {
+        let played = Set(rows.filter { $0.plays > 0 || $0.lastPlayed != nil }.map(\.track.fileURL))
+        let kept = LibraryHygiene.collapsingDuplicateSongs(rows.map(\.track)) { track in
+            (LovedTracksService.shared.isLoved(track: track) ? 2 : 0) + (played.contains(track.fileURL) ? 1 : 0)
+        }
+        let urls = Set(kept.tracks.map(\.fileURL))
+        return rows.filter { urls.contains($0.track.fileURL) }
     }
 
     nonisolated private static func fold(_ s: String) -> String {

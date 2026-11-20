@@ -273,23 +273,14 @@ extension SettingsViewController {
                 cell.accessibilityHint = String(localized: "Re-analyzes all tracks")
             }
 
-        case .groupAlbumEditions:
-            content.image = RowIcon.image(systemName: "square.stack.3d.up", tint: .systemPurple)
-            content.text = String(localized: "Group Album Editions")
+        case .cleanLibrary:
+            content.image = RowIcon.image(systemName: "sparkles", tint: .systemTeal)
+            content.text = LibraryOrganizeCopy.cleanLibraryTitle
             cell.selectionStyle = .none
             cell.accessibilityTraits = .none
-            cell.accessoryView = makeGroupEditionsSwitch()
-            cell.accessibilityLabel = String(localized: "Group Album Editions")
-            cell.accessibilityHint = String(localized: "Folds deluxe, remaster, and explicit variants into one album")
-
-        case .hideDuplicateSongs:
-            content.image = RowIcon.image(systemName: "square.on.square", tint: .systemTeal)
-            content.text = String(localized: "Hide Duplicate Songs")
-            cell.selectionStyle = .none
-            cell.accessibilityTraits = .none
-            cell.accessoryView = makeHideDuplicatesSwitch()
-            cell.accessibilityLabel = String(localized: "Hide Duplicate Songs")
-            cell.accessibilityHint = String(localized: "Lists one copy of a song that appears on several albums")
+            cell.accessoryView = makeCleanLibrarySwitch()
+            cell.accessibilityLabel = LibraryOrganizeCopy.cleanLibraryTitle
+            cell.accessibilityHint = LibraryOrganizeCopy.cleanLibraryHint
 
         case .metadataReport(let complete, let gaveUp):
             content.image = RowIcon.image(systemName: "tag.fill", tint: .systemBlue)

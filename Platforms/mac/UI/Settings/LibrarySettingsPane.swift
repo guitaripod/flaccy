@@ -18,8 +18,7 @@ final class LibrarySettingsPane: SettingsPane {
     let storageLabel = NSTextField(labelWithString: String(localized: "Storage: …"))
     let rescanButton = NSButton(title: String(localized: "Rescan Library"), target: nil, action: nil)
     let analyzeButton = NSButton(title: String(localized: "Re-analyze with AI…"), target: nil, action: nil)
-    let hideDuplicatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Hide duplicate songs"), target: nil, action: nil)
-    let groupEditionsCheckbox = NSButton(checkboxWithTitle: String(localized: "Group album editions (Deluxe, Remaster…) as one album"), target: nil, action: nil)
+    let cleanLibraryCheckbox = NSButton(checkboxWithTitle: LibraryOrganizeCopy.cleanLibraryTitle, target: nil, action: nil)
     let cleanUpButton = NSButton(title: String(localized: "Clean Up Library…"), target: nil, action: nil)
     let activitySpinner = NSProgressIndicator()
     let activityLabel = NSTextField(labelWithString: "")
@@ -73,14 +72,11 @@ final class LibrarySettingsPane: SettingsPane {
         buildMetadataGroup()
 
         formStack.addArrangedSubview(sectionLabel(String(localized: "Tidy Up")))
-        groupEditionsCheckbox.target = self
-        groupEditionsCheckbox.action = #selector(groupEditionsToggled)
-        formStack.addArrangedSubview(groupEditionsCheckbox)
-        addFullWidth(explanation(String(localized: "Folds Deluxe, Remaster and Explicit editions into one album.")))
-        hideDuplicatesCheckbox.target = self
-        hideDuplicatesCheckbox.action = #selector(hideDuplicatesToggled)
-        formStack.addArrangedSubview(hideDuplicatesCheckbox)
-        addFullWidth(explanation(String(localized: "Lists a song once when it is on several albums.")))
+        cleanLibraryCheckbox.target = self
+        cleanLibraryCheckbox.action = #selector(cleanLibraryToggled)
+        cleanLibraryCheckbox.setAccessibilityIdentifier("settings.cleanLibrary")
+        formStack.addArrangedSubview(cleanLibraryCheckbox)
+        addFullWidth(explanation(LibraryOrganizeCopy.cleanLibraryFooter))
         cleanUpButton.bezelStyle = .rounded
         cleanUpButton.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         cleanUpButton.imagePosition = .imageLeading
@@ -152,8 +148,7 @@ final class LibrarySettingsPane: SettingsPane {
         refresh()
         refreshMetadata()
         renderActivity()
-        groupEditionsCheckbox.state = GroupAlbumEditionsSetting.isEnabled ? .on : .off
-        hideDuplicatesCheckbox.state = HideDuplicateSongsSetting.isEnabled ? .on : .off
+        cleanLibraryCheckbox.state = CleanLibrarySetting.isEnabled ? .on : .off
         appleMusicCheckbox.state = AppleMusicArtworkSetting.isEnabled ? .on : .off
         NotificationCenter.default.addObserver(
             self, selector: #selector(libraryChanged), name: Library.didUpdateNotification, object: nil
@@ -172,12 +167,9 @@ final class LibrarySettingsPane: SettingsPane {
         )
     }
 
-    @objc func hideDuplicatesToggled() {
-        HideDuplicateSongsSetting.set(hideDuplicatesCheckbox.state == .on)
-    }
-
-    @objc func groupEditionsToggled() {
-        GroupAlbumEditionsSetting.set(groupEditionsCheckbox.state == .on)
+    @objc func cleanLibraryToggled() {
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        CleanLibrarySetting.set(cleanLibraryCheckbox.state == .on)
     }
 
     @objc func cleanUpTapped() {

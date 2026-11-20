@@ -13,26 +13,15 @@ extension SettingsViewController {
         return spinner
     }
 
-    func makeHideDuplicatesSwitch() -> UISwitch {
+    func makeCleanLibrarySwitch() -> UISwitch {
         let toggle = UISwitch()
-        toggle.isOn = HideDuplicateSongsSetting.isEnabled
-        toggle.accessibilityLabel = String(localized: "Hide Duplicate Songs")
+        toggle.isOn = CleanLibrarySetting.isEnabled
+        toggle.accessibilityLabel = LibraryOrganizeCopy.cleanLibraryTitle
+        toggle.accessibilityIdentifier = "settings.cleanLibrary"
         toggle.addAction(UIAction { [weak self] action in
             guard let toggle = action.sender as? UISwitch else { return }
             self?.selectionFeedback.selectionChanged()
-            HideDuplicateSongsSetting.set(toggle.isOn)
-        }, for: .valueChanged)
-        return toggle
-    }
-
-    func makeGroupEditionsSwitch() -> UISwitch {
-        let toggle = UISwitch()
-        toggle.isOn = GroupAlbumEditionsSetting.isEnabled
-        toggle.accessibilityLabel = String(localized: "Group Album Editions")
-        toggle.addAction(UIAction { [weak self] action in
-            guard let toggle = action.sender as? UISwitch else { return }
-            self?.selectionFeedback.selectionChanged()
-            GroupAlbumEditionsSetting.set(toggle.isOn)
+            CleanLibrarySetting.set(toggle.isOn)
         }, for: .valueChanged)
         return toggle
     }

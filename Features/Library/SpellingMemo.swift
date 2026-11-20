@@ -11,6 +11,8 @@ nonisolated final class SpellingMemo: Sendable {
 
     static let listenKeys = SpellingMemo { ListenHistory.trackKey(title: $0, artist: $1) }
     static let songKeys = SpellingMemo { LibraryHygiene.songKey(title: $0, artist: $1) }
+    /// Keyed by title and album, despite the parameter names, for `LibraryHygiene.recordingKey`.
+    static let recordingKeys = SpellingMemo { LibraryHygiene.recordingKey(title: $0, album: $1) }
 
     private static let capacity = 60_000
 

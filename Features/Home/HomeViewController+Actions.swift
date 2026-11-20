@@ -101,7 +101,7 @@ extension HomeViewController {
     }
 
     private func shuffleLibrary() {
-        let tracks = HideDuplicateSongsSetting.uniquePool(Library.shared.allTracks).shuffled()
+        let tracks = CleanLibrarySetting.uniquePool(Library.shared.allTracks).shuffled()
         guard !tracks.isEmpty else { return }
         player.play(tracks, startingAt: 0)
     }

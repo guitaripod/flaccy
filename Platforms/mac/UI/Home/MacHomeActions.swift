@@ -70,7 +70,7 @@ enum MacHomeActions {
     }
 
     static func shuffleLibrary() {
-        let pool = HideDuplicateSongsSetting.uniquePool(Library.shared.allTracks)
+        let pool = CleanLibrarySetting.uniquePool(Library.shared.allTracks)
         guard !pool.isEmpty else { return }
         AudioPlayer.shared.play(pool.shuffled(), startingAt: 0)
     }

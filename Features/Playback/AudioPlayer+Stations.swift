@@ -12,7 +12,7 @@ extension AudioPlayer {
         let pool = Library.shared.allTracks
         MidgarLog.info("Building artist station for \(seedArtist) from \(pool.count) library tracks", category: .playback)
         Task.detached { [weak self] in
-            let pool = HideDuplicateSongsSetting.uniquePool(pool)
+            let pool = CleanLibrarySetting.uniquePool(pool)
             let tracks = await StationBuilder.artistStation(
                 seedArtist: seedArtist, pool: pool, excluding: [], limit: StationBuilder.stationSize
             )
@@ -31,7 +31,7 @@ extension AudioPlayer {
         let pool = Library.shared.allTracks
         MidgarLog.info("Building track station for \(seedTrack.title) - \(seedTrack.artist)", category: .playback)
         Task.detached { [weak self] in
-            let pool = HideDuplicateSongsSetting.uniquePool(pool, preferring: [seedTrack])
+            let pool = CleanLibrarySetting.uniquePool(pool, preferring: [seedTrack])
             let tracks = await StationBuilder.trackStation(
                 seedTrack: seedTrack, pool: pool, excluding: [], limit: StationBuilder.stationSize
             )
@@ -50,7 +50,7 @@ extension AudioPlayer {
         let pool = Library.shared.allTracks
         MidgarLog.info("Building library radio from \(pool.count) library tracks", category: .playback)
         Task.detached { [weak self] in
-            let pool = HideDuplicateSongsSetting.uniquePool(pool)
+            let pool = CleanLibrarySetting.uniquePool(pool)
             let counts = (try? DatabaseManager.shared.playCountByTrack()) ?? []
             let tracks = StationBuilder.libraryRadio(
                 pool: pool, playCounts: counts, excluding: [], limit: StationBuilder.stationSize
@@ -68,7 +68,7 @@ extension AudioPlayer {
         let pool = Library.shared.allTracks
         MidgarLog.info("Building crate dig from \(pool.count) library tracks", category: .playback)
         Task.detached { [weak self] in
-            let pool = HideDuplicateSongsSetting.uniquePool(pool)
+            let pool = CleanLibrarySetting.uniquePool(pool)
             let counts = (try? DatabaseManager.shared.playCountByTrack()) ?? []
             let tracks = StationBuilder.crateDig(
                 pool: pool, playCounts: counts, excluding: [], limit: StationBuilder.stationSize
@@ -102,7 +102,7 @@ extension AudioPlayer {
     }
 
     nonisolated static func continuationBatch(_ request: ContinuationRequest) async -> [Track] {
-        let pool = HideDuplicateSongsSetting.uniquePool(request.pool, preferring: request.queued)
+        let pool = CleanLibrarySetting.uniquePool(request.pool, preferring: request.queued)
         if let seedArtist = request.seedArtist {
             return await StationBuilder.artistStation(
                 seedArtist: seedArtist, pool: pool, excluding: request.existing, limit: StationBuilder.continuationBatchSize

@@ -158,7 +158,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         let key = LibraryHygiene.artistKey(artistName)
         let tracks = albums.flatMap(\.tracks)
             + appearsOn.flatMap { $0.tracks.filter { LibraryHygiene.artistKey($0.artist) == key } }
-        return HideDuplicateSongsSetting.uniquePool(tracks)
+        return CleanLibrarySetting.uniquePool(tracks)
     }
 
     func ownedTracksByTitle() -> [String: Track] {

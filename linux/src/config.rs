@@ -14,10 +14,16 @@ pub struct Config {
     pub appearance: String,
     pub theme: String,
     pub autoplay_continuation: bool,
-    pub group_album_editions: bool,
-    /// One row per song in the Songs list, and one play per song in stations
-    /// and mixes, however many releases it sits on.
-    pub hide_duplicate_songs: bool,
+    /// Clean Library: one row per song in the Songs list and on an album's
+    /// page, one play per song in stations and mixes, and an album's editions
+    /// as one album.
+    pub clean_library: bool,
+    /// Read only to migrate a config written before Clean Library joined the
+    /// two settings it replaces.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_album_editions: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hide_duplicate_songs: Option<bool>,
     pub import_page_cursor: u32,
     /// The sidebar page the library shell was left on (`PAGES` names). Replaces
     /// the positional `sidebar_index`, which `load` migrates once.
@@ -184,10 +190,17 @@ impl Config {
             * 1024
     }
 
-    /// Moves a pre-Home `sidebar_index` over to `sidebar_page`, once.
+    /// Moves a pre-Home `sidebar_index` over to `sidebar_page`, and the two
+    /// settings Clean Library replaced over to it, once. Clean Library stays on
+    /// only for someone who had both on.
     fn migrated(mut self) -> Config {
         if let Some(index) = self.sidebar_index.take() {
             self.sidebar_page = legacy_sidebar_page(index).to_string();
+        }
+        let editions = self.group_album_editions.take();
+        let duplicates = self.hide_duplicate_songs.take();
+        if editions.is_some() || duplicates.is_some() {
+            self.clean_library = editions.unwrap_or(true) && duplicates.unwrap_or(true);
         }
         self
     }
@@ -215,8 +228,9 @@ impl Default for Config {
             appearance: "system".to_string(),
             theme: "adaptive".to_string(),
             autoplay_continuation: true,
-            group_album_editions: true,
-            hide_duplicate_songs: true,
+            clean_library: true,
+            group_album_editions: None,
+            hide_duplicate_songs: None,
             import_page_cursor: 1,
             sidebar_page: DEFAULT_SIDEBAR_PAGE.to_string(),
             sidebar_index: None,
@@ -377,6 +391,23 @@ mod tests {
         assert_eq!(parse("sidebar_index = 4").sidebar_page, "stats");
         assert_eq!(parse("sidebar_index = 6").sidebar_page, "downloads");
         assert_eq!(parse("sidebar_index = 7").sidebar_page, "guide");
+    }
+
+    #[test]
+    fn clean_library_is_on_by_default_and_for_someone_who_had_both_old_settings_on() {
+        assert!(parse("").clean_library);
+        assert!(parse("group_album_editions = true\nhide_duplicate_songs = true").clean_library);
+        assert!(parse("group_album_editions = true").clean_library);
+    }
+
+    #[test]
+    fn turning_off_either_old_setting_leaves_clean_library_off_and_the_old_keys_behind() {
+        assert!(!parse("group_album_editions = false\nhide_duplicate_songs = true").clean_library);
+        assert!(!parse("hide_duplicate_songs = false").clean_library);
+        let written = toml::to_string_pretty(&parse("hide_duplicate_songs = false")).unwrap();
+        assert!(!written.contains("hide_duplicate_songs"));
+        assert!(!written.contains("group_album_editions"));
+        assert!(!parse(&written).clean_library);
     }
 
     #[test]

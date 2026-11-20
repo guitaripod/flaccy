@@ -882,37 +882,18 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     }
     group.add(&autoplay_row);
 
-    let group_editions_row = adw::SwitchRow::builder()
-        .title("Group Album Editions")
-        .subtitle("Fold deluxe, remaster and explicit editions into one album")
-        .active(ui.core.config.borrow().group_album_editions)
+    let clean_library_row = adw::SwitchRow::builder()
+        .title("Clean Library")
+        .subtitle("Show each song once, wherever its copies live, and each album's editions as one album. Nothing is deleted.")
+        .active(ui.core.config.borrow().clean_library)
         .build();
     {
         let ui = Rc::clone(ui);
-        group_editions_row.connect_active_notify(move |row| {
-            ui.core.config.borrow_mut().group_album_editions = row.is_active();
-            ui.core.save_config();
-            crate::logger::info(
-                "ui",
-                &format!("group album editions set to {}", row.is_active()),
-            );
-            ui.core.reload_library();
+        clean_library_row.connect_active_notify(move |row| {
+            ui.core.set_clean_library(row.is_active());
         });
     }
-    group.add(&group_editions_row);
-
-    let hide_duplicates_row = adw::SwitchRow::builder()
-        .title("Hide Duplicate Songs")
-        .subtitle("Show a song once, however many albums it is on")
-        .active(ui.core.config.borrow().hide_duplicate_songs)
-        .build();
-    {
-        let ui = Rc::clone(ui);
-        hide_duplicates_row.connect_active_notify(move |row| {
-            ui.core.set_hide_duplicate_songs(row.is_active());
-        });
-    }
-    group.add(&hide_duplicates_row);
+    group.add(&clean_library_row);
 
     let rescan_row = adw::ActionRow::builder()
         .title("Rescan Library")

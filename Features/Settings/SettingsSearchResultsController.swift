@@ -16,12 +16,15 @@ final class SettingsSearchResultsController: UITableViewController, UISearchResu
         let symbolName: String
         let tint: UIColor
         let target: Target
+        /// Other names the setting answers to, such as the names of the settings it replaced.
+        let aliases: [String]
 
-        init(_ title: String, in page: SettingsViewController.Page) {
+        init(_ title: String, in page: SettingsViewController.Page, aliases: [String] = []) {
             self.title = title
             symbolName = page.symbolName
             tint = page.tint
             target = .page(page)
+            self.aliases = aliases
         }
 
         init(_ title: String, symbolName: String, tint: UIColor, row: SettingsViewController.Row) {
@@ -29,6 +32,11 @@ final class SettingsSearchResultsController: UITableViewController, UISearchResu
             self.symbolName = symbolName
             self.tint = tint
             target = .row(row)
+            aliases = []
+        }
+
+        func matches(_ query: String) -> Bool {
+            ([title] + aliases).contains { $0.localizedStandardContains(query) } || (location?.localizedStandardContains(query) ?? false)
         }
 
         /// The page a match lives on, named under it unless the match is the page itself.
@@ -61,9 +69,7 @@ final class SettingsSearchResultsController: UITableViewController, UISearchResu
     func updateSearchResults(for searchController: UISearchController) {
         let query = (searchController.searchBar.text ?? "").trimmingCharacters(in: .whitespaces)
         let entries = root?.searchEntries() ?? []
-        results = query.isEmpty ? [] : entries.filter {
-            $0.title.localizedStandardContains(query) || ($0.location?.localizedStandardContains(query) ?? false)
-        }
+        results = query.isEmpty ? [] : entries.filter { $0.matches(query) }
         tableView.reloadData()
     }
 

@@ -90,46 +90,53 @@ nonisolated extension LibraryHygiene {
         let copies: [URL: [Track]]
     }
 
+    /// Copies tagged with different artists count as one song only when they sit on the same album at the same
+    /// track number and last within this many seconds of each other, as a transcode of the same file does.
+    static let otherArtistDurationTolerance: TimeInterval = 1.0
+
+    /// The identity of a recording on its release regardless of who it is credited to: the album and the title with
+    /// re-release decoration removed. With the track number it tells "Various Artists" and the real performer of one
+    /// song on one compilation apart from two different songs.
+    static func recordingKey(title: String, album: String) -> String {
+        consolidationBaseTitle(album) + "\u{0}" + baseTitle(title, keywords: songEditionKeywords)
+    }
+
     /// Keeps one copy of every song in `tracks` and reports the copies it hid.
     /// Same song means the same `songKey` with lengths that chain together
-    /// within `songDurationTolerance`. The keeper is the copy `prefers` ranks
+    /// within `songDurationTolerance`, or the same album, track number and
+    /// title under another artist credit with lengths within
+    /// `otherArtistDurationTolerance`. The keeper is the copy `prefers` ranks
     /// highest (the one the person loved or plays), then the highest fidelity,
     /// then the oldest row. The original order is preserved.
     static func collapsingDuplicateSongs(
         _ tracks: [Track],
         prefers rank: (Track) -> Int = { _ in 0 }
     ) -> DuplicateSongs {
-        var byKey: [String: [Track]] = [:]
-        for track in tracks where !track.title.isEmpty {
-            byKey[SpellingMemo.songKeys.key(title: track.title, artist: track.artist), default: []].append(track)
+        var groups = DuplicateGrouping(count: tracks.count)
+        var bySong: [String: [Int]] = [:]
+        var byRecording: [String: [Int]] = [:]
+        for (index, track) in tracks.enumerated() where !track.title.isEmpty {
+            bySong[SpellingMemo.songKeys.key(title: track.title, artist: track.artist), default: []].append(index)
+            guard track.trackNumber > 0 else { continue }
+            let recording = SpellingMemo.recordingKeys.key(title: track.title, artist: track.albumTitle)
+            byRecording[recording + "\u{0}" + String(track.trackNumber), default: []].append(index)
         }
+        groups.chain(bySong.values, durations: tracks.map(\.duration), tolerance: songDurationTolerance)
+        groups.chain(byRecording.values, durations: tracks.map(\.duration), tolerance: otherArtistDurationTolerance)
         var hidden = Set<URL>()
         var copies: [URL: [Track]] = [:]
-        for members in byKey.values where members.count >= 2 {
-            let sorted = members.sorted { $0.duration < $1.duration }
-            var cluster: [Track] = []
-            func flush() {
-                defer { cluster = [] }
-                guard cluster.count >= 2 else { return }
-                let ranked = cluster.sorted { lhs, rhs in
-                    let lRank = rank(lhs), rRank = rank(rhs)
-                    if lRank != rRank { return lRank > rRank }
-                    let lQuality = trackQualityScalar(lhs), rQuality = trackQualityScalar(rhs)
-                    if lQuality != rQuality { return lQuality > rQuality }
-                    let lID = lhs.dbID ?? Int64.max, rID = rhs.dbID ?? Int64.max
-                    if lID != rID { return lID < rID }
-                    return lhs.fileURL.path < rhs.fileURL.path
-                }
-                copies[ranked[0].fileURL] = Array(ranked.dropFirst())
-                for loser in ranked.dropFirst() { hidden.insert(loser.fileURL) }
+        for members in groups.clusters() {
+            let ranked = members.map { tracks[$0] }.sorted { lhs, rhs in
+                let lRank = rank(lhs), rRank = rank(rhs)
+                if lRank != rRank { return lRank > rRank }
+                let lQuality = trackQualityScalar(lhs), rQuality = trackQualityScalar(rhs)
+                if lQuality != rQuality { return lQuality > rQuality }
+                let lID = lhs.dbID ?? Int64.max, rID = rhs.dbID ?? Int64.max
+                if lID != rID { return lID < rID }
+                return lhs.fileURL.path < rhs.fileURL.path
             }
-            var previous: TimeInterval?
-            for track in sorted {
-                if let previous, track.duration - previous > songDurationTolerance { flush() }
-                cluster.append(track)
-                previous = track.duration
-            }
-            flush()
+            copies[ranked[0].fileURL] = Array(ranked.dropFirst())
+            for loser in ranked.dropFirst() { hidden.insert(loser.fileURL) }
         }
         guard !hidden.isEmpty else { return DuplicateSongs(tracks: tracks, copies: [:]) }
         return DuplicateSongs(tracks: tracks.filter { !hidden.contains($0.fileURL) }, copies: copies)
@@ -290,5 +297,54 @@ nonisolated extension LibraryHygiene {
             year: year,
             genre: genre
         )
+    }
+}
+
+/// Joins the copies of a song found by any of the duplicate rules into one cluster, so a phone file that matches a
+/// server song by artist and title and another copy by album and track number all stand behind one keeper.
+nonisolated struct DuplicateGrouping {
+
+    private var parent: [Int]
+    private var joined = Set<Int>()
+
+    init(count: Int) {
+        parent = Array(0..<count)
+    }
+
+    /// Joins, within each group, the songs whose lengths follow each other within `tolerance`.
+    mutating func chain<Groups: Sequence>(_ groups: Groups, durations: [TimeInterval], tolerance: TimeInterval)
+    where Groups.Element == [Int] {
+        for members in groups where members.count >= 2 {
+            let sorted = members.sorted { durations[$0] < durations[$1] }
+            for (previous, next) in zip(sorted, sorted.dropFirst()) where durations[next] - durations[previous] <= tolerance {
+                join(previous, next)
+            }
+        }
+    }
+
+    /// The groups of two or more songs, each listed by index.
+    mutating func clusters() -> [[Int]] {
+        var byRoot: [Int: [Int]] = [:]
+        for index in joined {
+            byRoot[root(index), default: []].append(index)
+        }
+        return byRoot.values.filter { $0.count >= 2 }.map { $0.sorted() }
+    }
+
+    private mutating func join(_ a: Int, _ b: Int) {
+        joined.insert(a)
+        joined.insert(b)
+        let rootA = root(a), rootB = root(b)
+        guard rootA != rootB else { return }
+        parent[max(rootA, rootB)] = min(rootA, rootB)
+    }
+
+    private mutating func root(_ index: Int) -> Int {
+        var current = index
+        while parent[current] != current {
+            parent[current] = parent[parent[current]]
+            current = parent[current]
+        }
+        return current
     }
 }

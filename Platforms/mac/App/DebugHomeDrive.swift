@@ -138,7 +138,7 @@ enum DebugHomeDrive {
            let context = playlist.playbackContext {
             store.record(context, at: now.addingTimeInterval(-3 * 3_600))
         }
-        let pool = HideDuplicateSongsSetting.uniquePool(Library.shared.allTracks)
+        let pool = CleanLibrarySetting.uniquePool(Library.shared.allTracks)
         if let mix = SuggestedPlaylistService.build(pool: pool).first {
             store.record(MacHomeActions.context(for: mix), at: now.addingTimeInterval(-5 * 3_600))
         }

@@ -136,6 +136,7 @@ extension SettingsViewController {
             case .playback: String(localized: "Gapless is exact on lossless files. MP3 and AAC files can keep tiny encoder gaps.")
             case .servers: String(localized: "Stream from Flaccy Server, Navidrome or another Subsonic server.")
             case .serverCache: RemoteCopy.cacheFooter + " " + RemoteCopy.downloadQualityFooter
+            case .libraryOrganize: LibraryOrganizeCopy.cleanLibraryFooter
             default: nil
             }
         }
@@ -181,8 +182,7 @@ extension SettingsViewController {
         case clearCache
         case importFiles
         case rescanLibrary
-        case groupAlbumEditions
-        case hideDuplicateSongs
+        case cleanLibrary
         case metadataReport(complete: Int, gaveUp: Int)
         case findMissingArtwork(count: Int)
         case appleMusicArtwork(Bool)

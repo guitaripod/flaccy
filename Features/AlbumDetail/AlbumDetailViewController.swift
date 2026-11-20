@@ -3,7 +3,10 @@ import UIKit
 
 final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
+    /// The album as the page lists it: each song once under Clean Library.
     let album: Album
+    /// Every copy the album holds, for the actions that reach all of them: deleting the files and downloading.
+    let fullAlbum: Album
     let audioPlayer: AudioPlaying
     var tableView: UITableView!
     var dataSource: UITableViewDiffableDataSource<Int, Track>!
@@ -33,7 +36,8 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     let impactMedium = UIImpactFeedbackGenerator(style: .medium)
 
     init(album: Album, audioPlayer: AudioPlaying = AudioPlayer.shared) {
-        self.album = album
+        self.album = CleanLibrarySetting.eachSongOnce(in: album)
+        self.fullAlbum = album
         self.audioPlayer = audioPlayer
         super.init(nibName: nil, bundle: nil)
     }
@@ -81,7 +85,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     }
 
     func setupOverflowMenu() {
-        let album = self.album
+        let album = self.fullAlbum
         let localTracks = album.tracks.filter { $0.remoteSong == nil }
         let delete = UIAction(title: String(localized: "Delete from Library"), image: UIImage(systemName: "trash"), attributes: .destructive) { [weak self] _ in
             guard let self else { return }

@@ -52585,6 +52585,100 @@
         }
       }
     },
+    "Clean Library": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ryddeligt bibliotek"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgeräumte Mediathek"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biblioteca ordenada"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siisti kirjasto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bibliothèque épurée"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snyrtilegt safn"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libreria ordinata"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すっきりライブラリ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "깔끔한 보관함"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ryddig bibliotek"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uporządkowana biblioteka"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biblioteca Organizada"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Städat bibliotek"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整洁资料库"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整潔資料庫"
+          }
+        }
+      }
+    },
     "Clean Up": {
       "localizations": {
         "da": {
@@ -75720,6 +75814,194 @@
         }
       }
     },
+    "Each song shows once, wherever its copies live: in your library, on a server, or tagged with another artist on the same album. An album's editions show as one album. Nothing is deleted.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hver sang vises én gang, uanset hvor dens kopier ligger: i dit bibliotek, på en server eller tagget med en anden kunstner på samme album. Et albums udgaver vises som ét album. Intet slettes."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Song erscheint einmal, egal wo seine Kopien liegen: in deiner Mediathek, auf einem Server oder mit einem anderen Künstler auf demselben Album getaggt. Die Editionen eines Albums erscheinen als ein Album. Nichts wird gelöscht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada canción aparece una vez, estén donde estén sus copias: en tu biblioteca, en un servidor o etiquetada con otro artista en el mismo álbum. Las ediciones de un álbum aparecen como un solo álbum. No se borra nada."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jokainen kappale näkyy kerran, olivatpa sen kopiot missä tahansa: kirjastossasi, palvelimella tai merkittynä toiselle artistille samalla albumilla. Albumin versiot näkyvät yhtenä albumina. Mitään ei poisteta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque morceau n'apparaît qu'une fois, où que soient ses copies : dans votre bibliothèque, sur un serveur ou attribué à un autre artiste sur le même album. Les éditions d'un album apparaissent comme un seul album. Rien n'est supprimé."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvert lag birtist einu sinni, hvar sem afritin eru: í safninu þínu, á þjóni eða merkt öðrum flytjanda á sömu plötu. Útgáfur plötu birtast sem ein plata. Engu er eytt."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni brano compare una volta, ovunque si trovino le sue copie: nella tua libreria, su un server o con un altro artista nei tag dello stesso album. Le edizioni di un album compaiono come un unico album. Non viene eliminato nulla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピーがどこにあっても、各曲は1回だけ表示されます。ライブラリ内、サーバー上、同じアルバムで別のアーティストとしてタグ付けされたものも同様です。アルバムのエディションは1枚のアルバムとして表示されます。何も削除されません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사본이 어디에 있든 각 곡은 한 번만 표시돼요. 보관함, 서버, 같은 앨범에서 다른 아티스트로 태그된 사본도 마찬가지예요. 앨범의 에디션은 하나의 앨범으로 표시돼요. 아무것도 삭제되지 않아요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hver sang vises én gang, uansett hvor kopiene ligger: i biblioteket ditt, på en server eller tagget med en annen artist på samme album. Et albums utgaver vises som ett album. Ingenting slettes."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Każdy utwór pojawia się raz, niezależnie od tego, gdzie są jego kopie: w Twojej bibliotece, na serwerze czy oznaczone innym wykonawcą na tym samym albumie. Edycje albumu pojawiają się jako jeden album. Nic nie jest usuwane."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada música aparece uma vez, onde quer que estejam suas cópias: na sua biblioteca, em um servidor ou marcada com outro artista no mesmo álbum. As edições de um álbum aparecem como um só álbum. Nada é apagado."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varje låt visas en gång, var dess kopior än finns: i ditt bibliotek, på en server eller taggad med en annan artist på samma album. Ett albums utgåvor visas som ett album. Inget raderas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无论副本在哪里，每首歌曲都只显示一次：资料库中、服务器上，或在同一专辑中被标记为其他艺人。专辑的各个版本显示为一张专辑。不会删除任何内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無論副本在哪裡，每首歌曲都只顯示一次：資料庫中、伺服器上，或在同一專輯中被標記為其他藝人。專輯的各個版本顯示為一張專輯。不會刪除任何內容。"
+          }
+        }
+      }
+    },
+    "Each song shows once, wherever its copies live: in your library, on a server, or tagged with another artist on the same album. An album's editions show as one album. Nothing is deleted; touch and hold a song to see its other copies.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hver sang vises én gang, uanset hvor dens kopier ligger: i dit bibliotek, på en server eller tagget med en anden kunstner på samme album. Et albums udgaver vises som ét album. Intet slettes; tryk og hold på en sang for at se dens andre kopier."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Song erscheint einmal, egal wo seine Kopien liegen: in deiner Mediathek, auf einem Server oder mit einem anderen Künstler auf demselben Album getaggt. Die Editionen eines Albums erscheinen als ein Album. Nichts wird gelöscht; halte einen Song gedrückt, um seine anderen Kopien zu sehen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada canción aparece una vez, estén donde estén sus copias: en tu biblioteca, en un servidor o etiquetada con otro artista en el mismo álbum. Las ediciones de un álbum aparecen como un solo álbum. No se borra nada; mantén pulsada una canción para ver sus otras copias."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jokainen kappale näkyy kerran, olivatpa sen kopiot missä tahansa: kirjastossasi, palvelimella tai merkittynä toiselle artistille samalla albumilla. Albumin versiot näkyvät yhtenä albumina. Mitään ei poisteta; pidä kappaletta painettuna, niin näet sen muut kopiot."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque morceau n'apparaît qu'une fois, où que soient ses copies : dans votre bibliothèque, sur un serveur ou attribué à un autre artiste sur le même album. Les éditions d'un album apparaissent comme un seul album. Rien n'est supprimé ; maintenez le doigt sur un morceau pour voir ses autres copies."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvert lag birtist einu sinni, hvar sem afritin eru: í safninu þínu, á þjóni eða merkt öðrum flytjanda á sömu plötu. Útgáfur plötu birtast sem ein plata. Engu er eytt; haltu fingri á lagi til að sjá hin afritin."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni brano compare una volta, ovunque si trovino le sue copie: nella tua libreria, su un server o con un altro artista nei tag dello stesso album. Le edizioni di un album compaiono come un unico album. Non viene eliminato nulla; tieni premuto un brano per vederne le altre copie."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピーがどこにあっても、各曲は1回だけ表示されます。ライブラリ内、サーバー上、同じアルバムで別のアーティストとしてタグ付けされたものも同様です。アルバムのエディションは1枚のアルバムとして表示されます。何も削除されません。曲を長押しすると、ほかのコピーを確認できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사본이 어디에 있든 각 곡은 한 번만 표시돼요. 보관함, 서버, 같은 앨범에서 다른 아티스트로 태그된 사본도 마찬가지예요. 앨범의 에디션은 하나의 앨범으로 표시돼요. 아무것도 삭제되지 않아요. 곡을 길게 누르면 다른 사본을 볼 수 있어요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hver sang vises én gang, uansett hvor kopiene ligger: i biblioteket ditt, på en server eller tagget med en annen artist på samme album. Et albums utgaver vises som ett album. Ingenting slettes; hold inne en sang for å se de andre kopiene."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Każdy utwór pojawia się raz, niezależnie od tego, gdzie są jego kopie: w Twojej bibliotece, na serwerze czy oznaczone innym wykonawcą na tym samym albumie. Edycje albumu pojawiają się jako jeden album. Nic nie jest usuwane; przytrzymaj utwór, aby zobaczyć jego pozostałe kopie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada música aparece uma vez, onde quer que estejam suas cópias: na sua biblioteca, em um servidor ou marcada com outro artista no mesmo álbum. As edições de um álbum aparecem como um só álbum. Nada é apagado; toque e segure uma música para ver as outras cópias."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varje låt visas en gång, var dess kopior än finns: i ditt bibliotek, på en server eller taggad med en annan artist på samma album. Ett albums utgåvor visas som ett album. Inget raderas; tryck länge på en låt för att se dess andra kopior."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无论副本在哪里，每首歌曲都只显示一次：资料库中、服务器上，或在同一专辑中被标记为其他艺人。专辑的各个版本显示为一张专辑。不会删除任何内容；长按歌曲即可查看其他副本。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無論副本在哪裡，每首歌曲都只顯示一次：資料庫中、伺服器上，或在同一專輯中被標記為其他藝人。專輯的各個版本顯示為一張專輯。不會刪除任何內容；長按歌曲即可查看其他副本。"
+          }
+        }
+      }
+    },
     "Each song stays in the playlist once, at its first position. Your files are not deleted.": {
       "localizations": {
         "da": {
@@ -86233,102 +86515,96 @@
         }
       }
     },
-    "Flaccy lists one copy of each song. Tap a copy to play it, or swipe to delete the ones you don't need.": {
+    "Flaccy lists one copy of each song. Tap a copy to play it. Swipe a copy on this device to delete its file; copies on a server stay there.": {
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy viser hver sang kun én gang. Tryk på en kopi for at afspille den, eller stryg for at slette dem, du ikke har brug for."
+            "value": "Flaccy viser én kopi af hver sang. Tryk på en kopi for at afspille den. Swipe på en kopi på denne enhed for at slette dens fil; kopier på en server bliver liggende der."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy zeigt jeden Song nur einmal. Tippe auf eine Kopie, um sie abzuspielen, oder wische, um die nicht benötigten zu löschen."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy lists one copy of each song. Tap a copy to play it, or swipe to delete the ones you don't need."
+            "value": "Flaccy listet eine Kopie jedes Songs. Tippe auf eine Kopie, um sie abzuspielen. Wische über eine Kopie auf diesem Gerät, um ihre Datei zu löschen; Kopien auf einem Server bleiben dort."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy muestra una copia de cada canción. Toca una copia para reproducirla o desliza para eliminar las que no necesites."
+            "value": "Flaccy muestra una copia de cada canción. Toca una copia para reproducirla. Desliza una copia de este dispositivo para borrar su archivo; las copias de un servidor se quedan allí."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy näyttää kustakin kappaleesta vain yhden kopion. Napauta kopiota toistaaksesi sen tai pyyhkäise poistaaksesi tarpeettomat."
+            "value": "Flaccy näyttää jokaisesta kappaleesta yhden kopion. Toista kopio napauttamalla sitä. Poista tämän laitteen kopion tiedosto pyyhkäisemällä; palvelimella olevat kopiot jäävät sinne."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy affiche une seule copie de chaque morceau. Touche une copie pour la lire, ou balaie pour supprimer celles dont tu n'as pas besoin."
+            "value": "Flaccy affiche une copie de chaque morceau. Touchez une copie pour la lire. Balayez une copie sur cet appareil pour supprimer son fichier ; les copies sur un serveur y restent."
           }
         },
         "is": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy sýnir eitt eintak af hverju lagi. Pikkaðu á eintak til að spila það, eða strjúktu til að eyða þeim sem þú þarft ekki."
+            "value": "Flaccy sýnir eitt afrit af hverju lagi. Ýttu á afrit til að spila það. Strjúktu yfir afrit á þessu tæki til að eyða skránni; afrit á þjóni verða þar áfram."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy mostra una copia di ogni brano. Tocca una copia per riprodurla o scorri per eliminare quelle che non ti servono."
+            "value": "Flaccy mostra una copia di ogni brano. Tocca una copia per riprodurla. Scorri su una copia di questo dispositivo per eliminarne il file; le copie su un server restano lì."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccyは各曲を1つだけ表示します。コピーをタップして再生、またはスワイプして不要なものを削除できます。"
+            "value": "Flaccyは各曲のコピーを1つだけ表示します。コピーをタップすると再生します。このデバイス上のコピーをスワイプするとファイルを削除できます。サーバー上のコピーはそのまま残ります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy는 각 곡을 하나씩만 표시합니다. 복사본을 탭하여 재생하거나 스와이프하여 필요 없는 복사본을 삭제하세요."
+            "value": "Flaccy는 각 곡의 사본을 하나만 보여 줘요. 사본을 탭하면 재생돼요. 이 기기에 있는 사본을 쓸어 넘기면 파일을 삭제할 수 있어요. 서버에 있는 사본은 그대로 남아요."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy viser én kopi av hver sang. Trykk på en kopi for å spille den av, eller sveip for å slette de du ikke trenger."
+            "value": "Flaccy viser én kopi av hver sang. Trykk på en kopi for å spille den. Sveip en kopi på denne enheten for å slette filen; kopier på en server blir værende der."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy pokazuje jedną kopię każdego utworu. Stuknij kopię, aby ją odtworzyć, lub przesuń palcem, aby usunąć niepotrzebne."
+            "value": "Flaccy pokazuje jedną kopię każdego utworu. Stuknij kopię, aby ją odtworzyć. Przesuń kopię na tym urządzeniu, aby usunąć jej plik; kopie na serwerze zostają tam."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Flaccy lista uma cópia de cada música. Toque em uma cópia para tocá-la ou deslize para apagar as que você não precisa."
+            "value": "O Flaccy mostra uma cópia de cada música. Toque em uma cópia para tocá-la. Deslize uma cópia neste dispositivo para apagar o arquivo; as cópias em um servidor continuam lá."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy visar en kopia av varje låt. Tryck på en kopia för att spela den, eller svep för att radera de du inte behöver."
+            "value": "Flaccy visar en kopia av varje låt. Tryck på en kopia för att spela den. Svep på en kopia på den här enheten för att radera filen; kopior på en server ligger kvar där."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy 每首歌只列出一份。点按某个副本即可播放，或滑动删除不需要的副本。"
+            "value": "Flaccy 为每首歌曲只列出一个副本。轻点副本即可播放。在此设备上的副本上轻扫可删除其文件；服务器上的副本会保留。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy 每首歌只列出一份。輕點某個副本即可播放，或滑動刪除不需要的副本。"
+            "value": "Flaccy 為每首歌曲只列出一個副本。點一下副本即可播放。在此裝置上的副本上滑動可刪除其檔案；伺服器上的副本會保留。"
           }
         }
       }
@@ -87463,100 +87739,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "平坦 · bit-perfect"
-          }
-        }
-      }
-    },
-    "Folds Deluxe, Remaster and Explicit editions into one album.": {
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Samler Deluxe-, Remaster- og Explicit-udgaverne i ét album."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fasst Deluxe-, Remaster- und Explicit-Editionen zu einem Album zusammen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Funde las ediciones Deluxe, Remaster y Explicit en un solo álbum."
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Yhdistää Deluxe-, Remaster- ja Explicit-painokset yhdeksi albumiksi."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fond les éditions Deluxe, Remaster et Explicit en un seul album."
-          }
-        },
-        "is": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sameinar Deluxe-, Remaster- og Explicit-útgáfur í eina plötu."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fonde le edizioni Deluxe, Remaster ed Explicit in un solo album."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deluxe版・Remaster版・Explicit版を1つのアルバムにまとめます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "디럭스, 리마스터, 익스플리싯 에디션을 하나의 앨범으로 합칩니다."
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Slår sammen Deluxe-, Remaster- og Explicit-utgavene til ett album."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Łączy edycje Deluxe, Remaster i Explicit w jeden album."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Junta as edições Deluxe, Remaster e Explicit em um só álbum."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Slår ihop Deluxe-, Remaster- och Explicit-utgåvor till ett album."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把豪华版、重制版和显式版合成一张专辑。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把豪華版、重製版與 Explicit 版合成一張專輯。"
           }
         }
       }
@@ -92085,100 +92267,6 @@
         }
       }
     },
-    "Group album editions (Deluxe, Remaster…) as one album": {
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gruppér albumudgaver (Deluxe, Remaster…) som ét album"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Album-Editionen (Deluxe, Remaster…) als ein Album"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agrupar ediciones (Deluxe, Remaster…) como un álbum"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ryhmittele albumiversiot (Deluxe, Remaster…) yhdeksi albumiksi"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Regrouper les éditions (Deluxe, Remaster…) en un album"
-          }
-        },
-        "is": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flokka plötuútgáfur (Deluxe, Remaster…) sem eina plötu"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Raggruppa le edizioni (Deluxe, Remaster…) come un unico album"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エディション（Deluxe、Remasterなど）を1つのアルバムにまとめます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "에디션(디럭스, 리마스터 등)을 하나의 앨범으로 묶기"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grupper albumutgaver (Deluxe, Remaster…) som ett album"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grupuj edycje albumu (Deluxe, Remaster…) w jeden album"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agrupar edições (Deluxe, Remaster…) como um só álbum"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gruppera albumutgåvor (Deluxe, Remaster…) som ett album"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把各版本（豪华版、重制版…）合并为一张专辑"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把各種專輯版本（豪華版、重製版…）合併為一張專輯"
-          }
-        }
-      }
-    },
     "Grouping tracks into albums and artists": {
       "localizations": {
         "da": {
@@ -93691,106 +93779,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "隱藏其他"
-          }
-        }
-      }
-    },
-    "Hide duplicate songs": {
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skjul dubletter af sange"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Doppelte Songs ausblenden"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hide duplicate songs"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ocultar canciones duplicadas"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Piilota kaksoiskappaleet"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Masquer les morceaux en double"
-          }
-        },
-        "is": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fela afrit af lögum"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nascondi brani duplicati"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重複した曲を非表示"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "중복 곡 숨기기"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skjul duplikater"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ukryj zduplikowane utwory"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ocultar músicas duplicadas"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dölj dubblettlåtar"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "隐藏重复歌曲"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "隱藏重複歌曲"
           }
         }
       }
@@ -105771,106 +105759,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "一首歌出現在多張專輯中時只列出一次。"
-          }
-        }
-      }
-    },
-    "Lists one copy of a song that appears on several albums": {
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Viser ét eksemplar af en sang, der optræder på flere album"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zeigt eine Kopie eines Songs, der auf mehreren Alben vorkommt"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lists one copy of a song that appears on several albums"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Muestra una copia de una canción que aparece en varios álbumes"
-          }
-        },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Näyttää kappaleen yhden kopion, kun se esiintyy useilla albumeilla"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Affiche une seule copie d'un morceau présent sur plusieurs albums"
-          }
-        },
-        "is": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sýnir eitt eintak af lagi sem birtist á nokkrum plötum"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra una copia di un brano presente in più album"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "複数のアルバムに入っている曲は1つだけ表示"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "여러 앨범에 있는 곡은 하나만 표시"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Viser én kopi av en sang som finnes på flere album"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyświetla jedną kopię utworu znajdującego się na kilku albumach"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lista uma cópia de uma música que aparece em vários álbuns"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Visar en kopia av en låt som finns på flera album"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同一首歌出现在多张专辑中时只列出一份"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同一首歌出現在多張專輯中時只列出一份"
           }
         }
       }
@@ -170898,6 +170786,100 @@
         }
       }
     },
+    "Shows each song once and each album's editions as one album": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viser hver sang én gang og et albums udgaver som ét album"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt jeden Song einmal und die Editionen eines Albums als ein Album"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muestra cada canción una vez y las ediciones de un álbum como un solo álbum"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Näyttää jokaisen kappaleen kerran ja albumin versiot yhtenä albumina"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affiche chaque morceau une seule fois et les éditions d'un album comme un seul album"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sýnir hvert lag einu sinni og útgáfur plötu sem eina plötu"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra ogni brano una volta e le edizioni di un album come un unico album"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各曲を1回だけ表示し、アルバムのエディションを1枚にまとめます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "각 곡을 한 번만 보여 주고 앨범의 에디션을 하나의 앨범으로 묶어요"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viser hver sang én gang og et albums utgaver som ett album"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokazuje każdy utwór raz, a edycje albumu jako jeden album"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra cada música uma vez e as edições de um álbum como um só álbum"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visar varje låt en gång och ett albums utgåvor som ett album"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每首歌曲只显示一次，专辑的各个版本合并为一张专辑"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每首歌曲只顯示一次，專輯的各個版本合併為一張專輯"
+          }
+        }
+      }
+    },
     "Shows everything again": {
       "localizations": {
         "da": {
@@ -188901,6 +188883,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "等化器只調整 Flaccy 播放的聲音，其他 App 與系統音效不受影響。"
+          }
+        }
+      }
+    },
+    "The file from \"%@\" is deleted from this device. %@ keeps its copy.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filen fra »%@« slettes fra denne enhed. %@ beholder sin kopi."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei von \"%@\" wird von diesem Gerät gelöscht. %@ behält seine Kopie."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El archivo de \"%@\" se borra de este dispositivo. %@ conserva su copia."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiedosto kohteesta ”%@” poistetaan tältä laitteelta. %@ säilyttää oman kopionsa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fichier de \"%@\" est supprimé de cet appareil. %@ garde sa copie."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skránni úr „%@“ er eytt af þessu tæki. %@ heldur sínu afriti."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il file di \"%@\" viene eliminato da questo dispositivo. %@ conserva la sua copia."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\"%@\" のファイルはこのデバイスから削除されます。%@ は自分のコピーを保持します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\"%@\"의 파일이 이 기기에서 삭제돼요. %@은(는) 자신의 사본을 유지해요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filen fra «%@» slettes fra denne enheten. %@ beholder sin kopi."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plik z \"%@\" zostanie usunięty z tego urządzenia. %@ zachowuje swoją kopię."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O arquivo de \"%@\" é apagado deste dispositivo. %@ mantém a sua cópia."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filen från ”%@” raderas från den här enheten. %@ behåller sin kopia."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自 \"%@\" 的文件将从此设备中删除。%@ 保留其副本。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "來自 \"%@\" 的檔案將從此裝置中刪除。%@ 保留其副本。"
           }
         }
       }

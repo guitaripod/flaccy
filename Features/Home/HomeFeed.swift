@@ -149,7 +149,7 @@ nonisolated enum HomeFeedBuilder {
 
         let resume = resumeCard(inputs, index: index)
         let canResume = resume.map { $0.point.isResumable(now: inputs.now) } ?? false
-        let mixes = hasHistory ? SuggestedPlaylistService.build(pool: HideDuplicateSongsSetting.uniquePool(inputs.tracks)) : []
+        let mixes = hasHistory ? SuggestedPlaylistService.build(pool: CleanLibrarySetting.uniquePool(inputs.tracks)) : []
 
         let playingKey = inputs.queue.isEmpty ? nil : inputs.context.key
         let historyEntries = historyAlbums(database: database, index: index)

@@ -904,7 +904,7 @@ final class Library: LibraryProviding {
             ))
         }
 
-        if GroupAlbumEditionsSetting.isEnabled {
+        if CleanLibrarySetting.isEnabled {
             loadedAlbums = LibraryHygiene.consolidateAlbums(loadedAlbums)
         }
         return LibraryHygiene.mergeSameNamedAlbums(loadedAlbums)

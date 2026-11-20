@@ -103,12 +103,12 @@ extension LibraryViewController {
             }
         let sortMenu = UIMenu(title: String(localized: "Sort By"), image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
         let hideDuplicates = UIAction(
-            title: String(localized: "Hide Duplicate Songs"),
-            image: UIImage(systemName: "square.on.square"),
-            state: HideDuplicateSongsSetting.isEnabled ? .on : .off
+            title: LibraryOrganizeCopy.cleanLibraryTitle,
+            image: UIImage(systemName: "sparkles"),
+            state: CleanLibrarySetting.isEnabled ? .on : .off
         ) { [weak self] _ in
             self?.impactLight.impactOccurred()
-            HideDuplicateSongsSetting.set(!HideDuplicateSongsSetting.isEnabled)
+            CleanLibrarySetting.set(!CleanLibrarySetting.isEnabled)
             self?.updateRightBarButton(for: .songs)
         }
         return UIMenu(children: [sortMenu, UIMenu(options: .displayInline, children: [hideDuplicates])])

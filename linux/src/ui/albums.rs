@@ -812,6 +812,9 @@ fn build_album_cell() -> gtk::Box {
 }
 
 pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
+    let clean = ui.core.config.borrow().clean_library;
+    let shown = if clean { crate::hygiene::each_song_once(album) } else { album.clone() };
+    let album = &shown;
     let dominant: Rc<RefCell<Option<(u8, u8, u8)>>> = Rc::new(RefCell::new(None));
 
     let backdrop = crate::ui::controls::hero_backdrop(&dominant);

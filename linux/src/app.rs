@@ -367,14 +367,14 @@ impl AppCore {
             LoadPhase::OpeningLibrary,
         )));
         let db_path = self.db_path.clone();
-        let group_album_editions = self.config.borrow().group_album_editions;
+        let clean_library = self.config.borrow().clean_library;
         let (tx, rx) = async_channel::bounded::<(Library, Vec<(String, f64)>)>(1);
         std::thread::Builder::new()
             .name("flaccy-reload".into())
             .spawn(move || {
                 let Ok(db) = Db::open(&db_path) else { return };
                 db.resolve_album_credits();
-                let library = library::load(&db, group_album_editions);
+                let library = library::load(&db, clean_library);
                 let now = chrono::Utc::now().timestamp();
                 let weights = db
                     .track_sort_keys()
@@ -443,13 +443,13 @@ impl AppCore {
         }
         let generation = self.listing_generation.get();
         let db_path = self.db_path.clone();
-        let group_album_editions = self.config.borrow().group_album_editions;
+        let clean_library = self.config.borrow().clean_library;
         let (tx, rx) = async_channel::bounded::<Library>(1);
         std::thread::Builder::new()
             .name("flaccy-listing".into())
             .spawn(move || {
                 let Ok(db) = Db::open(&db_path) else { return };
-                let _ = tx.send_blocking(library::load(&db, group_album_editions));
+                let _ = tx.send_blocking(library::load(&db, clean_library));
             })
             .ok();
         let core = Rc::clone(self);
@@ -905,13 +905,18 @@ impl AppCore {
             return;
         };
         let context = album_context(&album.title, &album.artist);
-        self.play_list_in(album.tracks.clone(), shuffle, key, Some(context));
+        let tracks = if self.config.borrow().clean_library {
+            crate::hygiene::each_song_once(album).tracks
+        } else {
+            album.tracks.clone()
+        };
+        self.play_list_in(tracks, shuffle, key, Some(context));
     }
 
     /// Every library track `artist` is on, in album order.
     pub fn artist_tracks(&self, artist: &str) -> Vec<Track> {
         let tracks = self.library.borrow().artist_tracks(artist);
-        crate::station::station_pool(tracks, self.config.borrow().hide_duplicate_songs, &[])
+        crate::station::station_pool(tracks, self.config.borrow().clean_library, &[])
     }
 
     pub fn play_artist(self: &Rc<Self>, artist: &str, shuffle: bool) {
@@ -950,7 +955,7 @@ impl AppCore {
     /// song is played.
     pub fn start_library_radio(self: &Rc<Self>) {
         let pool = self.library.borrow().tracks.clone();
-        let hide_duplicates = self.config.borrow().hide_duplicate_songs;
+        let hide_duplicates = self.config.borrow().clean_library;
         let db_path = self.db_path.clone();
         let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
         std::thread::Builder::new()
@@ -1474,14 +1479,17 @@ impl AppCore {
         config::save(&self.config.borrow());
     }
 
-    pub fn set_hide_duplicate_songs(&self, hide: bool) {
-        if self.config.borrow().hide_duplicate_songs == hide {
+    /// Turns Clean Library on or off: the lists that show each song once
+    /// change at once, and the albums regroup when the library reloads.
+    pub fn set_clean_library(self: &Rc<Self>, clean: bool) {
+        if self.config.borrow().clean_library == clean {
             return;
         }
-        self.config.borrow_mut().hide_duplicate_songs = hide;
+        self.config.borrow_mut().clean_library = clean;
         self.save_config();
-        crate::logger::info("ui", &format!("hide duplicate songs set to {hide}"));
-        self.hub.emit(&AppEvent::HideDuplicatesChanged);
+        crate::logger::info("ui", &format!("clean library set to {clean}"));
+        self.hub.emit(&AppEvent::CleanLibraryChanged);
+        self.reload_library();
     }
 
     fn schedule_periodic_drain(self: &Rc<Self>) {
@@ -1620,7 +1628,7 @@ impl AppCore {
         let pool = library.tracks.clone();
         let library_songs = pool.len();
         let library_artists: Vec<String> = library.artists.iter().map(|a| a.name.clone()).collect();
-        let hide_duplicates = self.config.borrow().hide_duplicate_songs;
+        let hide_duplicates = self.config.borrow().clean_library;
         let db_path = self.db_path.clone();
         let session_key = self.session.borrow().as_ref().map(|s| s.key.clone());
         let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
@@ -1742,7 +1750,7 @@ impl AppCore {
         let snapshot = self.player.queue_snapshot();
         let excluding: std::collections::HashSet<String> =
             snapshot.queue.iter().map(|t| t.rel_path.clone()).collect();
-        let hide_duplicates = self.config.borrow().hide_duplicate_songs;
+        let hide_duplicates = self.config.borrow().clean_library;
         let queued = snapshot.queue.clone();
         let db_path = self.db_path.clone();
         let session_key = self.session.borrow().as_ref().map(|s| s.key.clone());

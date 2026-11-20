@@ -31,7 +31,7 @@ final class AlbumDetailViewController: NSViewController {
     private var listenCount: Int?
 
     init(album: Album) {
-        self.album = album
+        self.album = CleanLibrarySetting.eachSongOnce(in: album)
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -432,7 +432,7 @@ final class AlbumDetailViewController: NSViewController {
 
     @objc private func libraryUpdated() {
         guard let refreshed = Library.shared.albums.first(where: { $0 == self.album }) else { return }
-        album = refreshed
+        album = CleanLibrarySetting.eachSongOnce(in: refreshed)
         pageFrame?.preservingScroll { populate() }
     }
 }

@@ -167,7 +167,7 @@ extension LibraryViewModel {
         suggestionsLoading = true
         let pool = library.allTracks
         Task.detached(priority: .utility) { [weak self] in
-            let suggestions = SuggestedPlaylistService.build(pool: HideDuplicateSongsSetting.uniquePool(pool))
+            let suggestions = SuggestedPlaylistService.build(pool: CleanLibrarySetting.uniquePool(pool))
             await MainActor.run {
                 guard let self else { return }
                 self.cachedSuggestions = suggestions
@@ -212,7 +212,7 @@ extension LibraryViewModel {
     /// person loved and then the one they have played, so a Favorites or
     /// Recently Played pivot never loses a row to a twin it has no history for.
     func collapsingDuplicates(in songs: [Track]) -> [Track] {
-        guard HideDuplicateSongsSetting.isEnabled else {
+        guard CleanLibrarySetting.isEnabled else {
             duplicateCopies = [:]
             return songs
         }
