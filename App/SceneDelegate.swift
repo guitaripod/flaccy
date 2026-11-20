@@ -74,6 +74,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         PlaylistMakerExercise.runIfRequested()
         EqualizerDescribeExercise.runIfRequested()
         PlaylistCoverExercise.runIfRequested(window: window)
+        SearchMenuExercise.runIfRequested(tabs: tabs)
         EqualizerShots.runIfRequested(in: window)
         #endif
         #if DEBUG && targetEnvironment(simulator)

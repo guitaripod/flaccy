@@ -147,6 +147,7 @@ targets:
           - Pad/PlayerColumnSetting.swift
           - SceneDelegate.swift
           - UI/AdaptiveLayout.swift
+          - UI/AlbumContextMenu.swift
           - UI/AppAccent.swift
           - UI/AppAppearance.swift
           - UI/AsyncImageView.swift
@@ -298,6 +299,7 @@ targets:
           - Remote/RemoteDownloadActions.swift
           - Remote/RemoteShot.swift
           - Search/SearchResultCell.swift
+          - Search/SearchMenuExercise.swift
           - Search/SearchViewController.swift
           - ServerSync/FlaccyServerShot.swift
           - ServerSync/ServerSyncBackgroundRefresh.swift

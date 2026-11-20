@@ -5,7 +5,7 @@ import UIKit
 /// The Search tab. It asks the Library's own view model for matches, so a
 /// query finds exactly what the Library's segments would, and shows albums,
 /// artists, songs and playlists together.
-final class SearchViewController: UIViewController {
+final class SearchViewController: UIViewController, SonglinkShareable {
 
     nonisolated enum Section: Int, CaseIterable, Sendable {
         case albums
@@ -225,4 +225,76 @@ extension SearchViewController: UICollectionViewDelegate {
             )
         }
     }
+
+    /// A long press on a song or an album opens the same menu it has in the
+    /// Library, so a found song goes to a playlist or the queue from here.
+    func collectionView(
+        _ collectionView: UICollectionView, contextMenuConfigurationForItemsAt indexPaths: [IndexPath], point: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        guard indexPaths.count == 1, let indexPath = indexPaths.first,
+              let item = dataSource.itemIdentifier(for: indexPath) else { return nil }
+        switch item {
+        case .song(let track):
+            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+                self?.songMenu(for: track)
+            }
+        case .album(let album):
+            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+                guard let self else { return nil }
+                return AlbumContextMenu.build(for: album, in: self)
+            }
+        case .artist, .playlist:
+            return nil
+        }
+    }
+
+    private func songMenu(for track: Track) -> UIMenu {
+        var context = TrackContextMenu.Context()
+        context.otherCopies = libraryViewModel.duplicateCopies[track.fileURL] ?? []
+        return TrackContextMenu.build(
+            for: track,
+            in: self,
+            push: { [weak self] viewController in
+                self?.navigationController?.pushViewController(viewController, animated: true)
+            },
+            context: context
+        )
+    }
 }
+
+#if DEBUG
+extension SearchViewController {
+
+    /// What a long press opens on the first result of each kind on screen:
+    /// the menu's titles, submenus included, or nil where a long press opens
+    /// nothing.
+    func debugLongPressMenus() -> [Section: [String]?] {
+        var menus = [Section: [String]?]()
+        let snapshot = dataSource.snapshot()
+        for section in snapshot.sectionIdentifiers {
+            guard let item = snapshot.itemIdentifiers(inSection: section).first,
+                  let indexPath = dataSource.indexPath(for: item) else { continue }
+            guard collectionView(collectionView, contextMenuConfigurationForItemsAt: [indexPath], point: .zero) != nil else {
+                menus[section] = .some(nil)
+                continue
+            }
+            let menu: UIMenu? = switch item {
+            case .song(let track): songMenu(for: track)
+            case .album(let album): AlbumContextMenu.build(for: album, in: self)
+            case .artist, .playlist: nil
+            }
+            menus[section] = menu.map(Self.titles(in:))
+        }
+        return menus
+    }
+
+    private static func titles(in menu: UIMenu) -> [String] {
+        menu.children.flatMap { element -> [String] in
+            if let submenu = element as? UIMenu {
+                return (submenu.title.isEmpty ? [] : [submenu.title]) + titles(in: submenu)
+            }
+            return (element as? UIAction).map { [$0.title] } ?? []
+        }
+    }
+}
+#endif
