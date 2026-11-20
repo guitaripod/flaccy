@@ -216,6 +216,9 @@ final class AppTabBarController: UITabBarController {
         accessoryMiniPlayer.configure(with: track, isPlaying: isPlaying)
         if bottomAccessory == nil {
             setBottomAccessory(UITabAccessory(contentView: accessoryMiniPlayer), animated: true)
+            #if DEBUG
+            AccessoryMorphProbe.shared?.watch(accessoryMiniPlayer.morphProbeParts)
+            #endif
         }
     }
 

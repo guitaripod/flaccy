@@ -260,6 +260,7 @@ targets:
           - Lyrics/TimingNoteViews.swift
           - LyricsMeaning/LyricsMeaningViewController.swift
           - PlaylistMaker/PlaylistMakerViewController.swift
+          - NowPlaying/AccessoryMorphProbe.swift
           - NowPlaying/MiniPlayerView.swift
           - NowPlaying/NowPlayingBackdropView.swift
           - NowPlaying/NowPlayingVersionRow.swift
