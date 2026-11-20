@@ -360,21 +360,18 @@ nonisolated enum AIIdentificationTask {
 
         for album in identified.albums {
             for identifiedTrack in album.tracks {
-                guard var dbTrack = tracks.first(where: { track in
+                guard let dbTrack = tracks.first(where: { track in
                     let filename = URL(fileURLWithPath: track.fileURL).lastPathComponent
                     return filename.lowercased() == identifiedTrack.filename.lowercased()
                         || track.fileURL.lowercased().hasSuffix(identifiedTrack.filename.lowercased())
                 }) else { continue }
 
-                dbTrack.artist = album.artist
-                dbTrack.albumTitle = album.album
-                dbTrack.title = identifiedTrack.title
-                dbTrack.trackNumber = identifiedTrack.trackNumber
-                dbTrack.aiAnalyzed = true
-
                 do {
-                    try db.updateTrackPreservingArtwork(dbTrack)
-                    matched += 1
+                    let written = try db.applyIdentification(
+                        fileURL: dbTrack.fileURL, title: identifiedTrack.title, artist: album.artist,
+                        albumTitle: album.album, trackNumber: identifiedTrack.trackNumber
+                    )
+                    if written { matched += 1 }
                 } catch {
                     MidgarLog.error("Track update failed: \(error.localizedDescription)", category: .database)
                 }

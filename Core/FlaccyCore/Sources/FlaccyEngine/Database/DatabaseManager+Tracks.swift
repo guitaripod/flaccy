@@ -18,11 +18,22 @@ extension DatabaseManager {
         }
     }
 
-    /// Updates a track fetched without its artwork BLOB, leaving the stored
-    /// `artworkData` column untouched.
-    public func updateTrackPreservingArtwork(_ track: TrackRecord) throws {
+    /// Writes what an identification pass read from a song's filename: its title, artist, album and track number, and that
+    /// it was analyzed. Only those columns, since the pass reads its rows long before it answers, and a love, a play or a move
+    /// to a server made in between must survive it. Returns false when no row has that path any more.
+    @discardableResult
+    public func applyIdentification(
+        fileURL: String, title: String, artist: String, albumTitle: String, trackNumber: Int
+    ) throws -> Bool {
         try dbQueue.write { db in
-            try track.update(db, columns: Self.trackColumnsWithoutArtworkOrVersion)
+            try db.execute(
+                sql: """
+                    UPDATE tracks SET title = ?, artist = ?, albumTitle = ?, trackNumber = ?, aiAnalyzed = 1
+                    WHERE fileURL = ? AND remoteServer IS NULL
+                    """,
+                arguments: [title, artist, albumTitle, trackNumber, fileURL]
+            )
+            return db.changesCount > 0
         }
     }
 
