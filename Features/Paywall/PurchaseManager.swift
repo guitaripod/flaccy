@@ -18,6 +18,10 @@ nonisolated enum EntitlementState: Equatable, Hashable {
     case trialNotStarted
     case trial(daysRemaining: Int)
     case expired
+    /// The trial ran out a month or more ago and the one second look has not
+    /// been spent: playback and AI are open again, and seven more free days
+    /// start at the next play of the person's own music.
+    case secondLookReady
     case purchased(PurchasePlan)
 
     var isPurchased: Bool {
@@ -62,7 +66,8 @@ typealias PurchaseAnchor = UIScene
 /// answers "may this person play music". Everything the runway needs — which
 /// day it is, whether the banner is due, whether the welcome-back window is
 /// open — derives from the one stored start date through `TrialRunway`, so the
-/// clients never do their own arithmetic.
+/// clients never do their own arithmetic. A second look is a second add-only
+/// date beside it: once stamped, the runway counts from that date instead.
 final class PurchaseManager {
 
     static let shared = PurchaseManager(store: FlaccyMidgar.shared.store)
@@ -70,14 +75,21 @@ final class PurchaseManager {
     static let stateDidChange = Notification.Name("PurchaseStateDidChange")
     static let paywallRequired = Notification.Name("PaywallRequired")
     static let entitlementsDidLoad = Notification.Name("PurchaseEntitlementsDidLoad")
+    static let secondLookDidStart = Notification.Name("PurchaseSecondLookDidStart")
 
     static let trialLengthDays = TrialRunway.lengthDays
 
     private(set) var state: EntitlementState = .trialNotStarted
     private(set) var offers: [PurchaseOffer] = []
+    /// The date the runway counts from: the second look's start once it has
+    /// one, the first trial's until then.
     private(set) var trialStart = Date()
     private(set) var trialHasStarted = false
     private var trialStartIsUnreadable = false
+    private var firstTrialStart = Date()
+    private(set) var secondLookStart: Date?
+    private var secondLookPlayIsWaiting = false
+    private var secondLookStampFailed = false
     private(set) var hasLoadedEntitlements = false
     private var welcomeProductSeenThisSession = false
     private var welcomeProduct: StoreProduct?
@@ -128,9 +140,13 @@ final class PurchaseManager {
 
     /// The purchase engine, absent in a test host or a screenshot seed.
     private let store: MidgarStore?
+    private let dates: any TrialDateStoring
+    private let now: () -> Date
 
-    init(store: MidgarStore?) {
+    init(store: MidgarStore?, dates: any TrialDateStoring = KeychainTrialDates(), now: @escaping () -> Date = { Date() }) {
         self.store = store
+        self.dates = dates
+        self.now = now
     }
 
     /// An `expired` state derived before the entitlements have loaded is only
@@ -144,12 +160,21 @@ final class PurchaseManager {
     var lifetimeOffer: PurchaseOffer? { offers.first { $0.plan == .lifetime } }
 
     var runwayPhase: TrialRunway.Phase {
-        TrialRunway.phase(start: trialStart, now: Date())
+        TrialRunway.phase(start: trialStart, now: now())
     }
 
+    /// Whether the runway in progress is the second look, not the first trial.
+    var isSecondLook: Bool { secondLookStart != nil }
+
+    /// The first trial opens the welcome-back window only once it has expired;
+    /// a second look carries the price from its first free day.
     var lapsedOfferState: TrialRunway.LapsedOffer {
-        guard hasLoadedEntitlements, state == .expired else { return .notYet }
-        return TrialRunway.lapsedOffer(start: trialStart, now: Date())
+        guard hasLoadedEntitlements, !state.isPurchased else { return .notYet }
+        if let secondLookStart {
+            return TrialRunway.secondLookOffer(secondLookStart: secondLookStart, now: now())
+        }
+        guard state == .expired else { return .notYet }
+        return TrialRunway.lapsedOffer(start: trialStart, now: now())
     }
 
     var lifetimeOfferToPresent: PurchaseOffer? {
@@ -176,12 +201,14 @@ final class PurchaseManager {
 
     private var runwayPromptHasBeenShown: Bool {
         if runwayPromptShownCached { return true }
-        runwayPromptShownCached = TrialClock.date(for: .runwayPromptShown) != nil
+        runwayPromptShownCached = dates.date(for: .runwayPromptShown) != nil
         return runwayPromptShownCached
     }
 
+    /// Never during a second look, which sends no reminders of its own: the
+    /// consent names the first trial's dates.
     var reminderOptInIsDue: Bool {
-        guard hasLoadedEntitlements, case .trial = state,
+        guard hasLoadedEntitlements, case .trial = state, !isSecondLook,
               !TrialReminderScheduler.shared.hasBeenAsked
         else { return false }
         return TrialRunway.consentWindowIsOpen(phase: runwayPhase)
@@ -208,9 +235,11 @@ final class PurchaseManager {
     /// retried at every later chance and the state re-derived from it.
     private func readTrialStartIfNeeded() {
         guard !trialHasStarted else { return }
-        switch TrialClock.lookup(.trialStart) {
+        switch dates.lookup(.trialStart) {
         case .found(let start):
-            trialStart = start
+            guard readSecondLookStart() else { return }
+            firstTrialStart = start
+            trialStart = TrialRunway.runwayStart(trialStart: start, secondLookStart: secondLookStart)
             trialHasStarted = true
             trialStartIsUnreadable = false
         case .absent:
@@ -218,6 +247,23 @@ final class PurchaseManager {
         case .unreadable(let status):
             trialStartIsUnreadable = true
             MidgarLog.notice("Trial start not readable from the Keychain yet (status \(status)); will retry", category: .purchases)
+        }
+    }
+
+    /// False while the Keychain refuses the read, so a second look that has
+    /// already been spent is never mistaken for one still waiting.
+    private func readSecondLookStart() -> Bool {
+        switch dates.lookup(.secondLookStart) {
+        case .found(let start):
+            secondLookStart = start
+            return true
+        case .absent:
+            secondLookStart = nil
+            return true
+        case .unreadable(let status):
+            trialStartIsUnreadable = true
+            MidgarLog.notice("Second look start not readable from the Keychain yet (status \(status)); will retry", category: .purchases)
+            return false
         }
     }
 
@@ -232,17 +278,61 @@ final class PurchaseManager {
             FunnelSignals.shared.noteSamplePlayed()
             return
         }
-        guard case .absent = TrialClock.lookup(.trialStart) else {
+        guard case .absent = dates.lookup(.trialStart) else {
             refreshTrialPhase()
             return
         }
-        TrialClock.stampIfAbsent(Date(), for: .trialStart)
+        dates.stampIfAbsent(now(), for: .trialStart)
         readTrialStartIfNeeded()
         guard trialHasStarted else { return }
         MidgarLog.info("Trial started at the first play of the library's own music", category: .purchases)
         FunnelSignals.shared.noteTrialStarted()
         refreshTrialPhase()
         Task { await TrialReminderScheduler.shared.refresh() }
+    }
+
+    /// Reported while a track is really playing, with time moving on it,
+    /// however it began: a tap, a resumed queue, the next song arriving. That
+    /// is what starts a waiting second look. A track that only loaded, or a
+    /// file that could not be opened, spends nothing; neither does the sample
+    /// album. A play that lands before the entitlements have answered waits
+    /// for them, so someone who paid never spends their second look in the
+    /// first second of a launch.
+    func noteOwnMusicPlaying(_ track: Track) {
+        guard state == .secondLookReady, !secondLookStampFailed, !SampleMusicService.isSample(track.fileURL) else { return }
+        guard hasLoadedEntitlements else {
+            secondLookPlayIsWaiting = true
+            return
+        }
+        beginSecondLook()
+    }
+
+    /// Stamps the second look's start, add-only like every trial date, and
+    /// moves the runway onto it: seven free days from now, the welcome-back
+    /// price with them. Under `--trial-day` the start lives in memory only.
+    private func beginSecondLook() {
+        secondLookPlayIsWaiting = false
+        guard state == .secondLookReady else { return }
+        if trialClockIsOverridden {
+            secondLookStart = now()
+        } else {
+            dates.stampIfAbsent(now(), for: .secondLookStart)
+            secondLookStart = dates.date(for: .secondLookStart)
+        }
+        guard let secondLookStart else {
+            secondLookStampFailed = true
+            MidgarLog.error("Second look not started this launch: its date did not reach the Keychain", category: .purchases)
+            return
+        }
+        trialStart = secondLookStart
+        MidgarLog.info("Second look started: the person's own music is playing again", category: .purchases)
+        FunnelSignals.shared.noteSecondLookStarted()
+        refreshTrialPhase()
+        NotificationCenter.default.post(name: Self.secondLookDidStart, object: nil)
+        Task {
+            await TrialReminderScheduler.shared.refresh()
+            await loadLapsedOfferIfNeeded()
+        }
     }
 
     /// Called by both paywalls once their offers have loaded, and recorded with
@@ -264,21 +354,39 @@ final class PurchaseManager {
     }
 
     #if DEBUG
-    /// `--trial-day N` (1…40) moves the trial clock in memory only, so every day
+    /// `--trial-day N` (1…60) moves the trial clock in memory only, so every day
     /// of the runway can be exercised and screenshotted without touching the
     /// Keychain that the real trial lives in. Day N means N − 1 days elapsed:
-    /// day 7 is the last trial day (banner due), day 9 opens the welcome-back window.
+    /// day 7 is the last trial day (banner due), day 9 opens the welcome-back
+    /// window and day 38 a second look, which the next play of the person's own
+    /// music then starts. `--second-look-day M` (1…20) puts the clock on day M
+    /// of a second look that has already started.
     private func applyTrialDayOverride() {
-        let arguments = CommandLine.arguments
-        guard let flag = arguments.firstIndex(of: "--trial-day"),
-              arguments.indices.contains(flag + 1),
-              let day = Int(arguments[flag + 1]),
-              (1...40).contains(day)
-        else { return }
-        trialStart = Date().addingTimeInterval(-TimeInterval(day - 1) * TrialRunway.day)
+        let trialDay = Self.launchDay(after: "--trial-day", in: 1...60)
+        let secondLookDay = Self.launchDay(after: "--second-look-day", in: 1...20)
+        guard trialDay != nil || secondLookDay != nil else { return }
+        let now = now()
+        let secondLookOpensOnDay = TrialRunway.lengthDays + TrialRunway.secondLookAfterExpiryDays + 1
+        let day = trialDay ?? secondLookOpensOnDay + (secondLookDay ?? 1)
+        firstTrialStart = now.addingTimeInterval(-TimeInterval(day - 1) * TrialRunway.day)
+        secondLookStart = secondLookDay.map { now.addingTimeInterval(-TimeInterval($0 - 1) * TrialRunway.day) }
+        trialStart = TrialRunway.runwayStart(trialStart: firstTrialStart, secondLookStart: secondLookStart)
         trialHasStarted = true
         trialDayOverrideActive = true
-        MidgarLog.info("Trial clock overridden: day \(day) (elapsed \(day - 1) d)", category: .purchases)
+        MidgarLog.info(
+            "Trial clock overridden: day \(day) (elapsed \(day - 1) d), second look day \(secondLookDay.map(String.init) ?? "none")",
+            category: .purchases
+        )
+    }
+
+    private static func launchDay(after flag: String, in range: ClosedRange<Int>) -> Int? {
+        let arguments = CommandLine.arguments
+        guard let index = arguments.firstIndex(of: flag),
+              arguments.indices.contains(index + 1),
+              let day = Int(arguments[index + 1]),
+              range.contains(day)
+        else { return nil }
+        return day
     }
     #endif
 
@@ -475,7 +583,7 @@ final class PurchaseManager {
             MidgarLog.info("Runway prompt stamp skipped under --trial-day", category: .purchases)
             return
         }
-        TrialClock.stampIfAbsent(Date(), for: .runwayPromptShown)
+        dates.stampIfAbsent(now(), for: .runwayPromptShown)
     }
 
     func loadProof() async -> PaywallProof {
@@ -540,6 +648,15 @@ final class PurchaseManager {
         hasLoadedEntitlements = true
         NotificationCenter.default.post(name: Self.entitlementsDidLoad, object: nil)
         NotificationCenter.default.post(name: Self.stateDidChange, object: nil)
+        noteSecondLookOfferedIfReady()
+        if secondLookPlayIsWaiting { beginSecondLook() }
+    }
+
+    /// Counted once the entitlements confirm nobody paid, which is the first
+    /// moment Home may show the second look's card.
+    private func noteSecondLookOfferedIfReady() {
+        guard hasLoadedEntitlements, state == .secondLookReady else { return }
+        FunnelSignals.shared.noteSecondLookOffered()
     }
 
     /// A lifetime unlock never expires; a subscription is the yearly plan,
@@ -551,7 +668,11 @@ final class PurchaseManager {
 
     private func trialState() -> EntitlementState {
         guard trialHasStarted else { return .trialNotStarted }
-        switch TrialRunway.phase(start: trialStart, now: Date()) {
+        let now = now()
+        if TrialRunway.secondLook(trialStart: firstTrialStart, secondLookStart: secondLookStart, now: now) == .ready {
+            return .secondLookReady
+        }
+        switch TrialRunway.phase(start: trialStart, now: now) {
         case .trial(let daysRemaining): return .trial(daysRemaining: daysRemaining)
         case .expired: return .expired
         }
@@ -565,6 +686,7 @@ final class PurchaseManager {
             Task { await TrialReminderScheduler.shared.cancelAll() }
         }
         NotificationCenter.default.post(name: Self.stateDidChange, object: nil)
+        noteSecondLookOfferedIfReady()
     }
 
     func requestPaywall() {
@@ -573,15 +695,42 @@ final class PurchaseManager {
     }
 }
 
+/// Where the trial's add-only dates are kept: the Keychain in the app, memory
+/// in a test that walks the runway day by day.
+protocol TrialDateStoring {
+    func lookup(_ account: TrialClock.Account) -> TrialClock.Lookup
+    func stampIfAbsent(_ date: Date, for account: TrialClock.Account)
+}
+
+extension TrialDateStoring {
+
+    func date(for account: TrialClock.Account) -> Date? {
+        guard case .found(let date) = lookup(account) else { return nil }
+        return date
+    }
+}
+
+struct KeychainTrialDates: TrialDateStoring {
+
+    func lookup(_ account: TrialClock.Account) -> TrialClock.Lookup {
+        TrialClock.lookup(account)
+    }
+
+    func stampIfAbsent(_ date: Date, for account: TrialClock.Account) {
+        TrialClock.stampIfAbsent(date, for: account)
+    }
+}
+
 /// Persists the trial's add-only dates in the Keychain so they survive
 /// reinstalls; stored after-first-unlock and never synced to iCloud. Every
 /// account shares one query shape, and `trialStart` keeps the name it has
 /// always had, so existing trials are read back unchanged.
-private enum TrialClock {
+enum TrialClock {
 
     enum Account: String {
         case trialStart
         case runwayPromptShown
+        case secondLookStart
     }
 
     /// Absent and unreadable are different answers: before first unlock the
@@ -597,11 +746,6 @@ private enum TrialClock {
     #else
     private static let service = "com.midgarcorp.flaccy.trial"
     #endif
-
-    static func date(for account: Account) -> Date? {
-        guard case .found(let date) = lookup(account) else { return nil }
-        return date
-    }
 
     static func lookup(_ account: Account) -> Lookup {
         #if DEBUG

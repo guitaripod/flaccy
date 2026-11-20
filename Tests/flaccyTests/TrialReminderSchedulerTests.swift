@@ -18,9 +18,11 @@ nonisolated final class TrialReminderSchedulerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         start = Date().addingTimeInterval(-2 * TrialRunway.day)
-        reminders = TrialRunway.reminders(start: start, now: Date(), calendar: calendar, includeWelcomeBack: true)
+        reminders = TrialRunway.reminders(
+            start: start, now: Date(), calendar: calendar, includeWelcomeBack: true, includeSecondLook: false
+        )
         welcomeBackEnds = TrialRunway.lapsedOfferEnd(start: start)
-        XCTAssertEqual(reminders.map(\.kind), TrialRunway.Reminder.Kind.allCases)
+        XCTAssertEqual(reminders.map(\.kind), [.twoDaysLeft, .ended, .welcomeBack])
     }
 
     @MainActor private func requests() -> [UNNotificationRequest] {
@@ -32,8 +34,29 @@ nonisolated final class TrialReminderSchedulerTests: XCTestCase {
     }
 
     @MainActor func testIdentifiersAreTheReminderKinds() {
-        XCTAssertEqual(requests().map(\.identifier), TrialRunway.Reminder.Kind.allCases.map(\.rawValue))
+        XCTAssertEqual(requests().map(\.identifier), reminders.map(\.kind.rawValue))
         XCTAssertEqual(requests().map(\.identifier), ["trial.twoDaysLeft", "trial.ended", "trial.welcomeBack"])
+    }
+
+    @MainActor func testTheSecondLookReminderOpensTheAppNotThePaywall() throws {
+        let fireAt = TrialRunway.deliveryTime(for: TrialRunway.secondLookOpens(trialStart: start), calendar: calendar)
+        let request = try XCTUnwrap(
+            TrialReminderScheduler.requests(
+                for: [TrialRunway.Reminder(kind: .secondLook, fireAt: fireAt)], welcomeBackEnds: welcomeBackEnds
+            ).first
+        )
+        XCTAssertEqual(request.identifier, "trial.secondLook")
+        XCTAssertEqual(request.content.title, PaywallCopy.secondLookTitle)
+        XCTAssertEqual(request.content.body, PaywallCopy.secondLookLine)
+        XCTAssertNil(request.content.userInfo[TrialReminderScheduler.destinationUserInfoKey])
+        XCTAssertFalse(request.content.body.contains(where: \.isCurrencySymbol))
+    }
+
+    @MainActor func testOnlyTheWelcomeBackAndSecondLookRemindersOutliveTheTrial() {
+        XCTAssertEqual(
+            TrialRunway.Reminder.Kind.allCases.filter(\.firesAfterTheTrial),
+            [.welcomeBack, .secondLook]
+        )
     }
 
     @MainActor func testEveryRequestRoutesToThePaywall() {

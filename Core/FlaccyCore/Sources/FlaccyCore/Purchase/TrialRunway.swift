@@ -1,11 +1,13 @@
 import Foundation
 
 /// The trial's calendar, derived entirely from its start date: which day it is,
-/// when each reminder fires, when the day-6 banner is due and when the
-/// welcome-back window opens and closes. Every client reads this and nothing
-/// else, so a wound-back clock, a reinstall or a tapped notification all agree.
+/// when each reminder fires, when the day-6 banner is due, when the
+/// welcome-back window opens and closes and when a second look opens. Every
+/// client reads this and nothing else, so a wound-back clock, a reinstall or a
+/// tapped notification all agree.
 public enum TrialRunway {
     public static let lengthDays = 7
+    public static let secondLookAfterExpiryDays = 30
     public static let twoDaysLeftReminderDay = 5
     public static let runwayBannerAtDaysRemaining = 1
     public static let lapsedOfferDelayDays = 1
@@ -33,6 +35,7 @@ public enum TrialRunway {
             case twoDaysLeft = "trial.twoDaysLeft"
             case ended = "trial.ended"
             case welcomeBack = "trial.welcomeBack"
+            case secondLook = "trial.secondLook"
         }
         public let kind: Kind
         public let fireAt: Date
@@ -43,12 +46,14 @@ public enum TrialRunway {
         }
     }
 
-    /// The unclamped instant each reminder belongs to: start + 5 d, + 7 d, + 8 d.
+    /// The unclamped instant each reminder belongs to: start + 5 d, + 7 d, + 8 d
+    /// and, for the second look, + 37 d.
     public static func exactTime(of kind: Reminder.Kind, start: Date) -> Date {
         switch kind {
         case .twoDaysLeft: return start.addingTimeInterval(TimeInterval(twoDaysLeftReminderDay) * day)
         case .ended: return start.addingTimeInterval(TimeInterval(lengthDays) * day)
         case .welcomeBack: return lapsedOfferStart(start: start)
+        case .secondLook: return secondLookOpens(trialStart: start)
         }
     }
 
@@ -69,15 +74,18 @@ public enum TrialRunway {
         return opening
     }
 
-    /// Future reminders only (fireAt > now), each clamped. `includeWelcomeBack` false drops R3.
+    /// Future reminders only (fireAt > now), each clamped. `includeWelcomeBack`
+    /// false drops R3, `includeSecondLook` false drops R4.
     public static func reminders(
         start: Date,
         now: Date,
         calendar: Calendar,
-        includeWelcomeBack: Bool
+        includeWelcomeBack: Bool,
+        includeSecondLook: Bool
     ) -> [Reminder] {
         Reminder.Kind.allCases
             .filter { includeWelcomeBack || $0 != .welcomeBack }
+            .filter { includeSecondLook || $0 != .secondLook }
             .map { Reminder(kind: $0, fireAt: deliveryTime(for: exactTime(of: $0, start: start), calendar: calendar)) }
             .filter { $0.fireAt > now }
     }
@@ -111,12 +119,48 @@ public enum TrialRunway {
     }
 
     /// `.notYet` before the window opens, `.available` until it closes, and
-    /// `.ended` from the close onwards, forever: the window is fixed by the
-    /// trial start, so nothing a later launch does can reopen it.
+    /// `.ended` from the close onwards: the window is fixed by the trial start,
+    /// so no later launch reopens it. Only a second look brings the price back.
     public static func lapsedOffer(start: Date, now: Date) -> LapsedOffer {
         if now < lapsedOfferStart(start: start) { return .notYet }
         let end = lapsedOfferEnd(start: start)
         if now < end { return .available(endsAt: end) }
         return .ended
+    }
+
+    /// Where a person stands with the one second look they ever get: seven
+    /// more free days for someone whose trial ran out a month or more ago.
+    public enum SecondLook: Equatable, Sendable {
+        /// The trial is still running, or ended less than thirty days ago.
+        case notYet
+        /// The free days are waiting and start at the next play of the person's own music.
+        case ready
+        /// It started on this date, which the runway now counts from.
+        case started(Date)
+    }
+
+    /// The instant a second look opens: thirty days after the trial ran out.
+    public static func secondLookOpens(trialStart: Date) -> Date {
+        trialStart.addingTimeInterval(TimeInterval(lengthDays + secondLookAfterExpiryDays) * day)
+    }
+
+    /// A stored start always wins, so a second look that has begun can never
+    /// be offered again, whatever the clock says.
+    public static func secondLook(trialStart: Date, secondLookStart: Date?, now: Date) -> SecondLook {
+        if let secondLookStart { return .started(secondLookStart) }
+        return now >= secondLookOpens(trialStart: trialStart) ? .ready : .notYet
+    }
+
+    /// The date every day of the runway counts from: the second look's start
+    /// once it has one, the trial's until then.
+    public static func runwayStart(trialStart: Date, secondLookStart: Date?) -> Date {
+        secondLookStart ?? trialStart
+    }
+
+    /// A second look carries the welcome-back price from its first day, through
+    /// its seven free days and to the close of the window that follows them.
+    public static func secondLookOffer(secondLookStart: Date, now: Date) -> LapsedOffer {
+        let end = lapsedOfferEnd(start: secondLookStart)
+        return now < end ? .available(endsAt: end) : .ended
     }
 }

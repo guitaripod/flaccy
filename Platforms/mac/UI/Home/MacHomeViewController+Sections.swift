@@ -391,6 +391,11 @@ extension MacHomeViewController {
             card.configure(plan: plan)
             card.onAction = { [weak self] action in self?.perform(action) }
             return card
+        case .secondLook(let secondLook):
+            let card = MacHomePromoCard()
+            card.configure(secondLook: secondLook)
+            card.onAction = { [weak self] action in self?.perform(action) }
+            return card
         case .note(let text):
             return MacHomePromoNote(text: text)
         }
@@ -406,6 +411,8 @@ extension MacHomeViewController {
             MacHomeActions.downloadSample(in: view.window)
         case .seePlans, .getLifetime:
             PurchaseManager.shared.requestPaywall()
+        case .playMyMusic:
+            MacHomeActions.shuffleLibrary()
         case .restorePurchases:
             MacHomeActions.restorePurchases(in: view.window)
         }

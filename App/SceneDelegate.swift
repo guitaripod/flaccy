@@ -64,6 +64,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         FlaccyServerShot.runIfRequested(tabs: tabs)
         PaywallShot.runIfRequested(in: window)
         SampleExercise.runIfRequested()
+        SecondLookExercise.runIfRequested()
         ReexportExercise.runIfRequested()
         NewMixShot.runIfRequested(tabs: tabs, player: playerContainer)
         WatchSyncExercise.runIfRequested()

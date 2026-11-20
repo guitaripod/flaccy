@@ -383,7 +383,7 @@ final class SettingsViewController: UITableViewController {
             return PlanSummary(title: String(localized: "Lifetime member"), subtitle: String(localized: "Everything in Flaccy, yours for good"))
         case .purchased(.yearly):
             return PlanSummary(title: String(localized: "Flaccy Pro"), subtitle: String(localized: "Yearly · everything in Flaccy is open"))
-        case .trialNotStarted, .trial, .expired:
+        case .trialNotStarted, .trial, .expired, .secondLookReady:
             let sentence = PaywallCopy.settingsSentence(state: state, lifetime: PurchaseManager.shared.lifetimeOfferToPresent)
             return PlanSummary(title: String(localized: "Flaccy Lifetime"), subtitle: sentence ?? "")
         }

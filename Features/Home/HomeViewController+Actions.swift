@@ -30,6 +30,7 @@ extension HomeViewController {
         case .computerGuide: library.performWhenVisible { library.presentComputerTransferGuide() }
         case .seePlans, .getLifetime: PurchaseManager.shared.requestPaywall()
         case .restorePurchases: restorePurchases()
+        case .playMyMusic: shuffleLibrary()
         }
     }
 

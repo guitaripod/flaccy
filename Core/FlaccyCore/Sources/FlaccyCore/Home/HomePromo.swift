@@ -15,11 +15,15 @@ public enum HomePromo: Equatable, Sendable {
     case lastDay
     /// The trial ended; the welcome-back price applies while its window is open.
     case keepListening(welcomeBack: Bool)
+    /// The trial ended a month or more ago and seven more free days are
+    /// waiting for the next play: Home sells Flaccy's best, not a price.
+    case secondLook
 
     public enum Phase: Equatable, Sendable {
         case notStarted
         case trial(daysRemaining: Int)
         case expired
+        case secondLookReady
         case purchased
     }
 
@@ -53,7 +57,8 @@ public enum HomePromo: Equatable, Sendable {
 
     /// Nil when Home should sell nothing: paid, or an ended trial that the
     /// entitlements have not confirmed yet (the local clock alone says
-    /// "expired" for the first second of every launch, paid or not).
+    /// "expired", or "second look", for the first second of every launch,
+    /// paid or not).
     public static func card(for facts: Facts) -> HomePromo? {
         guard facts.ownTrackCount > 0 else { return .getStarted }
         switch facts.phase {
@@ -68,12 +73,14 @@ public enum HomePromo: Equatable, Sendable {
             return .trialValue(daysRemaining: daysRemaining)
         case .expired:
             return facts.entitlementsLoaded ? .keepListening(welcomeBack: facts.welcomeBackOpen) : nil
+        case .secondLookReady:
+            return facts.entitlementsLoaded ? .secondLook : nil
         }
     }
 
     public var placement: Placement {
         switch self {
-        case .getStarted, .keepListening: .replacesHero
+        case .getStarted, .keepListening, .secondLook: .replacesHero
         case .lastDay: .belowHero
         case .trialStartsOnFirstPlay: .heroFootnote
         case .trialValue: .pageEnd

@@ -128,7 +128,7 @@ extension SettingsViewController {
 
         var footer: String? {
             switch self {
-            case .trial: String(localized: "Two reminders before your trial ends, and one if an offer opens.")
+            case .trial: PaywallCopy.reminderSummary
             case .signalPath: String(localized: "Flaccy sees the file, its own processing and the kind of output. What the device does after that is up to the device.")
             case .listeningGuide: String(localized: "How Bluetooth, AAC, and lossless files really affect what you hear.")
             case .playerButtons: String(localized: "Touch and hold the buttons under Now Playing to rearrange them.")

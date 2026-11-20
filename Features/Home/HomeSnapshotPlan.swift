@@ -22,6 +22,7 @@ nonisolated enum HomeItem: Hashable, Sendable {
     case hero
     case getStarted
     case promoCard
+    case secondLook
     case promoNote
     case jumpHeader
     case jump(PlaybackContext)
@@ -91,7 +92,11 @@ nonisolated enum HomeSnapshotPlan {
     /// replaces it.
     private static func heroItem(for promo: HomePromo?) -> HomeItem {
         guard let promo, promo.placement == .replacesHero else { return .hero }
-        return promo == .getStarted ? .getStarted : .promoCard
+        switch promo {
+        case .getStarted: return .getStarted
+        case .secondLook: return .secondLook
+        case .trialStartsOnFirstPlay, .trialValue, .lastDay, .keepListening: return .promoCard
+        }
     }
 
     private static func entry(for section: HomeSection, model: HomeScreenModel) -> (HomeSectionID, [HomeItem])? {

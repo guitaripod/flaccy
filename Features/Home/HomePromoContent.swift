@@ -8,6 +8,7 @@ extension HomePromo.Phase {
         case .trialNotStarted: self = .notStarted
         case .trial(let daysRemaining): self = .trial(daysRemaining: daysRemaining)
         case .expired: self = .expired
+        case .secondLookReady: self = .secondLookReady
         case .purchased: self = .purchased
         }
     }
@@ -16,7 +17,7 @@ extension HomePromo.Phase {
     nonisolated var hasProof: Bool {
         switch self {
         case .trial, .expired: true
-        case .notStarted, .purchased: false
+        case .notStarted, .secondLookReady, .purchased: false
         }
     }
 }
@@ -33,6 +34,15 @@ struct HomePlanCardContent: Equatable {
     let offersRestore: Bool
 }
 
+/// What the second look's card says: Flaccy's best, the free days that wait
+/// on a play, and a button that starts both.
+struct HomeSecondLookContent: Equatable {
+    let title: String
+    let body: String
+    let highlights: [String]
+    let primaryTitle: String
+}
+
 /// What a card that invites music in says.
 struct HomeGetStartedContent: Equatable {
     let title: String
@@ -46,6 +56,7 @@ enum HomePromoContent: Equatable {
     case getStarted(HomeGetStartedContent)
     case note(String)
     case plan(HomePlanCardContent)
+    case secondLook(HomeSecondLookContent)
 
     /// The most proof lines a card quotes, as many as the paywall's own card.
     static let proofLineLimit = 3
@@ -62,7 +73,7 @@ enum HomePromoContent: Equatable {
             return .getStarted(HomeGetStartedContent(
                 title: HomeCopy.getStartedTitle,
                 body: gettingStartedBody,
-                footnote: manager.state == .trialNotStarted ? PaywallCopy.trialStartsLine : nil
+                footnote: PaywallCopy.waitingLine(for: manager.state)
             ))
         case .trialStartsOnFirstPlay:
             return .note(PaywallCopy.trialStartsLine)
@@ -70,6 +81,13 @@ enum HomePromoContent: Equatable {
             return .plan(planCard(kicker: PaywallCopy.statusLine(for: manager.state), proof: proof, manager: manager, isExpired: false))
         case .keepListening:
             return .plan(planCard(kicker: PaywallCopy.statusLine(for: .expired), proof: proof, manager: manager, isExpired: true))
+        case .secondLook:
+            return .secondLook(HomeSecondLookContent(
+                title: PaywallCopy.secondLookTitle,
+                body: PaywallCopy.secondLookLine,
+                highlights: PaywallCopy.secondLookHighlights,
+                primaryTitle: PaywallCopy.secondLookPlay
+            ))
         }
     }
 
@@ -109,7 +127,7 @@ enum HomePromoOffers {
         guard let promo, !requested else { return }
         switch promo {
         case .trialValue, .lastDay, .keepListening: break
-        case .getStarted, .trialStartsOnFirstPlay: return
+        case .getStarted, .trialStartsOnFirstPlay, .secondLook: return
         }
         let manager = PurchaseManager.shared
         guard manager.offers.isEmpty else { return }

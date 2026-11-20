@@ -12,11 +12,29 @@ import MidgarCore
 @MainActor
 enum MacTrialRunwayPresenter {
 
+    private static var secondLookObserver: NSObjectProtocol?
+
     static func refresh(in window: NSWindow?) {
         MacTrialReminderPrompt.observeOpportunities()
+        observeSecondLook()
         PurchaseManager.shared.refreshTrialPhase()
         showRunwayToastIfDue(in: window)
         Task { await TrialReminderScheduler.shared.refresh() }
+    }
+
+    /// A second look starts at a play, with nothing on screen changing but the
+    /// card that offered it leaving, so the moment is said once in a toast.
+    private static func observeSecondLook() {
+        guard secondLookObserver == nil else { return }
+        secondLookObserver = NotificationCenter.default.addObserver(
+            forName: PurchaseManager.secondLookDidStart, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated {
+                guard let window = NSApp.mainWindow ?? NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain })
+                else { return }
+                MacToast.show(PaywallCopy.secondLookStartedToast, style: .success, in: window)
+            }
+        }
     }
 
     private static func showRunwayToastIfDue(in window: NSWindow?) {

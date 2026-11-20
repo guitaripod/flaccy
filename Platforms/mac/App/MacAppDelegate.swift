@@ -46,6 +46,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
         EqualizerExercise.runIfRequested()
         SongVolumeExercise.runIfRequested()
+        SecondLookExercise.runIfRequested()
         LyricShareExercise.runIfRequested()
         LyricsMeaningExercise.runIfRequested()
         PlaylistMakerExercise.runIfRequested()

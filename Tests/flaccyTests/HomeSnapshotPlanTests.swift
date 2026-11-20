@@ -31,6 +31,12 @@ nonisolated final class HomeSnapshotPlanTests: XCTestCase {
         XCTAssertEqual(HomeFeedBuilder.heroToShow(.empty, hasUpNext: false), .empty)
     }
 
+    @MainActor func testTheSecondLookTakesTheHeroSlotAndTheRestOfHomeStays() {
+        let plan = plan(feed(hero: .dayOne, blocks: [.single(.madeForYou)], promo: .secondLook))
+        XCTAssertEqual(plan.map(\.section), [.hero, .madeForYou, .footer])
+        XCTAssertEqual(plan[0].items, [.secondLook])
+    }
+
     @MainActor func testGetStartedTakesTheHeroSlotAndTheRestOfHomeStays() {
         let plan = plan(feed(hero: .dayOne, blocks: [.single(.madeForYou)], promo: .getStarted))
         XCTAssertEqual(plan.map(\.section), [.hero, .madeForYou, .footer])

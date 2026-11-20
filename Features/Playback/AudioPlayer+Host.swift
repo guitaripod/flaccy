@@ -67,6 +67,18 @@ extension AudioPlayer: PlaybackEngineHost {
 
     func playbackDidProgress() {
         checkScrobbleCriteria()
+        reportMusicPlayingIfSecondLookWaits()
+    }
+
+    /// A waiting second look starts on music that is really playing: time has
+    /// moved on the track. A queue restored at launch sits paused, and a file
+    /// that is missing or on a drive that is not connected never moves, so
+    /// neither spends the free days.
+    private func reportMusicPlayingIfSecondLookWaits() {
+        guard PurchaseManager.shared.state == .secondLookReady, isPlaying, currentTime > 0,
+              let track = currentTrack
+        else { return }
+        PurchaseManager.shared.noteOwnMusicPlaying(track)
     }
 
     func artworkIsNeeded(for track: Track) {

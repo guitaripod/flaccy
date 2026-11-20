@@ -590,7 +590,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             computerGuideButton.isHidden = false
             streamButton.isHidden = false
             applySampleButtonState()
-            trialStartsLabel.isHidden = PurchaseManager.shared.state != .trialNotStarted
+            let waitingLine = PaywallCopy.waitingLine(for: PurchaseManager.shared.state)
+            trialStartsLabel.text = waitingLine
+            trialStartsLabel.isHidden = waitingLine == nil
             collectionView.backgroundView = emptyStateView
         case .noSearchResults(let query):
             emptyStateIconView.image = UIImage(systemName: "magnifyingglass")

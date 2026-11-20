@@ -209,7 +209,7 @@ final class SettingsHeaderView: UIView {
                 tint: .systemYellow,
                 interactive: false
             )
-        case .trialNotStarted:
+        case .trialNotStarted, .secondLookReady:
             statusControl.configure(
                 symbolName: "sparkles",
                 title: String(localized: "Flaccy Lifetime"),

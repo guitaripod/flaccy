@@ -19,6 +19,11 @@ extension HomeViewController {
             cell.onAction = { [weak self] action in self?.handle(promo: action) }
             cell.configure(with: content)
         }
+        let secondLook = UICollectionView.CellRegistration<HomeSecondLookCell, HomeItem> { [weak self] cell, _, _ in
+            guard let self, case .secondLook(let content) = self.promoContent else { return }
+            cell.onAction = { [weak self] action in self?.handle(promo: action) }
+            cell.configure(with: content)
+        }
         let promoNote = UICollectionView.CellRegistration<HomePromoNoteCell, HomeItem> { [weak self] cell, _, _ in
             guard let self, case .note(let text) = self.promoContent else { return }
             cell.configure(text: text)
@@ -72,6 +77,8 @@ extension HomeViewController {
                 return collectionView.dequeueConfiguredReusableCell(using: getStarted, for: indexPath, item: item)
             case .promoCard:
                 return collectionView.dequeueConfiguredReusableCell(using: planCard, for: indexPath, item: item)
+            case .secondLook:
+                return collectionView.dequeueConfiguredReusableCell(using: secondLook, for: indexPath, item: item)
             case .promoNote:
                 return collectionView.dequeueConfiguredReusableCell(using: promoNote, for: indexPath, item: item)
             case .runwayBanner, .statusBanner:

@@ -9,12 +9,30 @@ import UIKit
 @MainActor
 enum TrialRunwayPresenter {
 
+    private static var secondLookObserver: NSObjectProtocol?
+
     static func refresh(in window: UIWindow?) {
+        observeSecondLook()
         let manager = PurchaseManager.shared
         manager.refreshTrialPhase()
         library(in: window)?.setRunwayBanner(visible: manager.runwayBannerIsDue)
         home(in: window)?.setRunwayBanner(visible: manager.runwayBannerIsDue)
         Task { await TrialReminderScheduler.shared.refresh() }
+    }
+
+    /// A second look starts at a play, with nothing on screen changing but the
+    /// card that offered it leaving, so the moment is said once in a toast.
+    private static func observeSecondLook() {
+        guard secondLookObserver == nil else { return }
+        secondLookObserver = NotificationCenter.default.addObserver(
+            forName: PurchaseManager.secondLookDidStart, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated {
+                guard let top = topmostViewController(in: activeWindow) else { return }
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                ToastView.show(PaywallCopy.secondLookStartedToast, in: top.view, style: .success)
+            }
+        }
     }
 
     /// The Library at the root of the window's navigation stack, wherever the

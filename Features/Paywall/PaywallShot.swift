@@ -21,17 +21,22 @@ enum PaywallShot {
             while let presented = top.presentedViewController { top = presented }
             PaywallViewController.presentSheet(from: top)
             try? await Task.sleep(for: .seconds(3))
-            capture(window)
+            capture(window, as: "paywall.png")
         }
     }
 
-    private static func capture(_ window: UIWindow) {
+    /// Draws the whole window into a PNG where `devicectl device copy from`
+    /// can fetch it: Documents unless a caller would rather keep its pictures
+    /// out of the person's music folder.
+    static func capture(
+        _ window: UIWindow, as fileName: String, in directory: FileManager.SearchPathDirectory = .documentDirectory
+    ) {
         let renderer = UIGraphicsImageRenderer(bounds: window.bounds, format: .init(for: window.traitCollection))
         let image = renderer.image { _ in window.drawHierarchy(in: window.bounds, afterScreenUpdates: true) }
         guard let data = image.pngData(),
-              let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+              let documents = FileManager.default.urls(for: directory, in: .userDomainMask).first
         else { return }
-        let url = documents.appendingPathComponent("paywall.png")
+        let url = documents.appendingPathComponent(fileName)
         do {
             try data.write(to: url)
             MidgarLog.info("PaywallShot: wrote \(url.path) (\(Int(image.size.width))×\(Int(image.size.height)) @\(image.scale)x)", category: .ui)

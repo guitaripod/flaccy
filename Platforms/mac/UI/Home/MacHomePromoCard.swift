@@ -10,6 +10,7 @@ enum MacHomePromoAction {
     case seePlans
     case getLifetime
     case restorePurchases
+    case playMyMusic
 }
 
 /// The card Home spends on getting music in and on Flaccy Pro, in the Mac's
@@ -80,7 +81,7 @@ final class MacHomePromoCard: MacHomeSurfaceView {
         let title = titleLabel(content.title)
         addFull(title)
         for line in content.proofLines {
-            column.addArrangedSubview(proofRow(line))
+            column.addArrangedSubview(checkRow(line))
         }
         column.setCustomSpacing(18, after: column.arrangedSubviews.last ?? title)
 
@@ -101,6 +102,27 @@ final class MacHomePromoCard: MacHomeSurfaceView {
         }
         setAccessibilityRole(.group)
         setAccessibilityLabel("\(content.kicker). \(content.title)")
+    }
+
+    /// The second look: Flaccy's best, and one button that plays the person's
+    /// music, which is what starts the free days.
+    func configure(secondLook content: HomeSecondLookContent) {
+        let title = label(content.title, size: 34, weight: .heavy, color: .labelColor)
+        addFull(title)
+        addFull(label(content.body, size: 13, weight: .regular, color: .secondaryLabelColor))
+        column.setCustomSpacing(14, after: column.arrangedSubviews.last ?? title)
+        for line in content.highlights {
+            column.addArrangedSubview(checkRow(line))
+        }
+        column.setCustomSpacing(18, after: column.arrangedSubviews.last ?? title)
+
+        let play = MacHomeFilledButton(title: content.primaryTitle, symbol: "play.fill")
+        play.onClick = { [weak self] in self?.onAction?(.playMyMusic) }
+        let plans = GlassCapsuleButton(title: HomeCopy.seePlans, symbolName: nil)
+        plans.onClick = { [weak self] in self?.onAction?(.seePlans) }
+        column.addArrangedSubview(buttonRow([play, plans]))
+        setAccessibilityRole(.group)
+        setAccessibilityLabel("\(content.title) \(content.body)")
     }
 
     private func addMusicMenu() -> NSMenu {
@@ -154,7 +176,7 @@ final class MacHomePromoCard: MacHomeSurfaceView {
         return field
     }
 
-    private func proofRow(_ text: String) -> NSView {
+    private func checkRow(_ text: String) -> NSView {
         let icon = NSImageView(image: MacSymbolImage.configured("checkmark.circle.fill", pointSize: 13, weight: .semibold) ?? NSImage())
         icon.contentTintColor = .controlAccentColor
         icon.setContentHuggingPriority(.required, for: .horizontal)

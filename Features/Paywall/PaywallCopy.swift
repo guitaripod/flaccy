@@ -142,6 +142,8 @@ enum PaywallCopy {
             return String(localized: "\(daysRemaining) days left in your trial")
         case .expired:
             return String(localized: "Your trial has ended. Everything you set up is still here.")
+        case .secondLookReady:
+            return secondLookLine
         case .purchased(.lifetime):
             return String(localized: "Lifetime unlocked. Thank you.")
         case .purchased(.yearly):
@@ -153,6 +155,44 @@ enum PaywallCopy {
     /// worth saying wherever the trial comes up before that song has played.
     static var trialStartsLine: String {
         String(localized: "Your \(TrialRunway.lengthDays)-day free trial starts the first time you play your own music.")
+    }
+
+    /// The second look counts from a play too, so it is told the same way
+    /// wherever it waits: Home's card, the paywall, Settings and the reminder.
+    static var secondLookLine: String {
+        String(localized: "\(TrialRunway.lengthDays) more free days start the next time you play your music.")
+    }
+
+    /// What waits on a play of the person's own music, if anything does.
+    static func waitingLine(for state: EntitlementState) -> String? {
+        switch state {
+        case .trialNotStarted: trialStartsLine
+        case .secondLookReady: secondLookLine
+        case .trial, .expired, .purchased: nil
+        }
+    }
+
+    static var secondLookTitle: String {
+        String(localized: "Flaccy. Again.")
+    }
+
+    /// Flaccy's best, the same for everyone who comes back whichever version
+    /// they left on, and true on the iPhone, the iPad and the Mac alike.
+    static var secondLookHighlights: [String] {
+        [
+            String(localized: "A real equalizer with a setting for every output"),
+            String(localized: "Synced lyrics you can share as a video"),
+            String(localized: "Your own server, streamed or kept offline"),
+            String(localized: "iPhone, iPad, Mac and Apple Watch on one purchase"),
+        ]
+    }
+
+    static var secondLookPlay: String {
+        String(localized: "Play My Music")
+    }
+
+    static var secondLookStartedToast: String {
+        String(localized: "\(TrialRunway.lengthDays) free days have started. Enjoy your music.")
     }
 
     static var lastDayLine: String {
@@ -182,6 +222,8 @@ enum PaywallCopy {
                 return String(localized: "\(daysRemaining) days left in your free trial")
             }
             return String(localized: "\(daysRemaining) days left · \(price), one payment")
+        case .secondLookReady:
+            return secondLookLine
         case .expired:
             guard let lifetime else { return String(localized: "Your free trial has ended") }
             guard lifetime.isWelcomeBack else {
@@ -196,7 +238,8 @@ enum PaywallCopy {
 
     /// The titlebar pill's short form of the same state; nil once purchased,
     /// and nil before the trial starts, because a nudge to buy has no place
-    /// before a single song of the person's own has played.
+    /// before a single song of the person's own has played. A second look is
+    /// good news, not a nudge, so it is named.
     static func pillLine(state: EntitlementState, lifetime: PurchaseOffer?) -> String? {
         switch state {
         case .purchased, .trialNotStarted:
@@ -205,6 +248,8 @@ enum PaywallCopy {
             return String(localized: "Under a day left · Get Lifetime")
         case .trial(let daysRemaining):
             return String(localized: "Trial · \(daysRemaining) days left")
+        case .secondLookReady:
+            return String(localized: "Welcome back · \(TrialRunway.lengthDays) free days")
         case .expired:
             if let lifetime, lifetime.isWelcomeBack {
                 return String(localized: "Welcome back · Lifetime \(lifetime.displayPrice)")
@@ -218,7 +263,12 @@ enum PaywallCopy {
     }
 
     static var reminderConsentBody: String {
-        String(localized: "Flaccy can send three notifications: two days before your trial ends, on the last day, and once if a welcome-back price on Lifetime becomes available. Nothing else. You can turn them off any time in Settings.")
+        String(localized: "Flaccy can send four notifications: two days before your trial ends, on the last day, once if a welcome-back price on Lifetime becomes available, and once if more free days open up later. Nothing else. You can turn them off any time in Settings.")
+    }
+
+    /// The short form of the same four, beside the switch in Settings.
+    nonisolated static var reminderSummary: String {
+        String(localized: "Two reminders before your trial ends, one if an offer opens, and one if more free days open up later.")
     }
 
     static var remindMe: String {

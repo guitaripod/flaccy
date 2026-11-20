@@ -16465,6 +16465,100 @@
         }
       }
     },
+    "%lld free days have started. Enjoy your music.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld gratis dage er begyndt. Nyd din musik."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld kostenlose Tage haben begonnen. Viel Freude mit deiner Musik."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Han empezado %lld días gratis. Disfruta de tu música."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ilmaista päivää on alkanut. Nauti musiikistasi."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld jours gratuits ont commencé. Profitez de votre musique."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ókeypis dagar eru hafnir. Njóttu tónlistarinnar."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sono iniziati %lld giorni gratuiti. Goditi la tua musica."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld日間の無料期間が始まりました。音楽をお楽しみください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 무료 이용이 시작되었습니다. 음악을 즐겨 보세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld gratis dager har startet. Nyt musikken din."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rozpoczęło się %lld darmowych dni. Miłego słuchania."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld dias grátis começaram. Aproveite sua música."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld gratisdagar har börjat. Njut av din musik."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 天免费使用已开始。尽情享受你的音乐吧。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 天免費使用已開始。盡情享受你的音樂吧。"
+          }
+        }
+      }
+    },
     "%lld from servers": {
       "localizations": {
         "da": {
@@ -17535,6 +17629,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 分鐘"
+          }
+        }
+      }
+    },
+    "%lld more free days start the next time you play your music.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld gratis dage mere starter, næste gang du afspiller din musik."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld weitere kostenlose Tage beginnen, sobald du das nächste Mal deine Musik abspielst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otros %lld días gratis empiezan la próxima vez que reproduzcas tu música."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld uutta ilmaista päivää alkaa, kun toistat musiikkiasi seuraavan kerran."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld jours gratuits de plus commencent la prochaine fois que vous lisez votre musique."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ókeypis dagar í viðbót hefjast næst þegar þú spilar tónlistina þína."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altri %lld giorni gratuiti iniziano la prossima volta che riproduci la tua musica."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次に自分の音楽を再生すると、さらに%lld日間無料で使えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음에 자신의 음악을 재생하면 %lld일 무료 이용이 다시 시작됩니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld gratis dager til starter neste gang du spiller musikken din."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kolejne %lld darmowych dni zaczyna się, gdy następnym razem odtworzysz swoją muzykę."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mais %lld dias grátis começam na próxima vez que você tocar sua música."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld gratisdagar till börjar nästa gång du spelar din musik."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下次播放你的音乐时，将再开始 %lld 天免费使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下次播放你的音樂時，將再開始 %lld 天免費使用。"
           }
         }
       }
@@ -31269,6 +31457,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "中繼資料來源拒絕了「%@」的請求。請稍後再試。"
+          }
+        }
+      }
+    },
+    "A real equalizer with a setting for every output": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En rigtig equalizer med en indstilling for hver udgang"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein echter Equalizer mit einer Einstellung für jeden Ausgang"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un ecualizador de verdad con un ajuste para cada salida"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oikea equalizer, jossa on oma asetus jokaiselle ulostulolle"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un véritable égaliseur avec un réglage pour chaque sortie"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alvöru tónjafnari með stillingu fyrir hvert úttak"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un vero equalizzatore con un'impostazione per ogni uscita"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出力ごとに設定できる本格イコライザ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출력마다 따로 설정하는 진짜 이퀄라이저"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En ekte equalizer med en innstilling for hver utgang"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prawdziwy korektor dźwięku z ustawieniem dla każdego wyjścia"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um equalizador de verdade com um ajuste para cada saída"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En riktig equalizer med en inställning för varje utgång"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "真正的均衡器，每个输出各有设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "真正的等化器，每個輸出各有設定"
           }
         }
       }
@@ -84153,96 +84435,96 @@
         }
       }
     },
-    "Flaccy can send three notifications: two days before your trial ends, on the last day, and once if a welcome-back price on Lifetime becomes available. Nothing else. You can turn them off any time in Settings.": {
+    "Flaccy can send four notifications: two days before your trial ends, on the last day, once if a welcome-back price on Lifetime becomes available, and once if more free days open up later. Nothing else. You can turn them off any time in Settings.": {
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy kan sende tre notifikationer: to dage før din prøveperiode udløber, på sidste dag og én gang, hvis en Velkommen tilbage-pris på Lifetime bliver tilgængelig. Ikke andet. Du kan slå dem fra når som helst i Indstillinger."
+            "value": "Flaccy kan sende fire notifikationer: to dage før din prøveperiode udløber, på sidste dag, én gang, hvis en Velkommen tilbage-pris på Lifetime bliver tilgængelig, og én gang, hvis der senere åbner sig flere gratis dage. Ikke andet. Du kan slå dem fra når som helst i Indstillinger."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy kann drei Mitteilungen senden: zwei Tage vor Ende deiner Testphase, am letzten Tag und einmal, falls ein Willkommens-zurück-Preis für Lifetime verfügbar wird. Sonst nichts. Du kannst sie jederzeit in den Einstellungen deaktivieren."
+            "value": "Flaccy kann vier Mitteilungen senden: zwei Tage vor Ende deiner Testphase, am letzten Tag, einmal, falls ein Willkommens-zurück-Preis für Lifetime verfügbar wird, und einmal, falls später weitere kostenlose Tage dazukommen. Sonst nichts. Du kannst sie jederzeit in den Einstellungen deaktivieren."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy puede enviar tres notificaciones: dos días antes de que termine tu prueba, el último día y una vez si aparece un precio de bienvenida para de por vida. Nada más. Puedes desactivarlas en cualquier momento en Ajustes."
+            "value": "Flaccy puede enviar cuatro notificaciones: dos días antes de que termine tu prueba, el último día, una vez si aparece un precio de bienvenida para de por vida y una vez si más adelante se abren más días gratis. Nada más. Puedes desactivarlas en cualquier momento en Ajustes."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy voi lähettää kolme ilmoitusta: kaksi päivää ennen kokeilun päättymistä, viimeisenä päivänä ja kerran, jos Lifetimeen tulee saataville tervetuloa takaisin -hinta. Ei mitään muuta. Voit poistaa ne käytöstä milloin tahansa Asetuksissa."
+            "value": "Flaccy voi lähettää neljä ilmoitusta: kaksi päivää ennen kokeilun päättymistä, viimeisenä päivänä, kerran, jos Lifetimeen tulee saataville tervetuloa takaisin -hinta, ja kerran, jos saat myöhemmin lisää ilmaisia päiviä. Ei mitään muuta. Voit poistaa ne käytöstä milloin tahansa Asetuksissa."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy peut envoyer trois notifications : deux jours avant la fin de votre essai, le dernier jour, et une fois si un tarif de bienvenue pour l'accès à vie devient disponible. Rien d'autre. Vous pouvez les désactiver à tout moment dans Réglages."
+            "value": "Flaccy peut envoyer quatre notifications : deux jours avant la fin de votre essai, le dernier jour, une fois si un tarif de bienvenue pour l'accès à vie devient disponible, et une fois si d'autres jours gratuits s'ouvrent plus tard. Rien d'autre. Vous pouvez les désactiver à tout moment dans Réglages."
           }
         },
         "is": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy getur sent þrjár tilkynningar: tveimur dögum áður en prufutíminn lýkur, á síðasta degi og einu sinni ef tilboðið Velkomin aftur fyrir Lifetime verður í boði. Ekkert annað. Þú getur slökkt á þeim hvenær sem er í Stillingum."
+            "value": "Flaccy getur sent fjórar tilkynningar: tveimur dögum áður en prufutíminn lýkur, á síðasta degi, einu sinni ef tilboðið Velkomin aftur fyrir Lifetime verður í boði og einu sinni ef fleiri ókeypis dagar bjóðast síðar. Ekkert annað. Þú getur slökkt á þeim hvenær sem er í Stillingum."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy può inviare tre notifiche: due giorni prima della fine della prova, l'ultimo giorno e una volta se diventa disponibile un prezzo di bentornato per l'opzione a vita. Nient'altro. Puoi disattivarle in qualsiasi momento in Impostazioni."
+            "value": "Flaccy può inviare quattro notifiche: due giorni prima della fine della prova, l'ultimo giorno, una volta se diventa disponibile un prezzo di bentornato per l'opzione a vita e una volta se in seguito si aprono altri giorni gratuiti. Nient'altro. Puoi disattivarle in qualsiasi momento in Impostazioni."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccyが送信する通知は最大3回です：トライアル終了2日前、最終日、そして買い切りのおかえりなさい価格が利用可能になった際の1回。それ以外はありません。設定でいつでもオフにできます。"
+            "value": "Flaccyが送信する通知は最大4回です：トライアル終了2日前、最終日、買い切りのおかえりなさい価格が利用可能になった際の1回、そして後日さらに無料期間が始まる際の1回。それ以外はありません。設定でいつでもオフにできます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy는 최대 세 번의 알림을 보낼 수 있습니다: 체험 종료 2일 전, 마지막 날, 그리고 평생 이용의 웰컴백 가격이 제공될 때 한 번. 그 외에는 없습니다. 설정에서 언제든 끌 수 있습니다."
+            "value": "Flaccy는 최대 네 번의 알림을 보낼 수 있습니다: 체험 종료 2일 전, 마지막 날, 평생 이용의 웰컴백 가격이 제공될 때 한 번, 그리고 나중에 무료 이용 기간이 추가로 열릴 때 한 번. 그 외에는 없습니다. 설정에서 언제든 끌 수 있습니다."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy kan sende tre varsler: to dager før prøveperioden din utløper, på siste dag, og én gang hvis et «Velkommen tilbake»-tilbud på Lifetime blir tilgjengelig. Ingenting annet. Du kan slå dem av når som helst i Innstillinger."
+            "value": "Flaccy kan sende fire varsler: to dager før prøveperioden din utløper, på siste dag, én gang hvis et «Velkommen tilbake»-tilbud på Lifetime blir tilgjengelig, og én gang hvis det senere åpner seg flere gratis dager. Ingenting annet. Du kan slå dem av når som helst i Innstillinger."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy może wysłać trzy powiadomienia: dwa dni przed końcem okresu próbnego, w ostatnim dniu i raz, gdy pojawi się cena powitalna na dostęp dożywotni. Nic więcej. Możesz je wyłączyć w każdej chwili w Ustawieniach."
+            "value": "Flaccy może wysłać cztery powiadomienia: dwa dni przed końcem okresu próbnego, w ostatnim dniu, raz, gdy pojawi się cena powitalna na dostęp dożywotni, i raz, gdy później pojawią się kolejne darmowe dni. Nic więcej. Możesz je wyłączyć w każdej chwili w Ustawieniach."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Flaccy pode enviar três notificações: dois dias antes do fim do seu teste, no último dia e uma vez se um preço de boas-vindas no vitalício ficar disponível. Nada mais. Você pode desativá-las a qualquer momento em Ajustes."
+            "value": "O Flaccy pode enviar quatro notificações: dois dias antes do fim do seu teste, no último dia, uma vez se um preço de boas-vindas no vitalício ficar disponível e uma vez se mais dias grátis forem liberados depois. Nada mais. Você pode desativá-las a qualquer momento em Ajustes."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy kan skicka tre notiser: två dagar innan din provperiod går ut, på den sista dagen, och en gång om ett Välkommen tillbaka-pris på Lifetime blir tillgängligt. Inget annat. Du kan stänga av dem när som helst i Inställningar."
+            "value": "Flaccy kan skicka fyra notiser: två dagar innan din provperiod går ut, på den sista dagen, en gång om ett Välkommen tillbaka-pris på Lifetime blir tillgängligt, och en gång om fler gratisdagar öppnas senare. Inget annat. Du kan stänga av dem när som helst i Inställningar."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy 最多会发送三次通知：试用结束前两天、最后一天，以及永久版的欢迎回归价可用时各一次。仅此而已。你可以随时在设置中关闭。"
+            "value": "Flaccy 最多会发送四次通知：试用结束前两天、最后一天、永久版的欢迎回归价可用时，以及日后再有免费天数开放时各一次。仅此而已。你可以随时在设置中关闭。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy 最多會發送三次通知：試用結束前兩天、最後一天，以及永久版的歡迎回歸價可用時各一次。僅此而已。你可以隨時在設定中關閉。"
+            "value": "Flaccy 最多會發送四次通知：試用結束前兩天、最後一天、永久版的歡迎回歸價可用時，以及日後再有免費天數開放時各一次。僅此而已。你可以隨時在設定中關閉。"
           }
         }
       }
@@ -86711,6 +86993,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy 的 AI 把雜亂的檔案名稱變成真正的標題、演出者和專輯。"
+          }
+        }
+      }
+    },
+    "Flaccy. Again.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. Igen."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. Noch einmal."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. Otra vez."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. Uudestaan."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. Encore."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. Aftur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. Di nuovo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy。もう一度。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. 다시."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. Igjen."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. Jeszcze raz."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. De novo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy. Igen."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy。再来一次。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy。再來一次。"
           }
         }
       }
@@ -136094,6 +136470,100 @@
         }
       }
     },
+    "Play My Music": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afspil min musik"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meine Musik abspielen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproducir mi música"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toista musiikkiani"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lire ma musique"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spila tónlistina mína"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduci la mia musica"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分の音楽を再生"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 음악 재생"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spill musikken min"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwórz moją muzykę"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocar minha música"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spela min musik"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放我的音乐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放我的音樂"
+          }
+        }
+      }
+    },
     "Play Next": {
       "localizations": {
         "da": {
@@ -182231,6 +182701,100 @@
         }
       }
     },
+    "Synced lyrics you can share as a video": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkroniserede sangtekster, du kan dele som video"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchrone Songtexte, die du als Video teilen kannst"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letras sincronizadas que puedes compartir como vídeo"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkronoidut sanoitukset, jotka voit jakaa videona"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Des paroles synchronisées à partager en vidéo"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samstilltir textar sem þú getur deilt sem myndskeiði"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testi sincronizzati da condividere come video"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画としてシェアできる同期歌詞"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동영상으로 공유할 수 있는 동기화 가사"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkroniserte sangtekster du kan dele som video"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zsynchronizowane teksty, które udostępnisz jako wideo"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letras sincronizadas para compartilhar em vídeo"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkroniserade låttexter som du kan dela som video"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可作为视频分享的同步歌词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可作為影片分享的同步歌詞"
+          }
+        }
+      }
+    },
     "Syncing %@": {
       "localizations": {
         "da": {
@@ -198977,96 +199541,96 @@
         }
       }
     },
-    "Two reminders before your trial ends, and one if an offer opens.": {
+    "Two reminders before your trial ends, one if an offer opens, and one if more free days open up later.": {
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "To påmindelser, før din prøveperiode slutter, og en, hvis der åbner sig et tilbud."
+            "value": "To påmindelser, før din prøveperiode slutter, en, hvis der åbner sig et tilbud, og en, hvis der senere åbner sig flere gratis dage."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zwei Erinnerungen vor Ende deiner Testphase und eine, wenn ein Angebot startet."
+            "value": "Zwei Erinnerungen vor Ende deiner Testphase, eine, wenn ein Angebot startet, und eine, falls später weitere kostenlose Tage dazukommen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dos recordatorios antes de que termine tu prueba y uno si hay una oferta."
+            "value": "Dos recordatorios antes de que termine tu prueba, uno si hay una oferta y uno si más adelante se abren más días gratis."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kaksi muistutusta ennen kokeilun päättymistä ja yksi, jos tarjous tulee saataville."
+            "value": "Kaksi muistutusta ennen kokeilun päättymistä, yksi, jos tarjous tulee saataville, ja yksi, jos saat myöhemmin lisää ilmaisia päiviä."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deux rappels avant la fin de votre essai, et un si une offre se présente."
+            "value": "Deux rappels avant la fin de votre essai, un si une offre se présente, et un si d'autres jours gratuits s'ouvrent plus tard."
           }
         },
         "is": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tvær áminningar áður en prufutíminn lýkur, og ein þegar tilboð verður í boði."
+            "value": "Tvær áminningar áður en prufutíminn lýkur, ein þegar tilboð verður í boði og ein ef fleiri ókeypis dagar bjóðast síðar."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Due promemoria prima della fine della prova e uno se arriva un'offerta."
+            "value": "Due promemoria prima della fine della prova, uno se arriva un'offerta e uno se in seguito si aprono altri giorni gratuiti."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "トライアル終了前に2回、オファーが始まったときに1回お知らせします。"
+            "value": "トライアル終了前に2回、オファーが始まったときに1回、後日さらに無料期間が始まるときに1回お知らせします。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "체험 종료 전에 두 번, 할인이 시작되면 한 번 알려 드립니다."
+            "value": "체험 종료 전에 두 번, 할인이 시작되면 한 번, 나중에 무료 이용 기간이 추가로 열리면 한 번 알려 드립니다."
           }
         },
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "To påminnelser før prøveperioden din utløper, og én hvis et tilbud dukker opp."
+            "value": "To påminnelser før prøveperioden din utløper, én hvis et tilbud dukker opp, og én hvis det senere åpner seg flere gratis dager."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dwa przypomnienia przed końcem okresu próbnego i jedno, gdy pojawi się oferta."
+            "value": "Dwa przypomnienia przed końcem okresu próbnego, jedno, gdy pojawi się oferta, i jedno, gdy później pojawią się kolejne darmowe dni."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dois lembretes antes do fim do seu teste e um se surgir uma oferta."
+            "value": "Dois lembretes antes do fim do seu teste, um se surgir uma oferta e um se mais dias grátis forem liberados depois."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Två påminnelser innan din provperiod går ut, och en om ett erbjudande blir tillgängligt."
+            "value": "Två påminnelser innan din provperiod går ut, en om ett erbjudande blir tillgängligt, och en om fler gratisdagar öppnas senare."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "试用结束前提醒两次，有优惠时再提醒一次。"
+            "value": "试用结束前提醒两次，有优惠时提醒一次，日后再有免费天数开放时再提醒一次。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "試用結束前提醒兩次，有優惠時再提醒一次。"
+            "value": "試用結束前提醒兩次，有優惠時提醒一次，日後再有免費天數開放時再提醒一次。"
           }
         }
       }
@@ -206689,6 +207253,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "歡迎回到 Flaccy"
+          }
+        }
+      }
+    },
+    "Welcome back · %lld free days": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velkommen tilbage · %lld gratis dage"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Willkommen zurück · %lld Tage gratis"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bienvenido de nuevo · %lld días gratis"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tervetuloa takaisin · %lld ilmaista päivää"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bon retour · %lld jours gratuits"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velkomin aftur · %lld ókeypis dagar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bentornato · %lld giorni gratuiti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "おかえりなさい・%lld日間無料"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "웰컴백 · %lld일 무료"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velkommen tilbake · %lld gratis dager"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Witaj ponownie · %lld darmowych dni"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bem-vindo de volta · %lld dias grátis"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Välkommen tillbaka · %lld gratisdagar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欢迎回归 · %lld 天免费"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歡迎回歸 · %lld 天免費"
           }
         }
       }
@@ -214827,6 +215485,100 @@
         }
       }
     },
+    "Your own server, streamed or kept offline": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din egen server, streamet eller gemt offline"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein eigener Server, gestreamt oder offline gespeichert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu propio servidor, en streaming o guardado sin conexión"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oma palvelimesi, suoratoistona tai offline-tilaan tallennettuna"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre propre serveur, en streaming ou hors ligne"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Þinn eigin þjónn, í streymi eða vistaður án nettengingar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo server, in streaming o salvato offline"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のサーバーからストリーミングもオフライン保存も"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 서버의 음악을 스트리밍하거나 오프라인으로 저장"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din egen server, strømmet eller lagret offline"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Twój własny serwer, strumieniowo lub offline"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu próprio servidor, por streaming ou guardado offline"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din egen server, strömmad eller sparad offline"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你自己的服务器，可流式播放，也可离线保存"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你自己的伺服器，可串流，也可離線保存"
+          }
+        }
+      }
+    },
     "Your persona: %@. %@": {
       "localizations": {
         "da": {
@@ -217298,6 +218050,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "iOS 會把所有音訊——你的音樂加上系統音效——混合成單一串流，再為藍牙重新編碼成 AAC，所以即使是 256 kbps 的 AAC 檔案，在送往 AirPods 的路上也會被解碼並再編碼一次。音訊管線本來就是這樣運作：這是工程界的共識，因為 Apple 並未說明有直通。多一代高位元率 AAC 基本上聽不出來——損失在紙面上真實存在，實際聽感上微乎其微。"
+          }
+        }
+      }
+    },
+    "iPhone, iPad, Mac and Apple Watch on one purchase": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac og Apple Watch med ét køb"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac und Apple Watch mit einem Kauf"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac y Apple Watch con una sola compra"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac ja Apple Watch yhdellä ostolla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac et Apple Watch avec un seul achat"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac og Apple Watch með einum kaupum"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac e Apple Watch con un solo acquisto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一度の購入でiPhone、iPad、Mac、Apple Watchに対応"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번 구입으로 iPhone, iPad, Mac, Apple Watch에서 모두 사용"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac og Apple Watch med ett kjøp"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac i Apple Watch w ramach jednego zakupu"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac e Apple Watch com uma única compra"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac och Apple Watch med ett köp"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次购买，iPhone、iPad、Mac 和 Apple Watch 通用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次購買，iPhone、iPad、Mac 和 Apple Watch 通用"
           }
         }
       }

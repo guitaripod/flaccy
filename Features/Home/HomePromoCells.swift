@@ -8,6 +8,7 @@ enum HomePromoAction {
     case seePlans
     case getLifetime
     case restorePurchases
+    case playMyMusic
 }
 
 /// The glass surface Home's promo cards share: a rounded card with the hero's
@@ -123,6 +124,20 @@ class HomePromoCardCell: UICollectionViewCell {
         return button(configuration: configuration, title: title, action: action)
     }
 
+    func checkRow(_ text: String) -> UIView {
+        let icon = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
+        icon.tintColor = .tintColor
+        icon.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
+        icon.setContentHuggingPriority(.required, for: .horizontal)
+        icon.setContentCompressionResistancePriority(.required, for: .horizontal)
+        let line = label(text, style: .subheadline, size: 15, weight: .regular)
+        let row = UIStackView(arrangedSubviews: [icon, line])
+        row.axis = .horizontal
+        row.spacing = 10
+        row.alignment = .firstBaseline
+        return row
+    }
+
     private func button(configuration: UIButton.Configuration, title: String, action: HomePromoAction) -> UIButton {
         let button = UIButton(type: .system)
         button.configuration = configuration
@@ -182,7 +197,7 @@ final class HomePlanCardCell: HomePromoCardCell {
         title.accessibilityTraits = .header
         content.addArrangedSubview(title)
         for line in plan.proofLines {
-            content.addArrangedSubview(proofRow(line))
+            content.addArrangedSubview(checkRow(line))
         }
         content.setCustomSpacing(18, after: content.arrangedSubviews.last ?? title)
         content.addArrangedSubview(primaryButton(title: plan.primaryTitle, symbol: nil, action: .getLifetime))
@@ -196,19 +211,28 @@ final class HomePlanCardCell: HomePromoCardCell {
             content.addArrangedSubview(linkButton(title: HomeCopy.restorePurchases, symbol: nil, action: .restorePurchases))
         }
     }
+}
 
-    private func proofRow(_ text: String) -> UIView {
-        let icon = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
-        icon.tintColor = .tintColor
-        icon.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
-        icon.setContentHuggingPriority(.required, for: .horizontal)
-        icon.setContentCompressionResistancePriority(.required, for: .horizontal)
-        let line = label(text, style: .subheadline, size: 15, weight: .regular)
-        let row = UIStackView(arrangedSubviews: [icon, line])
-        row.axis = .horizontal
-        row.spacing = 10
-        row.alignment = .firstBaseline
-        return row
+/// The second look's card: Flaccy's best for someone whose trial ended a month
+/// or more ago, and one button that plays their music, which is what starts
+/// the free days. The plans stay one tap away and are never opened for them.
+final class HomeSecondLookCell: HomePromoCardCell {
+
+    static let reuseID = "HomeSecondLookCell"
+
+    func configure(with secondLook: HomeSecondLookContent) {
+        resetContent()
+        let title = label(secondLook.title, style: .largeTitle, size: 34, weight: .heavy, maxSize: 42)
+        title.accessibilityTraits = .header
+        content.addArrangedSubview(title)
+        content.addArrangedSubview(label(secondLook.body, style: .subheadline, size: 15, weight: .regular, color: .secondaryLabel))
+        content.setCustomSpacing(16, after: content.arrangedSubviews.last ?? title)
+        for line in secondLook.highlights {
+            content.addArrangedSubview(checkRow(line))
+        }
+        content.setCustomSpacing(18, after: content.arrangedSubviews.last ?? title)
+        content.addArrangedSubview(primaryButton(title: secondLook.primaryTitle, symbol: "play.fill", action: .playMyMusic))
+        content.addArrangedSubview(secondaryButton(title: HomeCopy.seePlans, action: .seePlans))
     }
 }
 

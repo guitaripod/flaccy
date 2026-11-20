@@ -98,6 +98,16 @@ final class FunnelSignals {
         record(.trialStarted)
     }
 
+    /// An install whose trial ran out a month or more ago was told seven more free days are waiting.
+    func noteSecondLookOffered() {
+        record(.secondLookOffered)
+    }
+
+    /// The person played their own music again, which starts those days.
+    func noteSecondLookStarted() {
+        record(.secondLookStarted)
+    }
+
     /// The Mac can index a folder in place instead of copying, which is its way of getting music in.
     func noteFolderChosen() {
         record(.importSucceeded)

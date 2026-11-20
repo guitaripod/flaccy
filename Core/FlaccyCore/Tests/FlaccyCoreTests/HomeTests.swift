@@ -427,4 +427,15 @@ final class HomePromoTests: XCTestCase {
     func testPR6PaidLibrariesSeeNothing() {
         XCTAssertNil(HomePromo.card(for: facts(.purchased)))
     }
+
+    func testPR7ASecondLookReplacesTheHeroOnlyOnceTheEntitlementsConfirmNobodyPaid() {
+        XCTAssertNil(HomePromo.card(for: facts(.secondLookReady, loaded: false)))
+        XCTAssertEqual(HomePromo.card(for: facts(.secondLookReady)), .secondLook)
+        XCTAssertEqual(HomePromo.card(for: facts(.secondLookReady, welcomeBack: true, proof: 0)), .secondLook)
+        XCTAssertEqual(HomePromo.secondLook.placement, .replacesHero)
+    }
+
+    func testPR8ASecondLookWithoutMusicStillLeadsWithGettingItIn() {
+        XCTAssertEqual(HomePromo.card(for: facts(.secondLookReady, own: 0)), .getStarted)
+    }
 }

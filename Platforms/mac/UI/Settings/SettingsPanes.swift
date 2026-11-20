@@ -85,6 +85,7 @@ final class GeneralSettingsPane: SettingsPane {
         restoreSpinner.isDisplayedWhenStopped = false
         addRow([unlockButton, restoreButton, manageButton, restoreSpinner], spacing: 10)
         remindersCheckbox.target = self
+        remindersCheckbox.toolTip = PaywallCopy.reminderSummary
         remindersCheckbox.action = #selector(remindersToggled)
         formStack.addArrangedSubview(remindersCheckbox)
         remindersExplanation.stringValue = String(localized: "Three reminders at most: two days before your trial ends, on the last day, and once if a welcome-back price becomes available.")
@@ -182,7 +183,7 @@ final class GeneralSettingsPane: SettingsPane {
         switch state {
         case .purchased(.yearly):
             return String(localized: "Flaccy Pro — yearly. Thank you.")
-        case .purchased(.lifetime), .trialNotStarted, .trial, .expired:
+        case .purchased(.lifetime), .trialNotStarted, .trial, .expired, .secondLookReady:
             return String(localized: "Lifetime unlocked. Thank you.")
         }
     }

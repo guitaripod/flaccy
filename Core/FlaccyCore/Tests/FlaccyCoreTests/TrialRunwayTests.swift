@@ -71,7 +71,8 @@ final class TrialRunwayTests: XCTestCase {
         XCTAssertEqual(TrialRunway.Reminder.Kind.twoDaysLeft.rawValue, "trial.twoDaysLeft")
         XCTAssertEqual(TrialRunway.Reminder.Kind.ended.rawValue, "trial.ended")
         XCTAssertEqual(TrialRunway.Reminder.Kind.welcomeBack.rawValue, "trial.welcomeBack")
-        XCTAssertEqual(TrialRunway.Reminder.Kind.allCases, [.twoDaysLeft, .ended, .welcomeBack])
+        XCTAssertEqual(TrialRunway.Reminder.Kind.secondLook.rawValue, "trial.secondLook")
+        XCTAssertEqual(TrialRunway.Reminder.Kind.allCases, [.twoDaysLeft, .ended, .welcomeBack, .secondLook])
     }
 
     func testDeliveryTimeClampsIntoTheWindow() {
@@ -124,7 +125,7 @@ final class TrialRunwayTests: XCTestCase {
         XCTAssertEqual(components.second, 0)
         XCTAssertEqual(delivered, date(2026, 4, 1, 7, 0, in: utc))
 
-        let reminders = TrialRunway.reminders(start: start, now: start, calendar: calendar, includeWelcomeBack: true)
+        let reminders = TrialRunway.reminders(start: start, now: start, calendar: calendar, includeWelcomeBack: true, includeSecondLook: false)
         XCTAssertEqual(reminders.first?.kind, .twoDaysLeft)
         XCTAssertEqual(reminders.first?.fireAt, delivered)
     }
@@ -132,7 +133,7 @@ final class TrialRunwayTests: XCTestCase {
     func testRemindersCarryAllThreeAtTheStartInOrder() {
         let calendar = fixedOffset
         let start = date(2026, 9, 1, 12, 0, in: calendar)
-        let reminders = TrialRunway.reminders(start: start, now: start, calendar: calendar, includeWelcomeBack: true)
+        let reminders = TrialRunway.reminders(start: start, now: start, calendar: calendar, includeWelcomeBack: true, includeSecondLook: false)
 
         XCTAssertEqual(reminders.map(\.kind), [.twoDaysLeft, .ended, .welcomeBack])
         XCTAssertEqual(reminders.map(\.fireAt), [
@@ -145,7 +146,7 @@ final class TrialRunwayTests: XCTestCase {
     func testRemindersAreClamped() {
         let calendar = fixedOffset
         let start = date(2026, 9, 1, 22, 15, in: calendar)
-        let reminders = TrialRunway.reminders(start: start, now: start, calendar: calendar, includeWelcomeBack: true)
+        let reminders = TrialRunway.reminders(start: start, now: start, calendar: calendar, includeWelcomeBack: true, includeSecondLook: false)
 
         XCTAssertEqual(reminders.map(\.fireAt), [
             date(2026, 9, 7, 10, 0, in: calendar),
@@ -158,7 +159,7 @@ final class TrialRunwayTests: XCTestCase {
         let calendar = fixedOffset
         let start = date(2026, 9, 1, 12, 0, in: calendar)
         let now = start.addingTimeInterval(6 * day)
-        let reminders = TrialRunway.reminders(start: start, now: now, calendar: calendar, includeWelcomeBack: true)
+        let reminders = TrialRunway.reminders(start: start, now: now, calendar: calendar, includeWelcomeBack: true, includeSecondLook: false)
 
         XCTAssertEqual(reminders.map(\.kind), [.ended, .welcomeBack])
     }
@@ -167,7 +168,7 @@ final class TrialRunwayTests: XCTestCase {
         let calendar = fixedOffset
         let start = date(2026, 9, 1, 12, 0, in: calendar)
         let reminders = TrialRunway.reminders(
-            start: start, now: start.addingTimeInterval(5 * day), calendar: calendar, includeWelcomeBack: true
+            start: start, now: start.addingTimeInterval(5 * day), calendar: calendar, includeWelcomeBack: true, includeSecondLook: false
         )
 
         XCTAssertEqual(reminders.map(\.kind), [.ended, .welcomeBack])
@@ -177,7 +178,7 @@ final class TrialRunwayTests: XCTestCase {
         let calendar = fixedOffset
         let start = date(2026, 9, 1, 3, 0, in: calendar)
         let now = date(2026, 9, 6, 5, 0, in: calendar)
-        let reminders = TrialRunway.reminders(start: start, now: now, calendar: calendar, includeWelcomeBack: true)
+        let reminders = TrialRunway.reminders(start: start, now: now, calendar: calendar, includeWelcomeBack: true, includeSecondLook: false)
 
         XCTAssertEqual(reminders.first?.kind, .twoDaysLeft)
         XCTAssertEqual(reminders.first?.fireAt, date(2026, 9, 6, 10, 0, in: calendar))
@@ -186,7 +187,7 @@ final class TrialRunwayTests: XCTestCase {
     func testRemindersDropWelcomeBackWhenExcluded() {
         let calendar = fixedOffset
         let start = date(2026, 9, 1, 12, 0, in: calendar)
-        let reminders = TrialRunway.reminders(start: start, now: start, calendar: calendar, includeWelcomeBack: false)
+        let reminders = TrialRunway.reminders(start: start, now: start, calendar: calendar, includeWelcomeBack: false, includeSecondLook: false)
 
         XCTAssertEqual(reminders.map(\.kind), [.twoDaysLeft, .ended])
     }
@@ -195,7 +196,7 @@ final class TrialRunwayTests: XCTestCase {
         let calendar = fixedOffset
         let start = date(2026, 9, 1, 12, 0, in: calendar)
         let reminders = TrialRunway.reminders(
-            start: start, now: start.addingTimeInterval(9 * day), calendar: calendar, includeWelcomeBack: true
+            start: start, now: start.addingTimeInterval(9 * day), calendar: calendar, includeWelcomeBack: true, includeSecondLook: false
         )
 
         XCTAssertTrue(reminders.isEmpty)
@@ -262,6 +263,107 @@ final class TrialRunwayTests: XCTestCase {
             TrialRunway.lapsedOfferEnd(start: start).timeIntervalSince(opening),
             TimeInterval(TrialRunway.lapsedOfferWindowDays) * day
         )
+    }
+
+    func testSecondLookOpensThirtyDaysAfterTheTrialRanOut() {
+        XCTAssertEqual(TrialRunway.secondLookOpens(trialStart: start), start.addingTimeInterval(37 * day))
+        XCTAssertEqual(TrialRunway.exactTime(of: .secondLook, start: start), start.addingTimeInterval(37 * day))
+        XCTAssertEqual(
+            TrialRunway.phase(start: start, now: TrialRunway.secondLookOpens(trialStart: start)),
+            .expired(daysSinceExpiry: TrialRunway.secondLookAfterExpiryDays)
+        )
+    }
+
+    func testSecondLookTable() {
+        let table: [(elapsed: TimeInterval, expected: TrialRunway.SecondLook)] = [
+            (0, .notYet),
+            (6 * day, .notYet),
+            (7 * day, .notYet),
+            (15 * day, .notYet),
+            (37 * day - 1, .notYet),
+            (37 * day, .ready),
+            (38 * day, .ready),
+            (400 * day, .ready),
+        ]
+        for row in table {
+            XCTAssertEqual(
+                TrialRunway.secondLook(trialStart: start, secondLookStart: nil, now: start.addingTimeInterval(row.elapsed)),
+                row.expected,
+                "elapsed \(row.elapsed / day) d"
+            )
+        }
+    }
+
+    func testAStartedSecondLookIsNeverOfferedAgain() {
+        let began = start.addingTimeInterval(50 * day)
+        for elapsed in [0, 36, 37, 50, 57, 58, 65, 400, 4_000] {
+            XCTAssertEqual(
+                TrialRunway.secondLook(trialStart: start, secondLookStart: began, now: start.addingTimeInterval(TimeInterval(elapsed) * day)),
+                .started(began),
+                "day \(elapsed)"
+            )
+        }
+    }
+
+    func testAClockWoundBackBeforeTheTrialNeverOpensASecondLook() {
+        XCTAssertEqual(
+            TrialRunway.secondLook(trialStart: start, secondLookStart: nil, now: start.addingTimeInterval(-400 * day)),
+            .notYet
+        )
+    }
+
+    func testTheRunwayCountsFromTheSecondLookOnceItHasStarted() {
+        let began = start.addingTimeInterval(50 * day)
+        XCTAssertEqual(TrialRunway.runwayStart(trialStart: start, secondLookStart: nil), start)
+        XCTAssertEqual(TrialRunway.runwayStart(trialStart: start, secondLookStart: began), began)
+
+        let runway = TrialRunway.runwayStart(trialStart: start, secondLookStart: began)
+        XCTAssertEqual(TrialRunway.phase(start: runway, now: began), .trial(daysRemaining: 7))
+        XCTAssertEqual(TrialRunway.phase(start: runway, now: began.addingTimeInterval(6 * day + 23 * hour)), .trial(daysRemaining: 1))
+        XCTAssertEqual(TrialRunway.phase(start: runway, now: began.addingTimeInterval(7 * day)), .expired(daysSinceExpiry: 0))
+    }
+
+    func testASecondLookCarriesTheWelcomeBackPriceFromItsFirstDayToTheWindowsClose() {
+        let began = start.addingTimeInterval(50 * day)
+        let end = began.addingTimeInterval(15 * day)
+        XCTAssertEqual(TrialRunway.lapsedOffer(start: start, now: began), .ended)
+        XCTAssertEqual(TrialRunway.secondLookOffer(secondLookStart: began, now: began), .available(endsAt: end))
+        XCTAssertEqual(TrialRunway.secondLookOffer(secondLookStart: began, now: began.addingTimeInterval(7 * day)), .available(endsAt: end))
+        XCTAssertEqual(TrialRunway.secondLookOffer(secondLookStart: began, now: end.addingTimeInterval(-1)), .available(endsAt: end))
+        XCTAssertEqual(TrialRunway.secondLookOffer(secondLookStart: began, now: end), .ended)
+        XCTAssertEqual(TrialRunway.secondLookOffer(secondLookStart: began, now: end.addingTimeInterval(400 * day)), .ended)
+    }
+
+    func testTheSecondLookReminderFiresWhenItOpensAndOnlyWhenIncluded() {
+        let calendar = fixedOffset
+        let start = date(2026, 9, 1, 12, 0, in: calendar)
+        let all = TrialRunway.reminders(start: start, now: start, calendar: calendar, includeWelcomeBack: true, includeSecondLook: true)
+        XCTAssertEqual(all.map(\.kind), [.twoDaysLeft, .ended, .welcomeBack, .secondLook])
+        XCTAssertEqual(all.last?.fireAt, date(2026, 10, 8, 12, 0, in: calendar))
+
+        let afterTheWindow = TrialRunway.reminders(
+            start: start, now: start.addingTimeInterval(20 * day), calendar: calendar, includeWelcomeBack: true, includeSecondLook: true
+        )
+        XCTAssertEqual(afterTheWindow.map(\.kind), [.secondLook])
+
+        let withoutTheOffer = TrialRunway.reminders(
+            start: start, now: start.addingTimeInterval(20 * day), calendar: calendar, includeWelcomeBack: false, includeSecondLook: true
+        )
+        XCTAssertEqual(withoutTheOffer.map(\.kind), [.secondLook])
+
+        let onceOpen = TrialRunway.reminders(
+            start: start, now: start.addingTimeInterval(37 * day), calendar: calendar, includeWelcomeBack: true, includeSecondLook: true
+        )
+        XCTAssertTrue(onceOpen.isEmpty)
+    }
+
+    func testTheSecondLookReminderIsClampedIntoTheDeliveryWindow() {
+        let calendar = fixedOffset
+        let start = date(2026, 9, 1, 23, 30, in: calendar)
+        let reminders = TrialRunway.reminders(
+            start: start, now: start.addingTimeInterval(20 * day), calendar: calendar, includeWelcomeBack: false, includeSecondLook: true
+        )
+        XCTAssertEqual(reminders.map(\.fireAt), [date(2026, 10, 9, 10, 0, in: calendar)])
     }
 
     func testConsentWindowTable() {

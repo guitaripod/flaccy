@@ -2,11 +2,13 @@ import Foundation
 import MidgarCore
 import UserNotifications
 
-/// The three opt-in reminders around the end of the trial — two days before,
-/// the last day, and once if a welcome-back price on Lifetime opens up — built
-/// from `TrialRunway` so a tapped notification, the paywall and the banner all
-/// agree on which day it is. Consent lives in UserDefaults on purpose: a
-/// reinstall also resets notification authorization, so asking again is right.
+/// The opt-in reminders around the end of the trial — two days before, the
+/// last day, once if a welcome-back price on Lifetime opens up, and once a
+/// month later when a second look does — built from `TrialRunway` so a tapped
+/// notification, the paywall and the banner all agree on which day it is.
+/// Consent lives in UserDefaults on purpose: a reinstall also resets
+/// notification authorization, so asking again is right. The second look's
+/// reminder goes only to someone who agreed under the wording that names it.
 final class TrialReminderScheduler {
 
     static let shared = TrialReminderScheduler()
@@ -16,6 +18,7 @@ final class TrialReminderScheduler {
     static let optInOpportunity = Notification.Name("TrialReminderOptInOpportunity")
     static let enabledKey = "flaccy.trialReminders.enabled"
     static let askedKey = "flaccy.trialReminders.asked"
+    static let coversSecondLookKey = "flaccy.trialReminders.coversSecondLook"
 
     private static let identifiers = TrialRunway.Reminder.Kind.allCases.map(\.rawValue)
 
@@ -29,6 +32,12 @@ final class TrialReminderScheduler {
 
     var hasBeenAsked: Bool {
         UserDefaults.standard.bool(forKey: Self.askedKey)
+    }
+
+    /// Whether the reminders were switched on under the wording that counts
+    /// four notifications. Someone who agreed to three is never sent a fourth.
+    var consentCoversSecondLook: Bool {
+        UserDefaults.standard.bool(forKey: Self.coversSecondLookKey)
     }
 
     func markAsked() {
@@ -50,6 +59,7 @@ final class TrialReminderScheduler {
             MidgarLog.notice("Trial reminders requested but notifications are denied", category: .purchases)
             return false
         }
+        UserDefaults.standard.set(true, forKey: Self.coversSecondLookKey)
         MidgarLog.info("Trial reminders enabled", category: .purchases)
         await refresh()
         return true
@@ -61,10 +71,11 @@ final class TrialReminderScheduler {
         MidgarLog.info("Trial reminders disabled", category: .purchases)
     }
 
-    /// Rebuilds the pending reminders from the current trial phase: all three
-    /// while the trial runs, only the welcome-back one once it has expired, and
-    /// none at all before the trial starts, after a purchase or when reminders
-    /// are off.
+    /// Rebuilds the pending reminders from the current trial phase: all of them
+    /// while the trial runs, the welcome-back and second-look ones once it has
+    /// expired, and none at all before the trial starts, after a purchase, when
+    /// reminders are off, or once a second look is waiting or has begun (it
+    /// sends none of its own).
     func refresh() async {
         guard isEnabled else {
             await cancelAll()
@@ -83,14 +94,19 @@ final class TrialReminderScheduler {
             MidgarLog.info("Trial reminder scheduling skipped under --trial-day", category: .purchases)
             return
         }
+        guard manager.state != .secondLookReady, !manager.isSecondLook else {
+            await cancelAll()
+            return
+        }
         let start = manager.trialStart
         let reminders = TrialRunway.reminders(
             start: start,
             now: Date(),
             calendar: .current,
-            includeWelcomeBack: manager.lapsedOfferExists
+            includeWelcomeBack: manager.lapsedOfferExists,
+            includeSecondLook: consentCoversSecondLook
         )
-        let wanted = manager.state == .expired ? reminders.filter { $0.kind == .welcomeBack } : reminders
+        let wanted = manager.state == .expired ? reminders.filter(\.kind.firesAfterTheTrial) : reminders
         await replacePending(with: wanted, welcomeBackEnds: TrialRunway.lapsedOfferEnd(start: start))
     }
 
@@ -103,16 +119,20 @@ final class TrialReminderScheduler {
         return pending.contains { Self.identifiers.contains($0.identifier) }
     }
 
-    /// One request per reminder, identified by its kind, carrying no price and
-    /// routing every tap to the paywall. The fire time is matched as calendar
-    /// components so a device asleep at that minute still delivers it next.
+    /// One request per reminder, identified by its kind and carrying no price.
+    /// A tap opens the paywall, except on the second look's, which has free
+    /// days to give and so only opens the app. The fire time is matched as
+    /// calendar components so a device asleep at that minute still delivers it
+    /// next.
     static func requests(for reminders: [TrialRunway.Reminder], welcomeBackEnds: Date) -> [UNNotificationRequest] {
         reminders.map { reminder in
             let content = UNMutableNotificationContent()
             content.title = title(for: reminder.kind)
             content.body = body(for: reminder.kind, welcomeBackEnds: welcomeBackEnds)
             content.sound = .default
-            content.userInfo = [destinationUserInfoKey: paywallDestination]
+            if reminder.kind != .secondLook {
+                content.userInfo = [destinationUserInfoKey: paywallDestination]
+            }
             let components = Calendar.current.dateComponents(
                 [.year, .month, .day, .hour, .minute, .second], from: reminder.fireAt
             )
@@ -126,6 +146,7 @@ final class TrialReminderScheduler {
         case .twoDaysLeft: String(localized: "2 days left in your Flaccy trial")
         case .ended: String(localized: "Your Flaccy trial has ended")
         case .welcomeBack: String(localized: "Welcome back to Flaccy")
+        case .secondLook: PaywallCopy.secondLookTitle
         }
     }
 
@@ -137,6 +158,8 @@ final class TrialReminderScheduler {
             String(localized: "Everything you set up is still here.")
         case .welcomeBack:
             String(localized: "A welcome-back price on Lifetime is available until \(welcomeBackEnds.formatted(.dateTime.day().month())).")
+        case .secondLook:
+            PaywallCopy.secondLookLine
         }
     }
 
@@ -149,6 +172,17 @@ final class TrialReminderScheduler {
             } catch {
                 MidgarLog.error("Scheduling \(request.identifier) failed: \(error.localizedDescription)", category: .purchases)
             }
+        }
+    }
+}
+
+extension TrialRunway.Reminder.Kind {
+
+    /// The reminders that still lie ahead once the trial has run out.
+    var firesAfterTheTrial: Bool {
+        switch self {
+        case .welcomeBack, .secondLook: true
+        case .twoDaysLeft, .ended: false
         }
     }
 }

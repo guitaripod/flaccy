@@ -14,7 +14,7 @@ nonisolated final class ServerSyncEntitlementTests: XCTestCase {
         XCTAssertTrue(entitlement.set(true))
     }
 
-    @MainActor func testAStateThatMayPlayMaySync() {
+    @MainActor func testAStateThatMayPlayMaySync() async {
         let manager = PurchaseManager(store: nil)
         XCTAssertTrue(manager.includesServerSync)
         XCTAssertEqual(manager.includesServerSync, manager.allowsPlayback)

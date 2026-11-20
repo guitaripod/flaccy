@@ -164,10 +164,13 @@ final class OnboardingPanelView: NSView {
         refreshTrialStartsLabel()
     }
 
-    /// The line only belongs before the trial has started, and the welcome
-    /// panel is sized to its content, so the host follows when it comes or goes.
+    /// The line only belongs while free days wait on a play, the trial's or a
+    /// second look's, and the welcome panel is sized to its content, so the
+    /// host follows when it comes or goes.
     private func refreshTrialStartsLabel() {
-        let hidden = isMovingLibrary || PurchaseManager.shared.state != .trialNotStarted
+        let waitingLine = PaywallCopy.waitingLine(for: PurchaseManager.shared.state)
+        let hidden = isMovingLibrary || waitingLine == nil
+        if let waitingLine, trialStartsLabel.stringValue != waitingLine { trialStartsLabel.stringValue = waitingLine }
         guard trialStartsLabel.isHidden != hidden else { return }
         trialStartsLabel.isHidden = hidden
         guard presentation == .welcome else { return }
