@@ -1227,8 +1227,8 @@ fn list_header(ui: &Rc<Ui>, title: &str, queue: &Rc<Vec<Track>>) -> gtk::Widget 
         return header.upcast();
     }
     for (icon, tooltip, shuffle) in [
-        ("media-playback-start-symbolic", "Play", false),
-        ("media-playlist-shuffle-symbolic", "Shuffle", true),
+        ("flaccy-play-symbolic", "Play", false),
+        ("flaccy-shuffle-symbolic", "Shuffle", true),
     ] {
         let button = gtk::Button::from_icon_name(icon);
         button.add_css_class("flat");

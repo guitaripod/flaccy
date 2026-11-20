@@ -23,6 +23,7 @@ pub mod flaccy_server_dialog;
 pub mod flaccy_server_merge;
 pub mod guide;
 pub mod home;
+pub mod icons;
 pub mod home_backdrop;
 pub mod home_customize;
 pub mod home_parts;

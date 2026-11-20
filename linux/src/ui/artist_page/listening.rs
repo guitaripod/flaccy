@@ -207,7 +207,7 @@ fn unheard_button(ui: &Rc<crate::ui::Ui>, songs: Vec<Track>) -> gtk::Button {
         count => format!("Play {} Unheard Songs", group_digits(count)),
     };
     let content = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-    content.append(&gtk::Image::from_icon_name("media-playback-start-symbolic"));
+    content.append(&gtk::Image::from_icon_name("flaccy-play-symbolic"));
     content.append(&gtk::Label::new(Some(&label)));
     let button = gtk::Button::builder().child(&content).halign(gtk::Align::Start).build();
     button.add_css_class("pill");

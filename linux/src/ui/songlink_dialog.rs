@@ -60,7 +60,7 @@ fn present(ui: &Rc<Ui>, result: &SonglinkResult) {
         &dialog,
         "song.link",
         &result.page_url,
-        "emblem-shared-symbolic",
+        "flaccy-share-link-symbolic",
     ));
     page.add(&universal);
 
@@ -83,7 +83,7 @@ fn platform_row(ui: &Rc<Ui>, dialog: &adw::Dialog, link: &PlatformLink) -> adw::
         dialog,
         &link.display_name,
         &link.url,
-        "media-playback-start-symbolic",
+        "flaccy-play-symbolic",
     )
 }
 
@@ -102,7 +102,7 @@ fn link_row(
         .activatable(true)
         .build();
     row.add_prefix(&gtk::Image::from_icon_name(icon));
-    let copy = gtk::Button::from_icon_name("edit-copy-symbolic");
+    let copy = gtk::Button::from_icon_name("flaccy-copy-symbolic");
     copy.add_css_class("flat");
     copy.set_valign(gtk::Align::Center);
     copy.set_tooltip_text(Some("Copy link"));

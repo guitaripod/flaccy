@@ -160,7 +160,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     }
 
     let empty = adw::StatusPage::builder()
-        .icon_name("system-users-symbolic")
+        .icon_name("flaccy-artists-symbolic")
         .title("No Artists")
         .description("Flaccy lists artists from the audio files in your music folder. Add music there, then choose Rescan Library in Preferences.")
         .build();

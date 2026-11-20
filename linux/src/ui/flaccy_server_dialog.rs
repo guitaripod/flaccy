@@ -104,7 +104,7 @@ impl Dialog {
         let connected_actions = button_row(&[&apple_apps_button(), &done]);
         connected_actions.set_halign(gtk::Align::Center);
         let connected = centered(&[
-            icon("emblem-ok-symbolic", "success").upcast_ref(),
+            icon("flaccy-check-circle-symbolic", "success").upcast_ref(),
             connected_title.upcast_ref(),
             connected_body.upcast_ref(),
             apple_apps_note.upcast_ref(),
@@ -115,7 +115,7 @@ impl Dialog {
         let failed_body = body_label("");
         let failed_actions = button_row(&[]);
         let failed = centered(&[
-            icon("dialog-warning-symbolic", "warning").upcast_ref(),
+            icon("flaccy-warning-symbolic", "warning").upcast_ref(),
             failed_title.upcast_ref(),
             failed_body.upcast_ref(),
             failed_actions.upcast_ref(),

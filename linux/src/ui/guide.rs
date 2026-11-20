@@ -26,7 +26,7 @@ const CARDS: [Card; 6] = [
     Card {
         position: 3,
         title: "When FLAC is worth it",
-        icon: "audio-card-symbolic",
+        icon: "flaccy-audio-interface-symbolic",
         body: "For true lossless, go wired: a desktop or home rig with a wired DAC is exactly where FLAC shines. On iPhone, the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz.",
         bullets_caption: None,
         bullets: &[],
@@ -38,7 +38,7 @@ const CARDS: [Card; 6] = [
     Card {
         position: 0,
         title: "Bluetooth & AAC",
-        icon: "bluetooth-active-symbolic",
+        icon: "flaccy-bluetooth-symbolic",
         body: "AirPods receive audio over Bluetooth using Apple's AAC codec at up to roughly 256 kbps. The rate is adaptive — it can drop when the wireless link degrades.",
         bullets_caption: None,
         bullets: &[],
@@ -50,7 +50,7 @@ const CARDS: [Card; 6] = [
     Card {
         position: 1,
         title: "Why lossless can't reach AirPods",
-        icon: "audio-headphones-symbolic",
+        icon: "flaccy-headphones-symbolic",
         body: "Apple confirms Bluetooth connections aren't lossless. Playing a FLAC or ALAC file to AirPods delivers, at best, ~256 kbps AAC at your ear. AirPods Pro 3's spec sheet lists \u{201c}No Lossless Audio\u{201d}.",
         bullets_caption: Some("Exceptions"),
         bullets: &[
@@ -65,7 +65,7 @@ const CARDS: [Card; 6] = [
     Card {
         position: 2,
         title: "What happens to your files",
-        icon: "media-playlist-repeat-symbolic",
+        icon: "flaccy-repeat-symbolic",
         body: "iOS mixes all audio — your music plus system sounds — into one stream and re-encodes it to AAC for Bluetooth, so even a 256 kbps AAC file is decoded and encoded again on its way to your AirPods. This is how the audio pipeline works: engineering consensus, as Apple doesn't document passthrough. One extra generation of high-bitrate AAC is essentially inaudible — the loss is real on paper, tiny in practice.",
         bullets_caption: None,
         bullets: &[],
@@ -77,7 +77,7 @@ const CARDS: [Card; 6] = [
     Card {
         position: 4,
         title: "Why some albums still click",
-        icon: "media-playlist-consecutive-symbolic",
+        icon: "flaccy-play-in-order-symbolic",
         body: "Gapless is always on in Flaccy — the next track is decoded and waiting before the current one ends, so a continuous album runs as one piece. What you hear at the seam depends on the file. Lossless formats store exactly the samples the master had, so there is nothing between tracks to remove. MP3 and AAC encode in fixed blocks and pad every file with a fraction of a second of silence at each end, and that padding lives inside the file.",
         bullets_caption: Some("What this means for your library"),
         bullets: &[
@@ -93,7 +93,7 @@ const CARDS: [Card; 6] = [
     Card {
         position: 5,
         title: "Can you hear the difference?",
-        icon: "audio-volume-high-symbolic",
+        icon: "flaccy-volume-high-symbolic",
         body: "In published blind tests — the largest public one put 580 participants on CD versus 256 kbps AAC — most listeners cannot reliably tell 256 kbps AAC from lossless. Only a small minority succeed, on specific tracks, under ideal conditions, on revealing gear. Apple itself calls the difference \u{201c}virtually indistinguishable\u{201d}.",
         bullets_caption: None,
         bullets: &[],

@@ -234,7 +234,7 @@ impl Screen {
             });
         }
 
-        let output_icon = gtk::Image::from_icon_name("audio-speakers-symbolic");
+        let output_icon = gtk::Image::from_icon_name("flaccy-speaker-symbolic");
         let output_label = gtk::Label::builder()
             .label("Output")
             .ellipsize(gtk::pango::EllipsizeMode::End)
@@ -448,7 +448,7 @@ impl Screen {
         lower_card.set_vexpand(false);
         lower.set_vexpand(false);
 
-        let status_icon = gtk::Image::from_icon_name("emblem-ok-symbolic");
+        let status_icon = gtk::Image::from_icon_name("flaccy-check-circle-symbolic");
         let status_label = gtk::Label::new(None);
         status_label.add_css_class("eq-status");
         let keys_label = gtk::Label::builder()

@@ -96,7 +96,7 @@ pub fn build(ui: &Rc<Ui>, bubble_host: &gtk::Overlay) -> gtk::Widget {
     labels.append(&title);
     labels.append(&artist);
 
-    let love = gtk::Button::from_icon_name("emote-love-symbolic");
+    let love = gtk::Button::from_icon_name("flaccy-heart-symbolic");
     love.add_css_class("flat");
     love.set_valign(gtk::Align::Center);
     love.set_tooltip_text(Some("Love on Last.fm"));
@@ -125,7 +125,7 @@ pub fn build(ui: &Rc<Ui>, bubble_host: &gtk::Overlay) -> gtk::Widget {
     left.append(&love);
 
     let shuffle = gtk::ToggleButton::builder()
-        .icon_name("media-playlist-shuffle-symbolic")
+        .icon_name("flaccy-shuffle-symbolic")
         .tooltip_text("Shuffle")
         .build();
     shuffle.add_css_class("flat");
@@ -139,7 +139,7 @@ pub fn build(ui: &Rc<Ui>, bubble_host: &gtk::Overlay) -> gtk::Widget {
         });
     }
 
-    let previous = gtk::Button::from_icon_name("media-skip-backward-symbolic");
+    let previous = gtk::Button::from_icon_name("flaccy-skip-back-symbolic");
     previous.add_css_class("flat");
     previous.set_tooltip_text(Some("Previous"));
     {
@@ -147,7 +147,7 @@ pub fn build(ui: &Rc<Ui>, bubble_host: &gtk::Overlay) -> gtk::Widget {
         previous.connect_clicked(move |_| ui.core.previous());
     }
 
-    let play = gtk::Button::from_icon_name("media-playback-start-symbolic");
+    let play = gtk::Button::from_icon_name("flaccy-play-symbolic");
     play.set_tooltip_text(Some("Play/Pause"));
     play.add_css_class("suggested-action");
     play.add_css_class("circular");
@@ -157,7 +157,7 @@ pub fn build(ui: &Rc<Ui>, bubble_host: &gtk::Overlay) -> gtk::Widget {
         play.connect_clicked(move |_| ui.core.toggle_play_pause());
     }
 
-    let next = gtk::Button::from_icon_name("media-skip-forward-symbolic");
+    let next = gtk::Button::from_icon_name("flaccy-skip-forward-symbolic");
     next.add_css_class("flat");
     next.set_tooltip_text(Some("Next"));
     {
@@ -165,7 +165,7 @@ pub fn build(ui: &Rc<Ui>, bubble_host: &gtk::Overlay) -> gtk::Widget {
         next.connect_clicked(move |_| ui.core.next());
     }
 
-    let repeat = gtk::Button::from_icon_name("media-playlist-repeat-symbolic");
+    let repeat = gtk::Button::from_icon_name("flaccy-repeat-symbolic");
     repeat.add_css_class("flat");
     repeat.add_css_class("transport-extra");
     repeat.set_tooltip_text(Some("Repeat"));
@@ -198,7 +198,7 @@ pub fn build(ui: &Rc<Ui>, bubble_host: &gtk::Overlay) -> gtk::Widget {
     quality.set_visible(false);
 
     let lyrics_toggle = gtk::ToggleButton::builder()
-        .icon_name("format-justify-center-symbolic")
+        .icon_name("flaccy-lyrics-symbolic")
         .tooltip_text("Lyrics")
         .build();
     lyrics_toggle.add_css_class("flat");
@@ -213,7 +213,7 @@ pub fn build(ui: &Rc<Ui>, bubble_host: &gtk::Overlay) -> gtk::Widget {
     }
 
     let queue_toggle = gtk::ToggleButton::builder()
-        .icon_name("view-list-symbolic")
+        .icon_name("flaccy-queue-symbolic")
         .tooltip_text("Queue")
         .build();
     queue_toggle.add_css_class("flat");
@@ -238,7 +238,7 @@ pub fn build(ui: &Rc<Ui>, bubble_host: &gtk::Overlay) -> gtk::Widget {
     sleep_menu.append(Some("End of Track"), Some("app.sleep-end-of-track"));
     sleep_menu.append(Some("Cancel Timer"), Some("app.sleep-cancel"));
     let sleep_button = gtk::MenuButton::builder()
-        .icon_name("alarm-symbolic")
+        .icon_name("flaccy-sleep-timer-symbolic")
         .tooltip_text("Sleep Timer")
         .menu_model(&sleep_menu)
         .build();
@@ -413,9 +413,9 @@ pub fn build(ui: &Rc<Ui>, bubble_host: &gtk::Overlay) -> gtk::Widget {
                 }
                 AppEvent::PlayingChanged(playing) => {
                     play.set_icon_name(if *playing {
-                        "media-playback-pause-symbolic"
+                        "flaccy-pause-symbolic"
                     } else {
-                        "media-playback-start-symbolic"
+                        "flaccy-play-symbolic"
                     });
                     if *playing {
                         bar_ref.add_css_class("playing");

@@ -444,7 +444,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     list_box.append(&status);
 
     let empty = adw::StatusPage::builder()
-        .icon_name("audio-x-generic-symbolic")
+        .icon_name("flaccy-song-symbolic")
         .title("No Songs")
         .description("Flaccy found no audio files in your music folder. Add music there, then choose Rescan Library in Preferences.")
         .build();
@@ -575,17 +575,17 @@ impl View {
             .build();
         let specs: [(&str, &str, fn(&Rc<View>)); 3] = [
             (
-                "media-playback-start-symbolic",
+                "flaccy-play-symbolic",
                 "Play this list",
                 View::play_list,
             ),
             (
-                "media-playlist-shuffle-symbolic",
+                "flaccy-shuffle-symbolic",
                 "Shuffle this list",
                 View::shuffle_list,
             ),
             (
-                "list-add-symbolic",
+                "flaccy-add-symbolic",
                 "Save this list as a playlist…",
                 View::save_list,
             ),
@@ -616,7 +616,7 @@ impl View {
     /// it is the same setting Preferences holds.
     fn duplicates_button(self: &Rc<Self>) -> gtk::ToggleButton {
         let button = self.duplicates_toggle.clone();
-        button.set_icon_name("edit-copy-symbolic");
+        button.set_icon_name("flaccy-copy-symbolic");
         button.add_css_class("flat");
         button.add_css_class("circular");
         button.set_tooltip_text(Some("Clean Library: each song once"));
@@ -1613,7 +1613,7 @@ fn cell_mark(cell: &gtk::Widget) -> Option<gtk::Image> {
 }
 
 fn kept_mark() -> gtk::Image {
-    let mark = gtk::Image::from_icon_name("folder-download-symbolic");
+    let mark = gtk::Image::from_icon_name("flaccy-download-symbolic");
     mark.add_css_class("kept-mark");
     mark.add_css_class("dim");
     mark.set_pixel_size(12);

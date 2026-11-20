@@ -16,12 +16,12 @@ use std::rc::Rc;
 /// The symbolic icon an output kind is shown with.
 pub fn output_icon_name(kind: Option<OutputKind>) -> &'static str {
     match kind {
-        Some(OutputKind::Headphones) => "audio-headphones-symbolic",
-        Some(OutputKind::Bluetooth) => "bluetooth-active-symbolic",
-        Some(OutputKind::Usb) => "audio-card-symbolic",
-        Some(OutputKind::Display) => "video-display-symbolic",
-        Some(OutputKind::Other) => "audio-card-symbolic",
-        Some(OutputKind::Speaker) | None => "audio-speakers-symbolic",
+        Some(OutputKind::Headphones) => "flaccy-headphones-symbolic",
+        Some(OutputKind::Bluetooth) => "flaccy-bluetooth-symbolic",
+        Some(OutputKind::Usb) => "flaccy-audio-interface-symbolic",
+        Some(OutputKind::Display) => "flaccy-video-symbolic",
+        Some(OutputKind::Other) => "flaccy-audio-interface-symbolic",
+        Some(OutputKind::Speaker) | None => "flaccy-speaker-symbolic",
     }
 }
 
@@ -186,9 +186,9 @@ impl Screen {
         self.status_label.add_css_class(status_class(status));
         self.status_icon.add_css_class(status_class(status));
         self.status_icon.set_icon_name(Some(match status {
-            Status::Off | Status::Flat => "emblem-ok-symbolic",
+            Status::Off | Status::Flat => "flaccy-check-circle-symbolic",
             Status::Processing => "flaccy-equalizer-symbolic",
-            Status::Comparing => "view-reveal-symbolic",
+            Status::Comparing => "flaccy-show-symbolic",
         }));
     }
 
@@ -237,8 +237,8 @@ mod tests {
 
     #[test]
     fn every_output_kind_has_an_icon() {
-        assert_eq!(output_icon_name(None), "audio-speakers-symbolic");
-        assert_eq!(output_icon_name(Some(OutputKind::Headphones)), "audio-headphones-symbolic");
-        assert_eq!(output_icon_name(Some(OutputKind::Display)), "video-display-symbolic");
+        assert_eq!(output_icon_name(None), "flaccy-speaker-symbolic");
+        assert_eq!(output_icon_name(Some(OutputKind::Headphones)), "flaccy-headphones-symbolic");
+        assert_eq!(output_icon_name(Some(OutputKind::Display)), "flaccy-video-symbolic");
     }
 }

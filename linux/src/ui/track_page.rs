@@ -26,9 +26,9 @@ pub fn layout_label(layout: TrackLayout) -> &'static str {
 
 pub fn layout_icon(layout: TrackLayout) -> &'static str {
     match layout {
-        TrackLayout::List => "view-list-symbolic",
-        TrackLayout::Table => "view-list-ordered-symbolic",
-        TrackLayout::Columns => "view-dual-symbolic",
+        TrackLayout::List => "flaccy-layout-list-symbolic",
+        TrackLayout::Table => "flaccy-layout-table-symbolic",
+        TrackLayout::Columns => "flaccy-layout-columns-symbolic",
     }
 }
 
@@ -224,7 +224,7 @@ impl ControlBar {
         status.add_css_class("caption");
         let spacer = gtk::Box::builder().hexpand(true).build();
 
-        let jump = gtk::Button::from_icon_name("find-location-symbolic");
+        let jump = gtk::Button::from_icon_name("flaccy-locate-symbolic");
         jump.add_css_class("flat");
         jump.set_tooltip_text(Some("Show the playing song (Ctrl+J)"));
         jump.update_property(&[gtk::accessible::Property::Label("Show the playing song")]);

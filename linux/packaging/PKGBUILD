@@ -30,4 +30,5 @@ package() {
       "$pkgdir/usr/share/icons/hicolor/scalable/actions/$(basename "$svg")"
   done
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 data/icons/LICENSE-phosphor "$pkgdir/usr/share/licenses/$pkgname/LICENSE-phosphor"
 }

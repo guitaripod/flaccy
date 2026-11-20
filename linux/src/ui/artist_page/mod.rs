@@ -277,7 +277,7 @@ fn action_row(artist: &str, playable: bool) -> gtk::Box {
     let target = artist.to_variant();
 
     let play = round_button(
-        "media-playback-start-symbolic",
+        "flaccy-play-symbolic",
         &format!("Play {artist}"),
         &["suggested-action", "artist-play"],
     );
@@ -286,7 +286,7 @@ fn action_row(artist: &str, playable: bool) -> gtk::Box {
     play.set_sensitive(playable);
     row.append(&play);
 
-    let shuffle = round_button("media-playlist-shuffle-symbolic", "Shuffle", &["artist-round"]);
+    let shuffle = round_button("flaccy-shuffle-symbolic", "Shuffle", &["artist-round"]);
     shuffle.set_action_name(Some("win.artist-shuffle"));
     shuffle.set_action_target_value(Some(&target));
     shuffle.set_sensitive(playable);
@@ -304,7 +304,7 @@ fn action_row(artist: &str, playable: bool) -> gtk::Box {
     station.set_action_target_value(Some(&target));
     row.append(&station);
 
-    let more = round_button("view-more-symbolic", "More", &["artist-round"]);
+    let more = round_button("flaccy-more-symbolic", "More", &["artist-round"]);
     more.set_sensitive(playable);
     {
         let artist = artist.to_string();
@@ -419,7 +419,7 @@ fn sticky_bar(
         .valign(gtk::Align::Center)
         .build();
     let play = round_button(
-        "media-playback-start-symbolic",
+        "flaccy-play-symbolic",
         &format!("Play {artist}"),
         &["suggested-action", "artist-sticky-play"],
     );

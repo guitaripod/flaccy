@@ -69,7 +69,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .build();
     ui.register_scroller(&scroll);
     let nothing = adw::StatusPage::builder()
-        .icon_name("system-search-symbolic")
+        .icon_name("flaccy-search-symbolic")
         .title("No Results")
         .vexpand(true)
         .build();
@@ -436,7 +436,7 @@ fn song_row(ui: &Rc<Ui>, track: &Track) -> gtk::ListBoxRow {
     row_box.append(&words);
 
     if track.loved {
-        let heart = gtk::Image::from_icon_name("emblem-favorite-symbolic");
+        let heart = gtk::Image::from_icon_name("flaccy-heart-symbolic");
         heart.add_css_class("artist-song-loved");
         heart.set_tooltip_text(Some("Loved"));
         row_box.append(&heart);

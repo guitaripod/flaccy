@@ -604,7 +604,7 @@ impl Editor {
         self.info.add_css_class("dim");
         column.append(&self.info);
 
-        let warning = gtk::Image::from_icon_name("dialog-warning-symbolic");
+        let warning = gtk::Image::from_icon_name("flaccy-warning-symbolic");
         let text = gtk::Label::new(Some(SOFT_WARNING));
         text.add_css_class("caption");
         self.soft.append(&warning);
@@ -620,12 +620,12 @@ impl Editor {
 
     fn zoom_row(self: &Rc<Self>) -> gtk::Box {
         let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        let out = gtk::Button::from_icon_name("zoom-out-symbolic");
+        let out = gtk::Button::from_icon_name("flaccy-zoom-out-symbolic");
         out.add_css_class("flat");
         out.add_css_class("circular");
         out.set_tooltip_text(Some("Zoom out"));
         out.update_property(&[gtk::accessible::Property::Label("Zoom out")]);
-        let into = gtk::Button::from_icon_name("zoom-in-symbolic");
+        let into = gtk::Button::from_icon_name("flaccy-zoom-in-symbolic");
         into.add_css_class("flat");
         into.add_css_class("circular");
         into.set_tooltip_text(Some("Zoom in"));
@@ -724,10 +724,10 @@ impl Editor {
     fn source_actions(self: &Rc<Self>) -> gtk::Box {
         let section = gtk::Box::new(gtk::Orientation::Vertical, 8);
         let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        let choose = icon_button("document-open-symbolic", "Choose File…");
+        let choose = icon_button("flaccy-folder-open-symbolic", "Choose File…");
         choose.set_tooltip_text(Some("Choose an image file (Ctrl+O)"));
         choose.update_property(&[gtk::accessible::Property::Label("Choose File")]);
-        let paste_content = button_content("edit-paste-symbolic", "Paste");
+        let paste_content = button_content("flaccy-paste-symbolic", "Paste");
         self.paste.set_child(Some(&paste_content));
         self.paste.set_tooltip_text(Some("Paste an image, file or link (Ctrl+V)"));
         self.paste.update_property(&[gtk::accessible::Property::Label("Paste")]);
@@ -803,7 +803,7 @@ impl Editor {
         bar.set_margin_end(24);
         bar.set_margin_top(10);
         bar.set_margin_bottom(14);
-        let reset_content = button_content("edit-undo-symbolic", self.subject.reset_label());
+        let reset_content = button_content("flaccy-undo-symbolic", self.subject.reset_label());
         self.reset.set_child(Some(&reset_content));
         self.reset.add_css_class("flat");
         self.reset.add_css_class("destructive-action");

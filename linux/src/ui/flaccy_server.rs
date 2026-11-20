@@ -16,7 +16,7 @@ pub fn group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let add = gtk::Button::builder()
         .child(
             &adw::ButtonContent::builder()
-                .icon_name("list-add-symbolic")
+                .icon_name("flaccy-add-symbolic")
                 .label(copy::ADD_BUTTON)
                 .build(),
         )
@@ -77,13 +77,13 @@ fn server_row(ui: &Rc<Ui>, service: &Rc<Service>) -> adw::ActionRow {
         .subtitle(glib::markup_escape_text(&service.row_line()))
         .activatable(true)
         .build();
-    row.add_prefix(&gtk::Image::from_icon_name("emblem-synchronizing-symbolic"));
+    row.add_prefix(&gtk::Image::from_icon_name("flaccy-sync-symbolic"));
     let badge = gtk::Label::new(Some(copy::SYNC_BADGE));
     badge.add_css_class("caption-heading");
     badge.add_css_class("accent");
     badge.set_valign(gtk::Align::Center);
     row.add_suffix(&badge);
-    row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+    row.add_suffix(&gtk::Image::from_icon_name("flaccy-chevron-right-symbolic"));
     let ui = Rc::clone(ui);
     row.connect_activated(move |_| crate::ui::flaccy_server_detail::present(&ui));
     row

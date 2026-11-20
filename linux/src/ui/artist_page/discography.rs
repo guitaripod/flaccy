@@ -371,7 +371,7 @@ pub fn feature_card(ui: &Rc<Ui>, album: &Album, eyebrow: &str, detail: &str) -> 
     }
     context::attach_album_context_menu(&open, &ui.core, album.key());
 
-    let play = gtk::Button::from_icon_name("media-playback-start-symbolic");
+    let play = gtk::Button::from_icon_name("flaccy-play-symbolic");
     play.add_css_class("circular");
     play.add_css_class("suggested-action");
     play.add_css_class("artist-feature-play");

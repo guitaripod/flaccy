@@ -116,7 +116,7 @@ impl Editor {
             .title(home_copy::section_title(section))
             .subtitle(home_copy::section_subtitle(section))
             .build();
-        let handle = gtk::Image::from_icon_name("list-drag-handle-symbolic");
+        let handle = gtk::Image::from_icon_name("flaccy-drag-handle-symbolic");
         handle.add_css_class("dim");
         handle.set_tooltip_text(Some("Drag to reorder"));
         row.add_prefix(&handle);

@@ -247,7 +247,7 @@ fn build(ui: &Rc<Ui>, state: State) -> Rc<Dialog> {
         .child(&stage)
         .vexpand(true)
         .build();
-    let play = gtk::Button::from_icon_name("media-playback-start-symbolic");
+    let play = gtk::Button::from_icon_name("flaccy-play-symbolic");
     play.add_css_class("circular");
     play.add_css_class("osd");
     play.set_halign(gtk::Align::End);
@@ -341,7 +341,7 @@ fn build(ui: &Rc<Ui>, state: State) -> Rc<Dialog> {
     let mut rows = Vec::new();
     for (index, text) in state.picker_lines().into_iter().enumerate() {
         let label = gtk::Label::builder().label(text).xalign(0.0).wrap(true).hexpand(true).build();
-        let check = gtk::Image::from_icon_name("object-select-symbolic");
+        let check = gtk::Image::from_icon_name("flaccy-check-symbolic");
         let content = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         content.set_margin_top(8);
         content.set_margin_bottom(8);
@@ -846,7 +846,7 @@ impl Dialog {
         }
         let _ = playbin.set_state(gst::State::Playing);
         self.start_tick();
-        self.play.set_icon_name("media-playback-pause-symbolic");
+        self.play.set_icon_name("flaccy-pause-symbolic");
         self.play.set_tooltip_text(Some(copy::PAUSE_PREVIEW));
     }
 
@@ -855,7 +855,7 @@ impl Dialog {
             let _ = playbin.set_state(gst::State::Paused);
         }
         self.stop_tick();
-        self.play.set_icon_name("media-playback-start-symbolic");
+        self.play.set_icon_name("flaccy-play-symbolic");
         self.play.set_tooltip_text(Some(copy::PLAY_PREVIEW));
         self.preview.queue_draw();
     }

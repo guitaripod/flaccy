@@ -45,12 +45,12 @@ impl Shelf {
         text.append(&title);
         text.append(&subtitle);
 
-        let refresh = gtk::Button::from_icon_name("view-refresh-symbolic");
+        let refresh = gtk::Button::from_icon_name("flaccy-refresh-symbolic");
         refresh.add_css_class("flat");
         refresh.add_css_class("circular");
         refresh.set_tooltip_text(Some("Refresh"));
         refresh.update_property(&[gtk::accessible::Property::Label("Refresh")]);
-        let hide = gtk::Button::from_icon_name("view-conceal-symbolic");
+        let hide = gtk::Button::from_icon_name("flaccy-hide-symbolic");
         hide.add_css_class("flat");
         hide.add_css_class("circular");
         hide.set_tooltip_text(Some(HIDE));
@@ -208,7 +208,7 @@ impl Shelf {
         text.append(&detail);
 
         let label = format!("Add {} to the playlist", track.title);
-        let add = gtk::Button::from_icon_name("list-add-symbolic");
+        let add = gtk::Button::from_icon_name("flaccy-add-symbolic");
         add.add_css_class("flat");
         add.add_css_class("circular");
         add.set_valign(gtk::Align::Center);

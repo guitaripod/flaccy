@@ -632,7 +632,7 @@ fn attach_scan_status(ui: &Rc<Ui>, empty: &adw::StatusPage, actions: &gtk::Box) 
         .hub
         .subscribe_widget(empty, move |empty, event| match event {
             AppEvent::ScanProgress(state) if state.phase.blocks_library() => {
-                empty.set_icon_name(Some("content-loading-symbolic"));
+                empty.set_icon_name(Some("flaccy-loading-symbolic"));
                 empty.set_title(state.phase.headline());
                 let detail = state.detail();
                 let description = if detail.is_empty() {
@@ -696,7 +696,7 @@ fn welcome_button(label: &str, suggested: bool) -> gtk::Button {
 /// same page while the library is empty.
 pub(crate) fn build_empty_state(ui: &Rc<Ui>) -> adw::StatusPage {
     let empty = adw::StatusPage::builder()
-        .icon_name("audio-x-generic-symbolic")
+        .icon_name("flaccy-song-symbolic")
         .title("Where is your music?")
         .description(welcome_description(&ui.core.music_root()))
         .build();
@@ -1052,7 +1052,7 @@ fn cover_host_with_pencil(ui: &Rc<Ui>, album: &Album, picture: &gtk::Picture) ->
     host.set_halign(gtk::Align::Start);
     host.set_valign(gtk::Align::Start);
     host.add_css_class("album-cover-host");
-    let pencil = gtk::Button::from_icon_name("document-edit-symbolic");
+    let pencil = gtk::Button::from_icon_name("flaccy-edit-symbolic");
     pencil.add_css_class("osd");
     pencil.add_css_class("circular");
     pencil.add_css_class("artwork-pencil");

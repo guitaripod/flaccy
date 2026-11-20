@@ -441,7 +441,7 @@ pub fn resume_hero(
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     buttons.set_margin_top(if compact { 0 } else { 8 });
     let resume = pill(
-        Some("media-playback-start-symbolic"),
+        Some("flaccy-play-symbolic"),
         home_copy::RESUME,
         true,
     );
@@ -453,7 +453,7 @@ pub fn resume_hero(
         });
     }
     buttons.append(&resume);
-    let shuffle = icon_button("media-playlist-shuffle-symbolic", home_copy::SHUFFLE);
+    let shuffle = icon_button("flaccy-shuffle-symbolic", home_copy::SHUFFLE);
     {
         let ui = Rc::clone(ui);
         shuffle.connect_clicked(move |_| {
@@ -462,7 +462,7 @@ pub fn resume_hero(
     }
     buttons.append(&shuffle);
     if let Some(menu) = hero_menu(&ui.core, &hero.target) {
-        let more = icon_button("view-more-symbolic", "More");
+        let more = icon_button("flaccy-more-symbolic", "More");
         more.connect_clicked(move |button| {
             context::popup_menu_at(
                 button,
@@ -521,7 +521,7 @@ pub fn mix_hero(ui: &Rc<Ui>, hero: &MixHero, mode: PageMode, on_color: OnColor) 
     let context = mix_context(&hero.id, &hero.title, &hero.subtitle);
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     buttons.set_margin_top(if compact { 0 } else { 10 });
-    let play = pill(Some("media-playback-start-symbolic"), home_copy::PLAY, true);
+    let play = pill(Some("flaccy-play-symbolic"), home_copy::PLAY, true);
     play.set_hexpand(compact);
     {
         let ui = Rc::clone(ui);
@@ -534,7 +534,7 @@ pub fn mix_hero(ui: &Rc<Ui>, hero: &MixHero, mode: PageMode, on_color: OnColor) 
         });
     }
     buttons.append(&play);
-    let next = icon_button("list-add-symbolic", home_copy::PLAY_NEXT_TOOLTIP);
+    let next = icon_button("flaccy-add-symbolic", home_copy::PLAY_NEXT_TOOLTIP);
     {
         let ui = Rc::clone(ui);
         let tracks = hero.tracks.clone();
@@ -545,7 +545,7 @@ pub fn mix_hero(ui: &Rc<Ui>, hero: &MixHero, mode: PageMode, on_color: OnColor) 
         });
     }
     buttons.append(&next);
-    let shuffle = icon_button("media-playlist-shuffle-symbolic", home_copy::SHUFFLE);
+    let shuffle = icon_button("flaccy-shuffle-symbolic", home_copy::SHUFFLE);
     {
         let ui = Rc::clone(ui);
         let tracks = hero.tracks.clone();
@@ -592,7 +592,7 @@ pub fn day_one_hero(
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     buttons.set_margin_top(if compact { 0 } else { 12 });
     let shuffle = pill(
-        Some("media-playlist-shuffle-symbolic"),
+        Some("flaccy-shuffle-symbolic"),
         home_copy::SHUFFLE_LIBRARY,
         true,
     );
@@ -696,7 +696,7 @@ fn jump_row(ui: &Rc<Ui>, item: &JumpItem) -> gtk::ListBoxRow {
     labels.append(&fitted(&item.title, &["home-row-title"]));
     labels.append(&fitted(&item.subtitle, &["dim", "caption"]));
     row_box.append(&labels);
-    let play = gtk::Button::from_icon_name("media-playback-start-symbolic");
+    let play = gtk::Button::from_icon_name("flaccy-play-symbolic");
     play.add_css_class("circular");
     play.add_css_class("suggested-action");
     play.add_css_class("home-row-play");
@@ -773,7 +773,7 @@ pub fn tile(
     open_button.update_property(&[gtk::accessible::Property::Label(title)]);
     open_button.connect_clicked(move |_| open_it());
 
-    let play = gtk::Button::from_icon_name("media-playback-start-symbolic");
+    let play = gtk::Button::from_icon_name("flaccy-play-symbolic");
     play.add_css_class("circular");
     play.add_css_class("suggested-action");
     play.add_css_class("home-tile-play");
@@ -946,7 +946,7 @@ pub fn on_this_day_card(ui: &Rc<Ui>, card: &OtdCard) -> gtk::Widget {
     art.set_valign(gtk::Align::Center);
     strip.append(&art);
     strip.append(&card_text(&card.title, &card.subtitle));
-    let play = gtk::Button::from_icon_name("media-playback-start-symbolic");
+    let play = gtk::Button::from_icon_name("flaccy-play-symbolic");
     play.add_css_class("circular");
     play.add_css_class("suggested-action");
     play.set_valign(gtk::Align::Center);

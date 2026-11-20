@@ -77,8 +77,8 @@ pub fn present(ui: &Rc<Ui>, track: &Track) {
     scale.set_value(song_gain::decibels(initial));
     scale.update_property(&[gtk::accessible::Property::Label("Song volume")]);
 
-    let lower = step_button("list-remove-symbolic", "Quieter by 0.5 dB");
-    let raise = step_button("list-add-symbolic", "Louder by 0.5 dB");
+    let lower = step_button("flaccy-remove-symbolic", "Quieter by 0.5 dB");
+    let raise = step_button("flaccy-add-symbolic", "Louder by 0.5 dB");
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     row.append(&lower);
     row.append(&scale);

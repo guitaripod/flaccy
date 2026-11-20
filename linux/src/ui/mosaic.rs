@@ -156,7 +156,7 @@ impl Mosaic {
         let art = MosaicArt::new();
         art.set_hexpand(true);
         let icon = gtk::Image::builder()
-            .icon_name("audio-x-generic-symbolic")
+            .icon_name("flaccy-song-symbolic")
             .pixel_size(40)
             .halign(gtk::Align::Center)
             .valign(gtk::Align::Center)

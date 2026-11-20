@@ -129,13 +129,13 @@ pub fn present(ui: &Rc<Ui>) {
     // panel layout the user actually chose.
     let syncing = Rc::new(Cell::new(true));
 
-    let (lyrics_toggle, _) = toggle_button("format-justify-center-symbolic", "Lyrics");
-    let (queue_toggle, queue_label) = toggle_button("view-list-symbolic", "Up Next");
+    let (lyrics_toggle, _) = toggle_button("flaccy-lyrics-symbolic", "Lyrics");
+    let (queue_toggle, queue_label) = toggle_button("flaccy-queue-symbolic", "Up Next");
     let (comments_toggle, _) = toggle_button("flaccy-comments-symbolic", "Comments");
     comments_toggle.set_tooltip_text(Some("What people say under the song\u{2019}s music video"));
     comments_toggle.set_visible(crate::musicvideo::available());
 
-    let fullscreen = gtk::Button::from_icon_name("view-fullscreen-symbolic");
+    let fullscreen = gtk::Button::from_icon_name("flaccy-fullscreen-symbolic");
     fullscreen.add_css_class("flat");
     fullscreen.set_tooltip_text(Some("Full Screen (F11)"));
 
@@ -913,9 +913,9 @@ fn install_fullscreen(
             let Some(button) = button.upgrade() else { return };
             let full = window.is_fullscreen();
             button.set_icon_name(if full {
-                "view-restore-symbolic"
+                "flaccy-restore-symbolic"
             } else {
-                "view-fullscreen-symbolic"
+                "flaccy-fullscreen-symbolic"
             });
             button.set_tooltip_text(Some(if full {
                 "Leave Full Screen (Esc)"
@@ -1096,7 +1096,7 @@ struct TransportControls {
 impl TransportControls {
     fn new(ui: &Rc<Ui>) -> Self {
         let shuffle = gtk::ToggleButton::builder()
-            .icon_name("media-playlist-shuffle-symbolic")
+            .icon_name("flaccy-shuffle-symbolic")
             .tooltip_text("Shuffle")
             .build();
         shuffle.add_css_class("flat");
@@ -1115,12 +1115,12 @@ impl TransportControls {
             "Back 15 seconds",
             "Shift+←",
         );
-        let previous = icon_button("media-skip-backward-symbolic", "Previous");
+        let previous = icon_button("flaccy-skip-back-symbolic", "Previous");
         {
             let ui = Rc::clone(ui);
             previous.connect_clicked(move |_| ui.core.previous());
         }
-        let play = gtk::Button::from_icon_name("media-playback-start-symbolic");
+        let play = gtk::Button::from_icon_name("flaccy-play-symbolic");
         play.add_css_class("suggested-action");
         play.add_css_class("circular");
         play.add_css_class("np-play");
@@ -1129,7 +1129,7 @@ impl TransportControls {
             let ui = Rc::clone(ui);
             play.connect_clicked(move |_| ui.core.toggle_play_pause());
         }
-        let next = icon_button("media-skip-forward-symbolic", "Next");
+        let next = icon_button("flaccy-skip-forward-symbolic", "Next");
         {
             let ui = Rc::clone(ui);
             next.connect_clicked(move |_| ui.core.next());
@@ -1141,7 +1141,7 @@ impl TransportControls {
             "Forward 15 seconds",
             "Shift+→",
         );
-        let repeat = gtk::Button::from_icon_name("media-playlist-repeat-symbolic");
+        let repeat = gtk::Button::from_icon_name("flaccy-repeat-symbolic");
         repeat.add_css_class("flat");
         repeat.set_opacity(0.5);
         repeat.set_tooltip_text(Some("Repeat"));
@@ -1149,7 +1149,7 @@ impl TransportControls {
             let ui = Rc::clone(ui);
             repeat.connect_clicked(move |_| ui.core.player.cycle_repeat());
         }
-        let love = gtk::Button::from_icon_name("emote-love-symbolic");
+        let love = gtk::Button::from_icon_name("flaccy-heart-symbolic");
         love.add_css_class("flat");
         love.set_tooltip_text(Some("Love on Last.fm"));
 
@@ -1178,9 +1178,9 @@ impl TransportControls {
 
     fn sync_initial(&self, ui: &Rc<Ui>) {
         self.play.set_icon_name(if ui.core.player.is_playing() {
-            "media-playback-pause-symbolic"
+            "flaccy-pause-symbolic"
         } else {
-            "media-playback-start-symbolic"
+            "flaccy-play-symbolic"
         });
         self.shuffle.set_active(ui.core.player.shuffle_enabled());
         apply_repeat(&self.repeat, ui.core.player.repeat_mode());
@@ -1358,9 +1358,9 @@ fn wire_events(
         }
         AppEvent::PlayingChanged(playing) => {
             play.set_icon_name(if *playing {
-                "media-playback-pause-symbolic"
+                "flaccy-pause-symbolic"
             } else {
-                "media-playback-start-symbolic"
+                "flaccy-play-symbolic"
             });
         }
         AppEvent::ShuffleChanged(enabled) => shuffle.set_active(*enabled),

@@ -20,15 +20,15 @@ pub struct SidebarPage {
 }
 
 pub const SIDEBAR_PAGES: [SidebarPage; 9] = [
-    SidebarPage { name: "home", icon: "go-home-symbolic", label: "Home" },
-    SidebarPage { name: "albums", icon: "media-optical-symbolic", label: "Albums" },
-    SidebarPage { name: "songs", icon: "audio-x-generic-symbolic", label: "Songs" },
-    SidebarPage { name: "artists", icon: "system-users-symbolic", label: "Artists" },
-    SidebarPage { name: "playlists", icon: "view-list-symbolic", label: "Playlists" },
+    SidebarPage { name: "home", icon: "flaccy-home-symbolic", label: "Home" },
+    SidebarPage { name: "albums", icon: "flaccy-album-symbolic", label: "Albums" },
+    SidebarPage { name: "songs", icon: "flaccy-song-symbolic", label: "Songs" },
+    SidebarPage { name: "artists", icon: "flaccy-artists-symbolic", label: "Artists" },
+    SidebarPage { name: "playlists", icon: "flaccy-playlist-symbolic", label: "Playlists" },
     SidebarPage { name: "stats", icon: "flaccy-stats-symbolic", label: "Stats" },
-    SidebarPage { name: "wantlist", icon: "starred-symbolic", label: "Wantlist" },
-    SidebarPage { name: "downloads", icon: "folder-download-symbolic", label: "Downloads" },
-    SidebarPage { name: "guide", icon: "dialog-information-symbolic", label: "Guide" },
+    SidebarPage { name: "wantlist", icon: "flaccy-wantlist-symbolic", label: "Wantlist" },
+    SidebarPage { name: "downloads", icon: "flaccy-download-symbolic", label: "Downloads" },
+    SidebarPage { name: "guide", icon: "flaccy-guide-symbolic", label: "Guide" },
 ];
 
 /// The sidebar position of the page called `name`.
@@ -187,14 +187,14 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         .build();
 
     let sidebar_toggle = gtk::ToggleButton::builder()
-        .icon_name("sidebar-show-symbolic")
+        .icon_name("flaccy-sidebar-symbolic")
         .tooltip_text("Show Sidebar")
         .visible(false)
         .build();
     sidebar_toggle.add_css_class("flat");
     header.pack_start(&sidebar_toggle);
 
-    let rescan_button = gtk::Button::from_icon_name("view-refresh-symbolic");
+    let rescan_button = gtk::Button::from_icon_name("flaccy-refresh-symbolic");
     rescan_button.set_tooltip_text(Some("Rescan Library"));
     {
         let core = Rc::clone(core);
@@ -218,7 +218,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     menu.append(Some("About Flaccy"), Some("app.about"));
     menu.append(Some("Quit"), Some("app.quit"));
     let menu_button = gtk::MenuButton::builder()
-        .icon_name("open-menu-symbolic")
+        .icon_name("flaccy-menu-symbolic")
         .menu_model(&menu)
         .build();
     header.pack_end(&menu_button);
@@ -292,7 +292,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
                 AppEvent::ScanFinished { .. } => {
                     revealer.set_reveal_child(false);
                     rescan_button.set_sensitive(true);
-                    rescan_button.set_icon_name("view-refresh-symbolic");
+                    rescan_button.set_icon_name("flaccy-refresh-symbolic");
                     rescan_button.set_tooltip_text(Some("Rescan Library"));
                 }
                 _ => {}
@@ -572,6 +572,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     shell.set_pop_on_escape(true);
 
     window.set_content(Some(&shell));
+    adopt_toolkit_icons(&window);
     crate::frame_stats::install(&window);
     announce_suspension(&window, &core.hub);
 
@@ -762,6 +763,27 @@ fn build_job_status(ui: &Rc<Ui>) -> gtk::Revealer {
 
 /// Tells everything that animates on a timer when the window is suspended or
 /// brought back, and wakes the shared equalizer metronome on resume.
+/// Keeps the window's own buttons, and every dialog it presents, in Flaccy's
+/// glyphs: when the window first shows, when maximizing rebuilds its buttons,
+/// and when a dialog opens (once more a moment later, for the pages a dialog
+/// builds after it is shown).
+fn adopt_toolkit_icons(window: &adw::ApplicationWindow) {
+    ui::icons::keep_adopted(window);
+    window.connect_maximized_notify(|window| {
+        let window = window.clone();
+        glib::idle_add_local_once(move || ui::icons::adopt(&window));
+    });
+    window.connect_visible_dialog_notify(|window| {
+        let Some(dialog) = window.visible_dialog() else {
+            return;
+        };
+        ui::icons::adopt(&dialog);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(120), move || {
+            ui::icons::adopt(&dialog);
+        });
+    });
+}
+
 fn announce_suspension(window: &adw::ApplicationWindow, hub: &Rc<crate::events::EventHub>) {
     let announcer = Rc::clone(hub);
     window.connect_suspended_notify(move |window| {

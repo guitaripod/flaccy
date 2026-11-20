@@ -19,7 +19,7 @@ pub fn present(ui: &Rc<Ui>) {
         .build();
     let page = adw::PreferencesPage::builder()
         .title("General")
-        .icon_name("emblem-system-symbolic")
+        .icon_name("flaccy-settings-symbolic")
         .build();
 
     page.add(&hero_group(ui));
@@ -191,7 +191,7 @@ impl PlayCounter {
 }
 
 fn hero_identity() -> gtk::Box {
-    let glyph = gtk::Image::from_icon_name("audio-x-generic-symbolic");
+    let glyph = gtk::Image::from_icon_name("flaccy-song-symbolic");
     glyph.set_pixel_size(24);
     glyph.add_css_class("flaccy-hero-glyph");
     glyph.set_valign(gtk::Align::Center);
@@ -902,7 +902,7 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let rescan = gtk::Button::builder()
         .child(
             &adw::ButtonContent::builder()
-                .icon_name("view-refresh-symbolic")
+                .icon_name("flaccy-refresh-symbolic")
                 .label("Rescan")
                 .build(),
         )
@@ -922,7 +922,7 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let cleanup = gtk::Button::builder()
         .child(
             &adw::ButtonContent::builder()
-                .icon_name("edit-clear-all-symbolic")
+                .icon_name("flaccy-clean-symbolic")
                 .label("Clean Up…")
                 .build(),
         )

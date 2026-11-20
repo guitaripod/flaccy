@@ -215,9 +215,9 @@ impl Page {
     fn add_device(self: &Rc<Self>, device: &DeviceInfo) {
         let row = device_row(device);
         let (icon, tooltip) = if device.current {
-            ("document-edit-symbolic", copy::RENAME_TOOLTIP)
+            ("flaccy-edit-symbolic", copy::RENAME_TOOLTIP)
         } else {
-            ("user-trash-symbolic", copy::REMOVE_TOOLTIP)
+            ("flaccy-trash-symbolic", copy::REMOVE_TOOLTIP)
         };
         let button = gtk::Button::builder()
             .icon_name(icon)

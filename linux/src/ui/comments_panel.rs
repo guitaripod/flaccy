@@ -169,7 +169,7 @@ impl Panel {
         sort.set_active_name(Some(
             View::from_id(&ui.core.config.borrow().np_comments_sort).id(),
         ));
-        let open = gtk::Button::from_icon_name("web-browser-symbolic");
+        let open = gtk::Button::from_icon_name("flaccy-globe-symbolic");
         open.add_css_class("flat");
         open.set_tooltip_text(Some("Open the Comments on YouTube"));
         open.set_valign(gtk::Align::Center);
@@ -670,7 +670,7 @@ fn comment_row(
     let head = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     head.append(&author);
     if comment.verified {
-        let check = gtk::Image::from_icon_name("emblem-ok-symbolic");
+        let check = gtk::Image::from_icon_name("flaccy-check-circle-symbolic");
         check.set_pixel_size(12);
         check.add_css_class("dim");
         check.set_tooltip_text(Some("Verified"));
@@ -743,7 +743,7 @@ fn comment_row(
     if comment.hearted {
         let hearted = gtk::Box::new(gtk::Orientation::Horizontal, 5);
         hearted.add_css_class("np-comment-hearted");
-        let heart = gtk::Image::from_icon_name("emote-love-symbolic");
+        let heart = gtk::Image::from_icon_name("flaccy-heart-symbolic");
         heart.set_pixel_size(12);
         hearted.append(&heart);
         hearted.append(&gtk::Label::new(Some(&format!("by {}", channel_name(found)))));
@@ -756,7 +756,7 @@ fn comment_row(
         let pinned = gtk::Box::new(gtk::Orientation::Horizontal, 5);
         pinned.add_css_class("dim");
         pinned.add_css_class("caption");
-        let pin = gtk::Image::from_icon_name("view-pin-symbolic");
+        let pin = gtk::Image::from_icon_name("flaccy-pin-symbolic");
         pin.set_pixel_size(12);
         pinned.append(&pin);
         pinned.append(&gtk::Label::new(Some(&format!("Pinned by {}", channel_name(found)))));

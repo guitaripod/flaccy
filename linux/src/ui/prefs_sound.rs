@@ -23,7 +23,7 @@ use std::rc::Rc;
 pub fn page(ui: &Rc<Ui>, dialog: &adw::PreferencesDialog) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title("Sound")
-        .icon_name("audio-speakers-symbolic")
+        .icon_name("flaccy-speaker-symbolic")
         .name("sound")
         .build();
 
@@ -42,13 +42,13 @@ pub fn page(ui: &Rc<Ui>, dialog: &adw::PreferencesDialog) -> adw::PreferencesPag
 
     let controls = adw::PreferencesGroup::new();
     let equalizer_row = navigation_row("Equalizer", "flaccy-equalizer-symbolic", "sound-tint-pink");
-    let song_volumes_row = navigation_row("Song Volumes", "audio-volume-high-symbolic", "sound-tint-orange");
+    let song_volumes_row = navigation_row("Song Volumes", "flaccy-volume-high-symbolic", "sound-tint-orange");
     controls.add(&equalizer_row);
     controls.add(&song_volumes_row);
     page.add(&controls);
 
     let guide_group = adw::PreferencesGroup::new();
-    let guide_row = navigation_row("Listening Guide", "dialog-information-symbolic", "sound-tint-cyan");
+    let guide_row = navigation_row("Listening Guide", "flaccy-guide-symbolic", "sound-tint-cyan");
     guide_row.set_subtitle("How Bluetooth, AAC, and lossless files really affect what you hear.");
     guide_group.add(&guide_row);
     page.add(&guide_group);
@@ -150,13 +150,13 @@ impl SoundPage {
 
         match &track {
             Some(track) => self.path.file.show(
-                "audio-x-generic-symbolic",
+                "flaccy-song-symbolic",
                 "sound-tint-cyan",
                 &track.quality_badge().unwrap_or_else(|| track.title.clone()),
                 Some(&source_detail(track)),
             ),
             None => self.path.file.show(
-                "audio-x-generic-symbolic",
+                "flaccy-song-symbolic",
                 "sound-tint-cyan",
                 "Nothing playing",
                 Some("Play a song to see how it reaches you."),
@@ -172,7 +172,7 @@ impl SoundPage {
         }
         let processing = (!processing.is_empty()).then(|| processing.join(" · "));
         self.path.flaccy.show(
-            if untouched { "object-select-symbolic" } else { "flaccy-equalizer-symbolic" },
+            if untouched { "flaccy-check-symbolic" } else { "flaccy-equalizer-symbolic" },
             if untouched { "sound-tint-green" } else { "sound-tint-blue" },
             if untouched { "Untouched" } else { "Shaped" },
             processing.as_deref(),
@@ -343,11 +343,11 @@ fn kind_label(kind: SignalOutputKind) -> Option<&'static str> {
 
 fn output_icon(kind: Option<SignalOutputKind>) -> &'static str {
     match kind {
-        Some(SignalOutputKind::Headphones) => "audio-headphones-symbolic",
-        Some(SignalOutputKind::Bluetooth) => "bluetooth-active-symbolic",
-        Some(SignalOutputKind::Usb) => "audio-card-symbolic",
-        Some(SignalOutputKind::Display) => "video-display-symbolic",
-        _ => "audio-speakers-symbolic",
+        Some(SignalOutputKind::Headphones) => "flaccy-headphones-symbolic",
+        Some(SignalOutputKind::Bluetooth) => "flaccy-bluetooth-symbolic",
+        Some(SignalOutputKind::Usb) => "flaccy-audio-interface-symbolic",
+        Some(SignalOutputKind::Display) => "flaccy-video-symbolic",
+        _ => "flaccy-speaker-symbolic",
     }
 }
 
@@ -412,7 +412,7 @@ fn navigation_row(title: &str, icon: &str, tint: &str) -> adw::ActionRow {
         .activatable(true)
         .build();
     row.add_prefix(&icon_tile(icon, tint));
-    row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+    row.add_suffix(&gtk::Image::from_icon_name("flaccy-chevron-right-symbolic"));
     row
 }
 
@@ -493,7 +493,7 @@ struct Stage {
 impl Stage {
     fn new(caption: &str) -> Stage {
         let root = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-        let tile = icon_tile("audio-x-generic-symbolic", "sound-tint-cyan");
+        let tile = icon_tile("flaccy-song-symbolic", "sound-tint-cyan");
         tile.set_valign(gtk::Align::Start);
         let text = gtk::Box::new(gtk::Orientation::Vertical, 1);
         text.set_hexpand(true);
@@ -649,7 +649,7 @@ impl SongVolumeList {
             level.add_css_class("numeric");
             level.add_css_class(if *tenths > 0 { "sound-level-raised" } else { "dim" });
             row.add_suffix(&level);
-            let reset = gtk::Button::from_icon_name("edit-undo-symbolic");
+            let reset = gtk::Button::from_icon_name("flaccy-undo-symbolic");
             reset.set_valign(gtk::Align::Center);
             reset.add_css_class("flat");
             reset.set_tooltip_text(Some("Reset"));
@@ -1034,7 +1034,7 @@ fn rounded_rectangle(context: &gtk::cairo::Context, x: f64, y: f64, width: f64, 
 /// The Home Screen row of the Appearance group: how many sections Home shows,
 /// opening the editor that orders and hides them.
 pub fn home_screen_row(ui: &Rc<Ui>) -> adw::ActionRow {
-    let row = navigation_row("Home Screen", "go-home-symbolic", "sound-tint-orange");
+    let row = navigation_row("Home Screen", "flaccy-home-symbolic", "sound-tint-orange");
     let subtitle = {
         let ui = Rc::clone(ui);
         move |row: &adw::ActionRow| {

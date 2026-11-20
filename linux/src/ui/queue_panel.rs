@@ -113,7 +113,7 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
     list.add_css_class("boxed-list-separate");
 
     let empty = adw::StatusPage::builder()
-        .icon_name("view-list-symbolic")
+        .icon_name("flaccy-queue-symbolic")
         .title("Nothing Queued")
         .description("Play an album, playlist or station and the queue shows up here.")
         .build();
@@ -555,7 +555,7 @@ fn queue_row(ui: &Rc<Ui>, track: &Track, index: usize, current: usize) -> gtk::L
     row_box.append(&text_box);
 
     if track.loved {
-        let heart = gtk::Image::from_icon_name("emote-love-symbolic");
+        let heart = gtk::Image::from_icon_name("flaccy-heart-symbolic");
         heart.add_css_class("loved-heart");
         row_box.append(&heart);
     }
@@ -565,7 +565,7 @@ fn queue_row(ui: &Rc<Ui>, track: &Track, index: usize, current: usize) -> gtk::L
     row_box.append(&duration);
 
     if index != current {
-        let remove = gtk::Button::from_icon_name("window-close-symbolic");
+        let remove = gtk::Button::from_icon_name("flaccy-close-symbolic");
         remove.add_css_class("flat");
         remove.add_css_class("circular");
         remove.set_tooltip_text(Some("Remove from queue"));

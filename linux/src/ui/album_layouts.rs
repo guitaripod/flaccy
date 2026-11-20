@@ -493,7 +493,7 @@ fn disc_header(label: &str, count: usize, duration: f64) -> gtk::Box {
         .margin_end(6)
         .build();
     row.add_css_class("disc-header");
-    let icon = gtk::Image::from_icon_name("media-optical-symbolic");
+    let icon = gtk::Image::from_icon_name("flaccy-album-symbolic");
     icon.add_css_class("disc-header-icon");
     row.append(&icon);
     let name = gtk::Label::builder().label(label).xalign(0.0).build();
@@ -556,7 +556,7 @@ fn build_track_list(
         title_row.append(&track_title);
         title_row.append(&crate::ui::controls::live_new_mix_chip(ui, track));
         row_box.append(&title_row);
-        let heart = gtk::Image::from_icon_name("emote-love-symbolic");
+        let heart = gtk::Image::from_icon_name("flaccy-heart-symbolic");
         heart.add_css_class("loved-heart");
         heart.set_visible(track.loved);
         row_box.append(&heart);

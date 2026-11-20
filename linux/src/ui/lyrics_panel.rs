@@ -168,7 +168,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
 
     let idle = idle_status();
     let status = adw::StatusPage::builder()
-        .icon_name("format-justify-center-symbolic")
+        .icon_name("flaccy-lyrics-symbolic")
         .title(idle.title)
         .description(idle.body)
         .build();
@@ -207,7 +207,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
     let resume = gtk::Button::builder()
         .child(
             &adw::ButtonContent::builder()
-                .icon_name("go-down-symbolic")
+                .icon_name("flaccy-chevron-down-symbolic")
                 .label("Jump to Current")
                 .build(),
         )
@@ -831,7 +831,7 @@ impl Timing {
         content.append(&reset);
         let popover = gtk::Popover::builder().child(&content).build();
         let button = gtk::MenuButton::builder()
-            .icon_name("preferences-system-time-symbolic")
+            .icon_name("flaccy-timing-symbolic")
             .tooltip_text("Lyrics timing")
             .popover(&popover)
             .valign(gtk::Align::Center)
@@ -865,7 +865,7 @@ impl NoteChip {
         let label = gtk::Label::new(None);
         label.add_css_class("caption");
         let face = gtk::Box::new(gtk::Orientation::Horizontal, 5);
-        face.append(&gtk::Image::from_icon_name("dialog-information-symbolic"));
+        face.append(&gtk::Image::from_icon_name("flaccy-info-symbolic"));
         face.append(&label);
         let title = gtk::Label::builder().xalign(0.0).wrap(true).build();
         title.add_css_class("heading");
@@ -922,7 +922,7 @@ fn is_playing_track(ui: &Ui, track: &Track) -> bool {
 /// sung.
 fn share_button() -> gtk::Button {
     let button = gtk::Button::builder()
-        .icon_name("send-to-symbolic")
+        .icon_name("flaccy-share-symbolic")
         .tooltip_text(copy::SHEET_TITLE)
         .valign(gtk::Align::Center)
         .visible(false)
@@ -936,7 +936,7 @@ fn share_button() -> gtk::Button {
 /// The corner button that opens the Meaning dialog on the whole song.
 fn meaning_button() -> gtk::Button {
     let button = gtk::Button::builder()
-        .icon_name("accessories-dictionary-symbolic")
+        .icon_name("flaccy-meaning-symbolic")
         .tooltip_text(meaning_copy::BUTTON_TOOLTIP)
         .valign(gtk::Align::Center)
         .visible(false)
@@ -961,12 +961,12 @@ fn line_menu(
     let items = gtk::Box::new(gtk::Orientation::Vertical, 0);
     let popover = gtk::Popover::builder().child(&items).has_arrow(true).build();
     let mut actions: Vec<(&str, &str, Rc<dyn Fn(Option<usize>)>)> = vec![(
-        "accessories-dictionary-symbolic",
+        "flaccy-meaning-symbolic",
         meaning_copy::EXPLAIN_LINE,
         explain,
     )];
     if let Some(share_from) = share_from {
-        actions.push(("send-to-symbolic", copy::FROM_LINE, share_from));
+        actions.push(("flaccy-share-symbolic", copy::FROM_LINE, share_from));
     }
     for (icon, label, action) in actions {
         let item = gtk::Button::builder()
@@ -1044,8 +1044,8 @@ fn font_size_controls(ui: &Rc<Ui>) -> gtk::Box {
         crate::ui::lyrics_style::apply(size);
     };
     for (icon, tooltip, delta) in [
-        ("zoom-out-symbolic", "Smaller lyrics", -1),
-        ("zoom-in-symbolic", "Larger lyrics", 1),
+        ("flaccy-zoom-out-symbolic", "Smaller lyrics", -1),
+        ("flaccy-zoom-in-symbolic", "Larger lyrics", 1),
     ] {
         let button = gtk::Button::from_icon_name(icon);
         button.add_css_class("flat");

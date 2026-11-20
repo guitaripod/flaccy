@@ -104,7 +104,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .build();
 
     let empty = adw::StatusPage::builder()
-        .icon_name("starred-symbolic")
+        .icon_name("flaccy-wantlist-symbolic")
         .title("Nothing on the Wantlist")
         .description("Suggestions build up from your library gaps, lossy albums, and — when Last.fm is connected — your charts and loved tracks. Add music, or connect Last.fm in Preferences, to start them.")
         .build();
@@ -256,7 +256,7 @@ fn toolbar_row(ui: &Rc<Ui>, filter: &Rc<Cell<Filter>>) -> gtk::Widget {
     }
     row.append(&chips);
 
-    let add = gtk::Button::from_icon_name("list-add-symbolic");
+    let add = gtk::Button::from_icon_name("flaccy-add-symbolic");
     add.set_tooltip_text(Some("Add to wantlist manually"));
     {
         let ui = Rc::clone(ui);
@@ -264,7 +264,7 @@ fn toolbar_row(ui: &Rc<Ui>, filter: &Rc<Cell<Filter>>) -> gtk::Widget {
     }
     row.append(&add);
 
-    let refresh = gtk::Button::from_icon_name("view-refresh-symbolic");
+    let refresh = gtk::Button::from_icon_name("flaccy-refresh-symbolic");
     refresh.set_tooltip_text(Some("Refresh suggestions"));
     {
         let ui = Rc::clone(ui);
@@ -378,7 +378,7 @@ fn wantlist_row(ui: &Rc<Ui>, images: &Rc<RemoteImages>, item: &WantlistItemRow) 
         &subtitle,
     );
 
-    let got_it = gtk::Button::from_icon_name("object-select-symbolic");
+    let got_it = gtk::Button::from_icon_name("flaccy-check-symbolic");
     got_it.set_tooltip_text(Some("Got it — mark as acquired"));
     {
         let ui = Rc::clone(ui);
@@ -393,7 +393,7 @@ fn wantlist_row(ui: &Rc<Ui>, images: &Rc<RemoteImages>, item: &WantlistItemRow) 
     }
     actions.append(&got_it);
 
-    let dismiss = gtk::Button::from_icon_name("window-close-symbolic");
+    let dismiss = gtk::Button::from_icon_name("flaccy-close-symbolic");
     dismiss.set_tooltip_text(Some("Dismiss — don't suggest again"));
     {
         let ui = Rc::clone(ui);
@@ -412,7 +412,7 @@ fn wantlist_row(ui: &Rc<Ui>, images: &Rc<RemoteImages>, item: &WantlistItemRow) 
         "https://www.last.fm/music/{}",
         url_path_encode(&item.artist)
     );
-    let open = gtk::Button::from_icon_name("web-browser-symbolic");
+    let open = gtk::Button::from_icon_name("flaccy-globe-symbolic");
     open.set_tooltip_text(Some("Open on Last.fm"));
     {
         let ui = Rc::clone(ui);
@@ -438,13 +438,13 @@ fn release_row(ui: &Rc<Ui>, images: &Rc<RemoteImages>, release: &NewReleaseRow) 
         &format!("{} · Released {released}", release.artist),
     );
     if let Some(store_url) = release.store_url.clone() {
-        let open = gtk::Button::from_icon_name("web-browser-symbolic");
+        let open = gtk::Button::from_icon_name("flaccy-globe-symbolic");
         open.set_tooltip_text(Some("Open in store"));
         let ui = Rc::clone(ui);
         open.connect_clicked(move |_| open_url(&ui, &store_url));
         actions.append(&open);
     }
-    let want = gtk::Button::from_icon_name("list-add-symbolic");
+    let want = gtk::Button::from_icon_name("flaccy-add-symbolic");
     want.set_tooltip_text(Some("Add to wantlist"));
     {
         let ui = Rc::clone(ui);

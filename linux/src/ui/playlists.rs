@@ -424,7 +424,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     ui.register_scroller(&scroll);
 
     let no_results = adw::StatusPage::builder()
-        .icon_name("system-search-symbolic")
+        .icon_name("flaccy-search-symbolic")
         .title("No Results")
         .description("No playlist matches your search.")
         .vexpand(true)
@@ -459,7 +459,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     );
 
     let new_content = adw::ButtonContent::builder()
-        .icon_name("list-add-symbolic")
+        .icon_name("flaccy-add-symbolic")
         .label("New Playlist")
         .build();
     let new_button = gtk::Button::builder()
@@ -501,7 +501,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     );
 
     let empty = adw::StatusPage::builder()
-        .icon_name("view-list-symbolic")
+        .icon_name("flaccy-playlist-symbolic")
         .title("No Playlists")
         .description("Create a playlist, then add songs from any track's context menu.")
         .build();
@@ -712,7 +712,7 @@ fn build_card_cell(ui: &Rc<Ui>) -> gtk::Box {
 
     let art = PlaylistArt::new(ui, 0, "", 0, "cover", Vec::new());
     art.widget().set_size_request(120, -1);
-    let fab = gtk::Button::from_icon_name("media-playback-start-symbolic");
+    let fab = gtk::Button::from_icon_name("flaccy-play-symbolic");
     fab.set_halign(gtk::Align::End);
     fab.set_valign(gtk::Align::End);
     fab.set_margin_end(10);
@@ -826,7 +826,7 @@ pub fn present_add_to_playlist(ui: &Rc<Ui>, rel_path: &str) {
         .title("New Playlist…")
         .activatable(true)
         .build();
-    let new_icon = gtk::Image::from_icon_name("list-add-symbolic");
+    let new_icon = gtk::Image::from_icon_name("flaccy-add-symbolic");
     new_icon.add_css_class("playlist-picker-new");
     new_icon.set_pixel_size(20);
     new_row.add_prefix(&new_icon);
@@ -859,7 +859,7 @@ pub fn present_add_to_playlist(ui: &Rc<Ui>, rel_path: &str) {
         row.add_prefix(&art.widget());
         let already = holding.contains(&card.id);
         if already {
-            let check = gtk::Image::from_icon_name("object-select-symbolic");
+            let check = gtk::Image::from_icon_name("flaccy-check-symbolic");
             check.add_css_class("accent");
             check.set_tooltip_text(Some("Already in this playlist"));
             row.add_suffix(&check);
@@ -1734,7 +1734,7 @@ impl DetailView {
         album_label.add_css_class("caption");
         row_box.append(&album_label);
 
-        let heart = gtk::Image::from_icon_name("emote-love-symbolic");
+        let heart = gtk::Image::from_icon_name("flaccy-heart-symbolic");
         heart.add_css_class("loved-heart");
         heart.set_visible(track.loved);
         row_box.append(&heart);
@@ -1753,7 +1753,7 @@ impl DetailView {
         duration.add_css_class("duration-label");
         row_box.append(&duration);
 
-        let handle = gtk::Image::from_icon_name("list-drag-handle-symbolic");
+        let handle = gtk::Image::from_icon_name("flaccy-drag-handle-symbolic");
         handle.add_css_class("playlist-drag-handle");
         handle.set_tooltip_text(Some("Drag to reorder"));
         row_box.append(&handle);
@@ -1920,7 +1920,7 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
     shuffle.set_action_name(Some("win.playlist-shuffle"));
     shuffle.set_action_target_value(Some(&playlist_id.to_variant()));
     let more = gtk::MenuButton::builder()
-        .icon_name("view-more-symbolic")
+        .icon_name("flaccy-more-symbolic")
         .tooltip_text("More")
         .valign(gtk::Align::Center)
         .build();
@@ -1995,7 +1995,7 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
     stack.add_named(&list, Some("list"));
 
     let empty = adw::StatusPage::builder()
-        .icon_name("audio-x-generic-symbolic")
+        .icon_name("flaccy-song-symbolic")
         .title("No Songs Yet")
         .description("Right-click any song and choose Add to Playlist.")
         .visible(false)
@@ -2213,7 +2213,7 @@ fn editable_cover(ui: &Rc<Ui>, art: &PlaylistArt, playlist_id: i64) -> gtk::Over
     host.set_halign(gtk::Align::Start);
     host.set_valign(gtk::Align::Start);
     host.add_css_class("album-cover-host");
-    let pencil = gtk::Button::from_icon_name("document-edit-symbolic");
+    let pencil = gtk::Button::from_icon_name("flaccy-edit-symbolic");
     pencil.add_css_class("osd");
     pencil.add_css_class("circular");
     pencil.add_css_class("artwork-pencil");

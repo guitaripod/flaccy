@@ -21,21 +21,21 @@ struct StepCard {
 
 const STEP_CARDS: [StepCard; 3] = [
     StepCard {
-        icon: "insert-link-symbolic",
+        icon: "flaccy-link-symbolic",
         title: "Paste any link",
         body: "A single song, a full album, or a whole playlist — from YouTube, YouTube Music, \
                SoundCloud, Bandcamp, and hundreds of other sites. Playlists are expanded into \
                individual tracks and queued one by one.",
     },
     StepCard {
-        icon: "audio-x-generic-symbolic",
+        icon: "flaccy-song-symbolic",
         title: "Best quality, fully tagged",
         body: "The best audio stream available is saved without re-encoding — for YouTube that's \
                usually Opus. Title, artist, album, track number, and cover art are embedded \
                automatically.",
     },
     StepCard {
-        icon: "folder-download-symbolic",
+        icon: "flaccy-download-symbolic",
         title: "Straight into your library",
         body: "Tracks land in a YouTube folder inside your music library and appear in Albums, \
                Songs, and Artists the moment they finish — ready for playlists, stations, and \
@@ -71,7 +71,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let entry = gtk::Entry::builder()
         .placeholder_text("https://youtube.com/watch?v=…")
         .hexpand(true)
-        .secondary_icon_name("edit-paste-symbolic")
+        .secondary_icon_name("flaccy-paste-symbolic")
         .secondary_icon_tooltip_text("Paste link")
         .build();
     let download_button = gtk::Button::builder().label("Download").build();
@@ -278,7 +278,7 @@ fn render_setup(
     }
     if status.ready() {
         let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        let icon = gtk::Image::from_icon_name("object-select-symbolic");
+        let icon = gtk::Image::from_icon_name("flaccy-check-symbolic");
         icon.add_css_class("accent-toggle");
         row.append(&icon);
         let label = gtk::Label::builder()
@@ -302,7 +302,7 @@ fn render_setup(
     card.add_css_class("guide-card");
 
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    let icon = gtk::Image::from_icon_name("applications-system-symbolic");
+    let icon = gtk::Image::from_icon_name("flaccy-working-symbolic");
     icon.add_css_class("accent-toggle");
     header.append(&icon);
     let title = gtk::Label::builder()
@@ -347,7 +347,7 @@ fn render_setup(
         .build();
     command_label.add_css_class("dl-command");
     command_row.append(&command_label);
-    let copy_button = gtk::Button::from_icon_name("edit-copy-symbolic");
+    let copy_button = gtk::Button::from_icon_name("flaccy-copy-symbolic");
     copy_button.add_css_class("flat");
     copy_button.set_tooltip_text(Some("Copy command"));
     copy_button.set_valign(gtk::Align::Center);
@@ -391,9 +391,9 @@ fn render_setup(
 fn tool_row(name: &str, version: Option<&str>) -> gtk::Widget {
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let icon = gtk::Image::from_icon_name(if version.is_some() {
-        "object-select-symbolic"
+        "flaccy-check-symbolic"
     } else {
-        "dialog-warning-symbolic"
+        "flaccy-warning-symbolic"
     });
     if version.is_some() {
         icon.add_css_class("accent-toggle");
@@ -494,22 +494,22 @@ fn queue_row(
             spinner.upcast()
         }
         downloads::STATUS_DONE => {
-            let icon = gtk::Image::from_icon_name("object-select-symbolic");
+            let icon = gtk::Image::from_icon_name("flaccy-check-symbolic");
             icon.add_css_class("accent-toggle");
             icon.upcast()
         }
         downloads::STATUS_FAILED => {
-            let icon = gtk::Image::from_icon_name("dialog-error-symbolic");
+            let icon = gtk::Image::from_icon_name("flaccy-error-symbolic");
             icon.add_css_class("error");
             icon.upcast()
         }
         downloads::STATUS_CANCELLED => {
-            let icon = gtk::Image::from_icon_name("media-playback-stop-symbolic");
+            let icon = gtk::Image::from_icon_name("flaccy-stop-symbolic");
             icon.add_css_class("dim");
             icon.upcast()
         }
         _ => {
-            let icon = gtk::Image::from_icon_name("content-loading-symbolic");
+            let icon = gtk::Image::from_icon_name("flaccy-loading-symbolic");
             icon.add_css_class("dim");
             icon.upcast()
         }
@@ -561,7 +561,7 @@ fn queue_row(
         downloads::STATUS_QUEUED | downloads::STATUS_FETCHING | downloads::STATUS_DOWNLOADING => {
             actions.append(&action_button(
                 ui,
-                "media-playback-stop-symbolic",
+                "flaccy-stop-symbolic",
                 "Cancel",
                 row.id,
                 downloads::cancel,
@@ -570,14 +570,14 @@ fn queue_row(
         downloads::STATUS_FAILED => {
             actions.append(&action_button(
                 ui,
-                "view-refresh-symbolic",
+                "flaccy-refresh-symbolic",
                 "Retry",
                 row.id,
                 downloads::retry,
             ));
             actions.append(&action_button(
                 ui,
-                "window-close-symbolic",
+                "flaccy-close-symbolic",
                 "Remove from list",
                 row.id,
                 downloads::remove,
@@ -586,7 +586,7 @@ fn queue_row(
         _ => {
             actions.append(&action_button(
                 ui,
-                "window-close-symbolic",
+                "flaccy-close-symbolic",
                 "Remove from list",
                 row.id,
                 downloads::remove,

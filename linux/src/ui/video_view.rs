@@ -178,9 +178,9 @@ impl Tools {
         sync.add_css_class("caption");
         sync.add_css_class("numeric");
 
-        let earlier = icon_button("go-previous-symbolic", "Show the video earlier");
-        let reset = icon_button("edit-undo-symbolic", "Back to the automatic sync");
-        let later = icon_button("go-next-symbolic", "Show the video later");
+        let earlier = icon_button("flaccy-chevron-left-symbolic", "Show the video earlier");
+        let reset = icon_button("flaccy-undo-symbolic", "Back to the automatic sync");
+        let later = icon_button("flaccy-chevron-right-symbolic", "Show the video later");
         {
             let ui = Rc::clone(ui);
             earlier.connect_clicked(move |_| musicvideo::nudge_offset(&ui.core, -NUDGE_STEP));
@@ -274,7 +274,7 @@ impl Tools {
 
         let popover = gtk::Popover::builder().child(&content).build();
         let button = gtk::MenuButton::builder()
-            .icon_name("view-more-symbolic")
+            .icon_name("flaccy-more-symbolic")
             .tooltip_text("Now Playing Options")
             .popover(&popover)
             .valign(gtk::Align::Center)
@@ -491,7 +491,7 @@ impl StatusLayer {
     fn new(ui: &Rc<Ui>) -> Self {
         let spinner = adw::Spinner::new();
         spinner.set_size_request(16, 16);
-        let icon = gtk::Image::from_icon_name("network-offline-symbolic");
+        let icon = gtk::Image::from_icon_name("flaccy-offline-symbolic");
         icon.set_pixel_size(16);
         let label = gtk::Label::builder()
             .xalign(0.0)
@@ -835,7 +835,7 @@ fn candidate_row(
         .build();
     row.add_prefix(&slot);
     if current {
-        let mark = gtk::Image::from_icon_name("object-select-symbolic");
+        let mark = gtk::Image::from_icon_name("flaccy-check-symbolic");
         mark.set_tooltip_text(Some("Playing now"));
         mark.add_css_class("accent");
         row.add_suffix(&mark);

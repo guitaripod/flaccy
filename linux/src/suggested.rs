@@ -107,7 +107,7 @@ fn heavy_rotation(
         id: "heavy-rotation",
         title: "Heavy Rotation".to_string(),
         subtitle: subtitle.to_string(),
-        icon_name: "weather-clear-symbolic",
+        icon_name: "flaccy-sun-symbolic",
         tracks,
     })
 }
@@ -147,7 +147,7 @@ fn on_repeat(
             id: "on-repeat",
             title: "On Repeat".to_string(),
             subtitle: format!("The best of {display_artist}"),
-            icon_name: "media-playlist-repeat-symbolic",
+            icon_name: "flaccy-repeat-symbolic",
             tracks: ordered,
         });
     }
@@ -174,7 +174,7 @@ fn rediscover(
         id: "rediscover",
         title: "Rediscover".to_string(),
         subtitle: "Favourites you haven't heard in months".to_string(),
-        icon_name: "document-open-recent-symbolic",
+        icon_name: "flaccy-recent-symbolic",
         tracks,
     })
 }
@@ -204,7 +204,7 @@ fn crate_dig(pool: &[Track], all_counts: &HashMap<String, i64>, day: i64) -> Opt
         id: "crate-dig",
         title: "Crate Dig".to_string(),
         subtitle: "Deep cuts from albums you already love".to_string(),
-        icon_name: "media-optical-symbolic",
+        icon_name: "flaccy-album-symbolic",
         tracks,
     })
 }
@@ -290,7 +290,7 @@ fn tonights_spin(
         id: "tonights-spin",
         title: pick.2,
         subtitle,
-        icon_name: "media-optical-cd-audio-symbolic",
+        icon_name: "flaccy-disc-symbolic",
         tracks: pick.0,
     })
 }

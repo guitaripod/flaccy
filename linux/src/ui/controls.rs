@@ -85,17 +85,17 @@ pub fn set_love_appearance(button: &gtk::Button, loved: bool) {
 pub fn apply_repeat(repeat: &gtk::Button, mode: RepeatMode) {
     match mode {
         RepeatMode::Off => {
-            repeat.set_icon_name("media-playlist-repeat-symbolic");
+            repeat.set_icon_name("flaccy-repeat-symbolic");
             repeat.set_opacity(0.5);
             repeat.remove_css_class("accent-toggle");
         }
         RepeatMode::All => {
-            repeat.set_icon_name("media-playlist-repeat-symbolic");
+            repeat.set_icon_name("flaccy-repeat-symbolic");
             repeat.set_opacity(1.0);
             repeat.add_css_class("accent-toggle");
         }
         RepeatMode::One => {
-            repeat.set_icon_name("media-playlist-repeat-song-symbolic");
+            repeat.set_icon_name("flaccy-repeat-one-symbolic");
             repeat.set_opacity(1.0);
             repeat.add_css_class("accent-toggle");
         }
@@ -121,13 +121,13 @@ pub fn attach_label_nav(
 
 pub fn volume_icon_name(volume: f64) -> &'static str {
     if volume <= 0.001 {
-        "audio-volume-muted-symbolic"
+        "flaccy-volume-muted-symbolic"
     } else if volume < 0.34 {
-        "audio-volume-low-symbolic"
+        "flaccy-volume-low-symbolic"
     } else if volume < 0.67 {
-        "audio-volume-medium-symbolic"
+        "flaccy-volume-medium-symbolic"
     } else {
-        "audio-volume-high-symbolic"
+        "flaccy-volume-high-symbolic"
     }
 }
 

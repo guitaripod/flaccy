@@ -84,7 +84,7 @@ fn more_menu(profile: &EqualizerProfile) -> gtk::MenuButton {
         menu.append_item(&item);
     }
     let more = gtk::MenuButton::builder()
-        .icon_name("view-more-symbolic")
+        .icon_name("flaccy-more-symbolic")
         .menu_model(&menu)
         .valign(gtk::Align::Center)
         .build();
@@ -118,7 +118,7 @@ fn profile_row(profile: &EqualizerProfile, weak: &Weak<Screen>) -> RowParts {
     let indicator = build_equalizer_indicator();
     indicator.set_visible(false);
     indicator.set_valign(gtk::Align::Center);
-    let tick = gtk::Image::from_icon_name("object-select-symbolic");
+    let tick = gtk::Image::from_icon_name("flaccy-check-symbolic");
     tick.add_css_class("eq-preset-tick");
     tick.set_visible(false);
 
@@ -203,7 +203,7 @@ impl Deck {
         let caption = gtk::Label::builder().label("PRESETS").xalign(0.0).hexpand(true).build();
         caption.add_css_class("eq-caption");
         let hover_toggle = gtk::ToggleButton::builder()
-            .icon_name("audio-headphones-symbolic")
+            .icon_name("flaccy-headphones-symbolic")
             .active(hover_preview)
             .valign(gtk::Align::Center)
             .tooltip_text("Hover a preset to hear it")
@@ -251,7 +251,7 @@ impl Deck {
             menu.append(Some(title), Some(action));
         }
         let more = gtk::MenuButton::builder()
-            .icon_name("view-more-symbolic")
+            .icon_name("flaccy-more-symbolic")
             .menu_model(&menu)
             .valign(gtk::Align::Center)
             .tooltip_text("More")

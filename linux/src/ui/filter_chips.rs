@@ -205,7 +205,7 @@ impl ChipBar {
 
 fn make_chip(filter: LibraryFilter) -> Chip {
     let label = gtk::Label::new(Some(filter.label()));
-    let cross = gtk::Image::from_icon_name("window-close-symbolic");
+    let cross = gtk::Image::from_icon_name("flaccy-close-symbolic");
     cross.set_pixel_size(12);
     cross.set_visible(false);
     let content = gtk::Box::builder()
@@ -229,7 +229,7 @@ fn make_chip(filter: LibraryFilter) -> Chip {
 /// popover, not a menu model: GTK 4.22's `PopoverMenu` clips trailing rows.
 fn range_picker(current: Period) -> (gtk::MenuButton, Vec<(Period, gtk::Image)>) {
     let menu = gtk::MenuButton::builder()
-        .icon_name("pan-down-symbolic")
+        .icon_name("flaccy-chevron-down-symbolic")
         .tooltip_text("Choose the time range Most Played counts over")
         .valign(gtk::Align::Center)
         .build();
@@ -257,7 +257,7 @@ fn range_picker(current: Period) -> (gtk::MenuButton, Vec<(Period, gtk::Image)>)
             .xalign(0.0)
             .hexpand(true)
             .build();
-        let check = gtk::Image::from_icon_name("object-select-symbolic");
+        let check = gtk::Image::from_icon_name("flaccy-check-symbolic");
         check.set_opacity(if period == current { 1.0 } else { 0.0 });
         content.append(&name);
         content.append(&check);

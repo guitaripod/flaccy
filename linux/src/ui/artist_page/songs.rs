@@ -349,7 +349,7 @@ fn song_row(ui: &Rc<Ui>, track: &Track, rank: usize, plays: i64) -> gtk::ListBox
     row_box.append(&words);
 
     if track.loved {
-        let heart = gtk::Image::from_icon_name("emblem-favorite-symbolic");
+        let heart = gtk::Image::from_icon_name("flaccy-heart-symbolic");
         heart.add_css_class("artist-song-loved");
         heart.set_tooltip_text(Some("Loved"));
         row_box.append(&heart);

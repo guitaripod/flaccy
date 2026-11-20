@@ -14,7 +14,7 @@ use std::sync::Arc;
 pub fn page(ui: &Rc<Ui>) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title("Servers")
-        .icon_name("network-server-symbolic")
+        .icon_name("flaccy-server-symbolic")
         .build();
     page.add(&crate::ui::flaccy_server::group(ui));
     page.add(&servers_group(ui));
@@ -31,7 +31,7 @@ fn servers_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let refresh_all = gtk::Button::builder()
         .child(
             &adw::ButtonContent::builder()
-                .icon_name("view-refresh-symbolic")
+                .icon_name("flaccy-refresh-symbolic")
                 .label("Refresh")
                 .build(),
         )
@@ -46,7 +46,7 @@ fn servers_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let add = gtk::Button::builder()
         .child(
             &adw::ButtonContent::builder()
-                .icon_name("list-add-symbolic")
+                .icon_name("flaccy-add-symbolic")
                 .label("Add Server…")
                 .build(),
         )
@@ -119,7 +119,7 @@ fn server_row(ui: &Rc<Ui>, remote: &Arc<Remote>, server: &Server, songs: usize) 
             server.address
         )))
         .build();
-    row.add_prefix(&gtk::Image::from_icon_name("network-server-symbolic"));
+    row.add_prefix(&gtk::Image::from_icon_name("flaccy-server-symbolic"));
 
     let test = gtk::Button::builder()
         .label("Test")
@@ -127,9 +127,9 @@ fn server_row(ui: &Rc<Ui>, remote: &Arc<Remote>, server: &Server, songs: usize) 
         .valign(gtk::Align::Center)
         .build();
     test.add_css_class("flat");
-    let refresh = icon_button("view-refresh-symbolic", "Pull this server's songs again");
-    let rename = icon_button("document-edit-symbolic", "Rename");
-    let delete = icon_button("user-trash-symbolic", "Remove");
+    let refresh = icon_button("flaccy-refresh-symbolic", "Pull this server's songs again");
+    let rename = icon_button("flaccy-edit-symbolic", "Rename");
+    let delete = icon_button("flaccy-trash-symbolic", "Remove");
     delete.add_css_class("destructive-action");
     for button in [&test, &refresh, &rename, &delete] {
         row.add_suffix(button);

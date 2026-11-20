@@ -41,10 +41,10 @@ pub fn template_hint(template: Template) -> &'static str {
 
 pub fn template_icon(template: Template) -> &'static str {
     match template {
-        Template::Spotlight => "format-justify-center-symbolic",
-        Template::Verse => "format-justify-left-symbolic",
-        Template::Poster => "image-x-generic-symbolic",
-        Template::Pulse => "media-playlist-repeat-symbolic",
+        Template::Spotlight => "flaccy-align-center-symbolic",
+        Template::Verse => "flaccy-align-left-symbolic",
+        Template::Poster => "flaccy-image-symbolic",
+        Template::Pulse => "flaccy-repeat-symbolic",
     }
 }
 

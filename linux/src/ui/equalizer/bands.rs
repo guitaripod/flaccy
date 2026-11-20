@@ -155,8 +155,8 @@ impl SimpleStrip {
                 entry.add_controller(focus);
             }
 
-            let up = stepper("pan-up-symbolic", "Raise 0.5 dB");
-            let down = stepper("pan-down-symbolic", "Lower 0.5 dB");
+            let up = stepper("flaccy-chevron-up-symbolic", "Raise 0.5 dB");
+            let down = stepper("flaccy-chevron-down-symbolic", "Lower 0.5 dB");
             {
                 let handler = Rc::clone(&handler);
                 up.connect_clicked(move |_| handler(BandEvent::Step { index, delta: 0.5 }));
@@ -281,10 +281,10 @@ impl BandTable {
         table.append(&header);
         table.append(&scroll);
 
-        let add = gtk::Button::from_icon_name("list-add-symbolic");
+        let add = gtk::Button::from_icon_name("flaccy-add-symbolic");
         add.set_tooltip_text(Some("Add band"));
         add.update_property(&[gtk::accessible::Property::Label("Add band")]);
-        let remove = gtk::Button::from_icon_name("list-remove-symbolic");
+        let remove = gtk::Button::from_icon_name("flaccy-remove-symbolic");
         remove.set_tooltip_text(Some("Remove band"));
         remove.update_property(&[gtk::accessible::Property::Label("Remove band")]);
         let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 0);
