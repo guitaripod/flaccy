@@ -37,7 +37,7 @@ final class DebugWindowFrame: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .darkGray
-        content.traitOverrides.horizontalSizeClass = size.width >= 520 ? .regular : .compact
+        content.traitOverrides.horizontalSizeClass = size.width >= 640 ? .regular : .compact
         addChild(content)
         view.addSubview(content.view)
         content.didMove(toParent: self)

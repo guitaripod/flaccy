@@ -529,8 +529,10 @@ enum DemoRouter {
         guard CommandLine.arguments.contains(ScreenshotSeeder.launchArgument),
               let route = DemoMode.environment["FLACCY_ROUTE"], !route.isEmpty else { return }
         Task {
-            if DemoMode.environment["FLACCY_LANDSCAPE"] == "1" {
-                window.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) // duo-audit:ignore DEBUG-only demo flag that rotates the scene for captures
+            switch DemoMode.environment["FLACCY_LANDSCAPE"] {
+            case "1": window.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) // duo-audit:ignore DEBUG-only demo flag that rotates the scene for captures
+            case "0": window.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) // duo-audit:ignore DEBUG-only demo flag that turns a capture simulator back upright
+            default: break
             }
             await waitForLibrary()
             try? await Task.sleep(for: .seconds(0.4))
