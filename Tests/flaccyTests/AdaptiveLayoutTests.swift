@@ -238,4 +238,20 @@ nonisolated final class AdaptiveLayoutTests: XCTestCase {
         )
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 669, height: 951), horizontalFold: nil), .portrait)
     }
+
+    @MainActor func testMiniOnItsSideTakesTurnsBetweenSidebarAndColumn() {
+        let sidebar: CGFloat = 280
+        XCTAssertFalse(AdaptiveLayout.columnFitsBesideSidebar(width: 1158, sidebarWidth: sidebar))
+        XCTAssertTrue(AdaptiveLayout.columnWaits(width: 1158, sidebarWidth: sidebar, turn: .sidebar))
+        XCTAssertFalse(AdaptiveLayout.columnWaits(width: 1158, sidebarWidth: sidebar, turn: .column))
+        XCTAssertFalse(AdaptiveLayout.columnWaits(width: 1158, sidebarWidth: 0, turn: .sidebar))
+        XCTAssertTrue(AdaptiveLayout.usesSplit(size: CGSize(width: 1158, height: 756), style: .column))
+    }
+
+    @MainActor func testLargerIPadsKeepTheSidebarBesideTheColumn() {
+        XCTAssertTrue(AdaptiveLayout.columnFitsBesideSidebar(width: 1194, sidebarWidth: 280))
+        XCTAssertTrue(AdaptiveLayout.columnFitsBesideSidebar(width: 1210, sidebarWidth: 280))
+        XCTAssertTrue(AdaptiveLayout.columnFitsBesideSidebar(width: 1376, sidebarWidth: 300))
+        XCTAssertFalse(AdaptiveLayout.columnWaits(width: 1210, sidebarWidth: 280, turn: .sidebar))
+    }
 }

@@ -41,6 +41,10 @@ final class PadSidebar: NSObject {
     /// Library's segmented picker, with true while it does.
     var onShowsPivotsChange: ((Bool) -> Void)?
 
+    /// Called once the sidebar has finished coming out (true) or going away,
+    /// with its docked width already applied to the content.
+    var onSidebarVisibilityChange: ((Bool) -> Void)?
+
     init(tabs: AppTabBarController) {
         self.tabs = tabs
         let pivots = LibraryViewModel.Segment.allCases.map { segment in
@@ -280,7 +284,10 @@ extension PadSidebar: UITabBarController.Sidebar.Delegate {
         animator: any UITabBarController.Sidebar.Animating
     ) {
         animator.addAnimations { [weak self] in self?.notifyPivotPlacement() }
-        animator.addCompletion { [weak self] in self?.notifyPivotPlacement() }
+        animator.addCompletion { [weak self] in
+            self?.notifyPivotPlacement()
+            self?.onSidebarVisibilityChange?(!sidebar.isHidden)
+        }
     }
 
     @available(iOS 27.0, *)

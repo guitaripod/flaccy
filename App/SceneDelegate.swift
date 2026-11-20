@@ -269,6 +269,8 @@ final class RootContainerViewController: UIViewController {
     private var isPlayerFocused = false
     private var isAnimatingColumn = false
     private var resize: (started: CFTimeInterval, target: CGSize)?
+    private var sideTurn: AdaptiveLayout.SideTurn = .sidebar
+    private var sidebarSteppedBack = false
 
     override var childForStatusBarStyle: UIViewController? { statusBarSource }
 
@@ -343,6 +345,9 @@ final class RootContainerViewController: UIViewController {
         ])
         applyCompactLayout()
         raiseDebutAbovePlayer()
+        navigation.padSidebar?.onSidebarVisibilityChange = { [weak self] visible in
+            self?.sidebarVisibilityDidChange(visible: visible)
+        }
     }
 
     /// The Debut is added to this view while the content loads, before the
@@ -399,6 +404,10 @@ final class RootContainerViewController: UIViewController {
         guard AdaptiveLayout.showsPlayerPane(size: size, style: style, hasTrack: hasCurrentTrack, isShown: shown) else {
             return nil
         }
+        if style == .column,
+           AdaptiveLayout.columnWaits(width: size.width, sidebarWidth: dockedSidebarWidth, turn: sideTurn) {
+            return nil
+        }
         return AdaptiveLayout.splitGeometry(width: size.width, division: view.divisionRegionFrame, style: style)
     }
 
@@ -406,6 +415,66 @@ final class RootContainerViewController: UIViewController {
     /// not, so the controls that show and hide it know when they mean something.
     var canShowPlayerColumn: Bool {
         splitStyle == .column && hasCurrentTrack && AdaptiveLayout.usesSplit(size: view.bounds.size, style: .column)
+    }
+
+    /// Whether the Now Playing column is on screen beside the library.
+    var showsPlayerColumn: Bool {
+        isSplit && splitStyle == .column
+    }
+
+    /// The width a docked sidebar takes from the library: how far the tabs'
+    /// content is inset on its leading side beyond the window's own inset.
+    /// Nothing while the sidebar is hidden or floats over the content.
+    private var dockedSidebarWidth: CGFloat {
+        guard let content = navigation.selectedViewController?.viewIfLoaded,
+              navigation.padSidebar?.showsPivots == true else { return 0 }
+        let leading = view.effectiveUserInterfaceLayoutDirection == .rightToLeft
+            ? content.safeAreaInsets.right - navigation.additionalSafeAreaInsets.right - view.safeAreaInsets.right
+            : content.safeAreaInsets.left - view.safeAreaInsets.left
+        return max(leading, 0)
+    }
+
+    /// The person asked for the Now Playing column, from the mini player, the
+    /// menu bar or the keyboard: it takes the turn, and a docked sidebar that
+    /// would leave the library too narrow beside it steps back until the
+    /// column goes again.
+    func giveColumnTheTurn() {
+        sideTurn = .column
+        if !AdaptiveLayout.columnFitsBesideSidebar(width: view.bounds.width, sidebarWidth: dockedSidebarWidth) {
+            setSidebarHidden(true)
+            sidebarSteppedBack = true
+        }
+        PlayerColumnSetting.setShown(true)
+        refreshColumn(animated: true)
+    }
+
+    /// The sidebar finished coming out or going away. Out, it takes the turn,
+    /// and a column that would leave the library too narrow beside it steps
+    /// back for the mini player; away, it leaves the column room. The sidebar
+    /// stepping back or returning for the column ends up here too, which
+    /// changes nothing: the turn it reports is the one it was moved for.
+    private func sidebarVisibilityDidChange(visible: Bool) {
+        MidgarLog.debug("Sidebar \(visible ? "came out" : "went away"), docked width \(dockedSidebarWidth)", category: .ui)
+        if visible {
+            sideTurn = .sidebar
+            sidebarSteppedBack = false
+        }
+        refreshColumn(animated: true)
+    }
+
+    private func setSidebarHidden(_ hidden: Bool) {
+        guard navigation.padSidebar != nil, navigation.sidebar.isHidden != hidden else { return }
+        navigation.sidebar.isHidden = hidden
+        MidgarLog.debug("Sidebar \(hidden ? "stepped back for" : "came back after") the Now Playing column", category: .ui)
+    }
+
+    /// A sidebar that stepped back for the column comes out again once the
+    /// column goes, because the person hid it or the queue ran out.
+    private func returnSidebarIfSteppedBack() {
+        guard sidebarSteppedBack else { return }
+        sidebarSteppedBack = false
+        sideTurn = .sidebar
+        setSidebarHidden(false)
     }
 
     @objc private func playerColumnSettingDidChange() {
@@ -427,6 +496,7 @@ final class RootContainerViewController: UIViewController {
         guard animated, !UIAccessibility.isReduceMotionEnabled else {
             view.setNeedsLayout()
             view.layoutIfNeeded()
+            if !isSplit { returnSidebarIfSteppedBack() }
             return
         }
         let width = view.bounds.width
@@ -452,6 +522,7 @@ final class RootContainerViewController: UIViewController {
                 guard let self else { return }
                 self.isAnimatingColumn = false
                 self.applyCompactLayout()
+                self.returnSidebarIfSteppedBack()
                 self.view.setNeedsLayout()
             }
         }

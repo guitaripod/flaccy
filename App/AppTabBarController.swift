@@ -59,12 +59,6 @@ final class AppTabBarController: UITabBarController {
         return mini
     }()
 
-    /// Whether the window could hold Now Playing as a column beside the
-    /// library right now; asked by the mini player's menu.
-    private var canShowPlayerColumn: Bool {
-        (parent as? RootContainerViewController)?.canShowPlayerColumn == true
-    }
-
     init() {
         home = HomeViewController(libraryViewModel: library.viewModel, library: library)
         search = SearchViewController(libraryViewModel: library.viewModel)
@@ -260,12 +254,14 @@ extension AppTabBarController: UIContextMenuInteractionDelegate {
     func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint
     ) -> UIContextMenuConfiguration? {
-        guard canShowPlayerColumn, !PlayerColumnSetting.isShown else { return nil }
-        return UIContextMenuConfiguration(actionProvider: { _ in
+        guard let root = parent as? RootContainerViewController, root.canShowPlayerColumn, !root.showsPlayerColumn else {
+            return nil
+        }
+        return UIContextMenuConfiguration(actionProvider: { [weak root] _ in
             UIMenu(children: [
                 UIAction(title: String(localized: "Now Playing Column"), image: UIImage(systemName: "sidebar.trailing")) { _ in
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    PlayerColumnSetting.setShown(true)
+                    root?.giveColumnTheTurn()
                 },
             ])
         })

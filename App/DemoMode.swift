@@ -549,6 +549,18 @@ enum DemoRouter {
                 try? await Task.sleep(for: .seconds(0.4))
                 tabs.sidebar.isHidden = false
             }
+            if DemoMode.environment["FLACCY_COLUMN"] == "1" {
+                try? await Task.sleep(for: .seconds(1.2))
+                (tabs.parent as? RootContainerViewController)?.giveColumnTheTurn()
+            }
+            if DemoMode.environment["FLACCY_SIDEBAR_LATER"] == "1" {
+                try? await Task.sleep(for: .seconds(2.5))
+                tabs.sidebar.isHidden = false
+            }
+            if DemoMode.environment["FLACCY_HIDE_COLUMN_LATER"] == "1" {
+                try? await Task.sleep(for: .seconds(2.5))
+                PlayerColumnSetting.setShown(false)
+            }
             if let scroll = Double(DemoMode.environment["FLACCY_HOME_SCROLL"] ?? "") {
                 try? await Task.sleep(for: .seconds(1.2))
                 tabs.home.demoScroll(fraction: CGFloat(scroll))

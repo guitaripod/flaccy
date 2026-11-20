@@ -72,7 +72,7 @@ final class AppCommandTarget {
         case #selector(AppDelegate.flaccyToggleLove(_:)):
             return player.currentTrack.map { LovedTracksService.shared.isLoved(track: $0) } ?? false
         case #selector(AppDelegate.flaccyTogglePlayerColumn(_:)):
-            return root?.canShowPlayerColumn == true && PlayerColumnSetting.isShown
+            return root?.showsPlayerColumn == true
         default: return false
         }
     }
@@ -122,9 +122,15 @@ final class AppCommandTarget {
         player?.toggleFullPlayer()
     }
 
+    /// Puts the Now Playing column away when it is on screen, and otherwise
+    /// brings it out, a column waiting for its turn beside the sidebar included.
     func togglePlayerColumn() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        PlayerColumnSetting.setShown(!PlayerColumnSetting.isShown)
+        if root?.showsPlayerColumn == true {
+            PlayerColumnSetting.setShown(false)
+        } else {
+            root?.giveColumnTheTurn()
+        }
     }
 
     func togglePlayPause() {

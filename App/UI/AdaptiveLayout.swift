@@ -40,10 +40,37 @@ enum AdaptiveLayout {
     static let homeWideMinimumWidth: CGFloat = 760
     static let homeWideJumpColumns = 3
 
+    static let columnLibraryBesideSidebarMinimum: CGFloat = 540
+
     /// Whether Home has room for its iPad-class arrangement, judged from the
     /// width its own content area was given, never from the device.
     static func homeIsWide(contentWidth: CGFloat) -> Bool {
         contentWidth >= homeWideMinimumWidth
+    }
+
+    /// Whether the library keeps `columnLibraryBesideSidebarMinimum` between a
+    /// docked sidebar `sidebarWidth` wide and the Now Playing column. A 13-inch
+    /// or an 11-inch held sideways keeps it; an iPad mini on its side leaves
+    /// the library about 520 pt there, the middle of three crowded panes.
+    static func columnFitsBesideSidebar(width: CGFloat, sidebarWidth: CGFloat) -> Bool {
+        guard sidebarWidth > 0 else { return true }
+        return width - sidebarWidth - playerColumnWidth(forWidth: width) >= columnLibraryBesideSidebarMinimum
+    }
+
+    /// Which of the two side panes has the room when a docked sidebar and the
+    /// Now Playing column cannot both stand beside the library: the one the
+    /// person brought out last.
+    enum SideTurn: Equatable {
+        case sidebar
+        case column
+    }
+
+    /// Whether the Now Playing column waits for its turn in a window that
+    /// could otherwise show it: only while a docked sidebar would leave the
+    /// library too narrow beside it and the sidebar has the turn. The mini
+    /// player carries playback meanwhile.
+    static func columnWaits(width: CGFloat, sidebarWidth: CGFloat, turn: SideTurn) -> Bool {
+        turn == .sidebar && !columnFitsBesideSidebar(width: width, sidebarWidth: sidebarWidth)
     }
 
     /// How a window that holds the library beside Now Playing divides. A
