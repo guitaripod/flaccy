@@ -26,7 +26,9 @@ public enum TrackOrdering {
     /// non-zero track number appears more than once the release is multi-disc,
     /// and the file path (e.g. `a1, a2, b1` or `1-01, 2-01`) is the only
     /// reliable ordering signal, natural-sorted so numeric runs compare by
-    /// value rather than lexically.
+    /// value rather than lexically. Each item's sort key is folded once, not
+    /// once per comparison: restoring a library orders every album this way
+    /// while it holds the database.
     public static func ordered<T>(
         _ items: [T],
         number: (T) -> Int,
@@ -34,16 +36,19 @@ public enum TrackOrdering {
         title: (T) -> String
     ) -> [T] {
         if isMultiDisc(items, number: number) {
-            return stableSorted(items) {
-                naturalCompare(path($0).lowercased(), path($1).lowercased()) == .orderedAscending
-            }
+            let keys = items.map { Array(path($0).lowercased().unicodeScalars) }
+            return stableSorted(items, keys: keys, by: naturalCompare)
         }
-        return stableSorted(items) { lhs, rhs in
-            let ln = number(lhs)
-            let rn = number(rhs)
-            if ln != rn { return ln < rn }
-            return lexicographicScalarCompare(title(lhs).lowercased(), title(rhs).lowercased()) == .orderedAscending
+        let keys = items.map { NumberedTitle(number: number($0), title: Array(title($0).lowercased().unicodeScalars)) }
+        return stableSorted(items, keys: keys) { lhs, rhs in
+            if lhs.number != rhs.number { return lhs.number < rhs.number ? .orderedAscending : .orderedDescending }
+            return lexicographicScalarCompare(lhs.title, rhs.title)
         }
+    }
+
+    private struct NumberedTitle {
+        let number: Int
+        let title: [Unicode.Scalar]
     }
 
     /// Splits already-ordered items into physical disc/side sections when every
@@ -152,8 +157,10 @@ public enum TrackOrdering {
     /// Compares two strings so that embedded digit runs order by numeric value
     /// (`track2` before `track10`) while everything else compares by scalar.
     static func naturalCompare(_ a: String, _ b: String) -> ComparisonResult {
-        let av = Array(a.unicodeScalars)
-        let bv = Array(b.unicodeScalars)
+        naturalCompare(Array(a.unicodeScalars), Array(b.unicodeScalars))
+    }
+
+    private static func naturalCompare(_ av: [Unicode.Scalar], _ bv: [Unicode.Scalar]) -> ComparisonResult {
         var i = 0
         var j = 0
         while true {
@@ -164,20 +171,16 @@ public enum TrackOrdering {
             let ac = av[i]
             let bc = bv[j]
             if isAsciiDigit(ac), isAsciiDigit(bc) {
-                var an = String.UnicodeScalarView()
-                while i < av.count, isAsciiDigit(av[i]) {
-                    an.append(av[i])
-                    i += 1
-                }
-                var bn = String.UnicodeScalarView()
-                while j < bv.count, isAsciiDigit(bv[j]) {
-                    bn.append(bv[j])
-                    j += 1
-                }
+                let aStart = i
+                while i < av.count, isAsciiDigit(av[i]) { i += 1 }
+                let bStart = j
+                while j < bv.count, isAsciiDigit(bv[j]) { j += 1 }
+                let an = av[aStart..<i]
+                let bn = bv[bStart..<j]
                 let aLen = trimmedZeroLength(an)
                 let bLen = trimmedZeroLength(bn)
                 if aLen != bLen { return aLen < bLen ? .orderedAscending : .orderedDescending }
-                let ord = lexicographicScalarCompare(String(an), String(bn))
+                let ord = lexicographicScalarCompare(an, bn)
                 if ord != .orderedSame { return ord }
             } else {
                 if ac != bc { return ac.value < bc.value ? .orderedAscending : .orderedDescending }
@@ -188,20 +191,26 @@ public enum TrackOrdering {
     }
 
     static func lexicographicScalarCompare(_ a: String, _ b: String) -> ComparisonResult {
-        let av = Array(a.unicodeScalars)
-        let bv = Array(b.unicodeScalars)
-        var i = 0
-        while i < av.count, i < bv.count {
-            if av[i].value != bv[i].value {
-                return av[i].value < bv[i].value ? .orderedAscending : .orderedDescending
-            }
-            i += 1
-        }
-        if av.count == bv.count { return .orderedSame }
-        return av.count < bv.count ? .orderedAscending : .orderedDescending
+        lexicographicScalarCompare(Array(a.unicodeScalars), Array(b.unicodeScalars))
     }
 
-    private static func trimmedZeroLength(_ scalars: String.UnicodeScalarView) -> Int {
+    private static func lexicographicScalarCompare<Scalars: Collection<Unicode.Scalar>>(
+        _ a: Scalars, _ b: Scalars
+    ) -> ComparisonResult {
+        var ai = a.startIndex
+        var bi = b.startIndex
+        while ai != a.endIndex, bi != b.endIndex {
+            if a[ai].value != b[bi].value {
+                return a[ai].value < b[bi].value ? .orderedAscending : .orderedDescending
+            }
+            a.formIndex(after: &ai)
+            b.formIndex(after: &bi)
+        }
+        if ai == a.endIndex, bi == b.endIndex { return .orderedSame }
+        return ai == a.endIndex ? .orderedAscending : .orderedDescending
+    }
+
+    private static func trimmedZeroLength(_ scalars: ArraySlice<Unicode.Scalar>) -> Int {
         var leadingZeros = 0
         for scalar in scalars {
             if scalar == "0" { leadingZeros += 1 } else { break }
@@ -217,13 +226,19 @@ public enum TrackOrdering {
         (scalar.value >= 65 && scalar.value <= 90) || (scalar.value >= 97 && scalar.value <= 122)
     }
 
-    private static func stableSorted<T>(_ items: [T], _ areInIncreasingOrder: (T, T) -> Bool) -> [T] {
-        items.enumerated()
+    /// `items` ordered by their precomputed `keys`, equal keys keeping the
+    /// order they came in.
+    private static func stableSorted<T, Key>(
+        _ items: [T], keys: [Key], by compare: (Key, Key) -> ComparisonResult
+    ) -> [T] {
+        items.indices
             .sorted { lhs, rhs in
-                if areInIncreasingOrder(lhs.element, rhs.element) { return true }
-                if areInIncreasingOrder(rhs.element, lhs.element) { return false }
-                return lhs.offset < rhs.offset
+                switch compare(keys[lhs], keys[rhs]) {
+                case .orderedAscending: true
+                case .orderedDescending: false
+                case .orderedSame: lhs < rhs
+                }
             }
-            .map(\.element)
+            .map { items[$0] }
     }
 }

@@ -69,10 +69,15 @@ extension DatabaseManager {
 
     /// Fetches every track without the artwork BLOB column so full-library reads stay lean;
     /// `artworkData` decodes as nil. Use `fetchAlbumArtwork(title:artist:)` for images.
+    /// Every track without its artwork. Only copying the rows holds the
+    /// database; decoding them into records, the slow part on a library of
+    /// twelve thousand songs, happens after it is released, so the Library's
+    /// launch read does not keep Home's covers waiting.
     public func fetchAllTracks() throws -> [TrackRecord] {
-        try dbQueue.read { db in
-            try TrackRecord.fetchAll(db, TrackRecord.select(Self.trackColumnsWithoutArtwork))
+        let rows = try dbQueue.read { db in
+            try Row.fetchAll(db, TrackRecord.select(Self.trackColumnsWithoutArtwork))
         }
+        return try rows.map { try TrackRecord(row: $0) }
     }
 
     private static let trackColumnsWithoutArtworkOrVersion: [Column] = [

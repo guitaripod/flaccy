@@ -65,8 +65,12 @@ extension DatabaseManager {
     /// The table stores each cover ahead of the year and genre, so reading them
     /// from the rows walks every cover's overflow pages, about 150 MB for a
     /// thousand albums on a cold launch.
+    ///
+    /// Only the two reads hold the database; grouping and ordering twelve
+    /// thousand songs happens after it is released, so a launch's other reads
+    /// (Home's covers among them) are not kept waiting behind the sort.
     public func fetchAlbumsWithTracksLightweight() throws -> [(album: AlbumInfoRecord?, tracks: [LightTrackRecord])] {
-        try dbQueue.read { db in
+        let (allTracks, albumInfoByKey) = try dbQueue.read { db in
             let columns: [Column] = [
                 Column("id"), Column("fileURL"), Column("title"), Column("artist"),
                 Column("albumTitle"), Column("albumArtist"), Column("trackNumber"), Column("duration"),
@@ -104,41 +108,47 @@ extension DatabaseManager {
                 let key = "\(info.title)\0\(info.artist)"
                 albumInfoByKey[key] = info
             }
+            return (allTracks, albumInfoByKey)
+        }
+        return Self.groupedAlbums(allTracks, albumInfoByKey: albumInfoByKey)
+    }
 
-            var groupKeys: [String: String] = [:]
-            var order: [String] = []
-            var map: [String: [LightTrackRecord]] = [:]
-            for track in allTracks {
-                let spelling = track.albumTitle + "\u{0}" + track.credit
-                let groupKey = groupKeys[spelling] ?? Self.albumGroupingKey(albumTitle: track.albumTitle, credit: track.credit)
-                groupKeys[spelling] = groupKey
-                if map[groupKey] == nil { order.append(groupKey) }
-                map[groupKey, default: []].append(track)
-            }
+    private static func groupedAlbums(
+        _ allTracks: [LightTrackRecord], albumInfoByKey: [String: AlbumInfoRecord]
+    ) -> [(album: AlbumInfoRecord?, tracks: [LightTrackRecord])] {
+        var groupKeys: [String: String] = [:]
+        var order: [String] = []
+        var map: [String: [LightTrackRecord]] = [:]
+        for track in allTracks {
+            let spelling = track.albumTitle + "\u{0}" + track.credit
+            let groupKey = groupKeys[spelling] ?? Self.albumGroupingKey(albumTitle: track.albumTitle, credit: track.credit)
+            groupKeys[spelling] = groupKey
+            if map[groupKey] == nil { order.append(groupKey) }
+            map[groupKey, default: []].append(track)
+        }
 
-            var leads: [String: String] = [:]
-            func lead(_ credit: String) -> String {
-                if let known = leads[credit] { return known }
-                let primary = LibraryHygiene.primaryArtist(credit)
-                leads[credit] = primary
-                return primary
-            }
+        var leads: [String: String] = [:]
+        func lead(_ credit: String) -> String {
+            if let known = leads[credit] { return known }
+            let primary = LibraryHygiene.primaryArtist(credit)
+            leads[credit] = primary
+            return primary
+        }
 
-            return order.compactMap { groupKey in
-                guard let tracks = map[groupKey], !tracks.isEmpty else { return nil }
-                let displayTitle = Self.majorityValue(tracks.map(\.albumTitle))
-                let displayArtist = Self.majorityValue(tracks.map { lead($0.credit) })
-                let orderedTracks = TrackOrdering.ordered(
-                    tracks,
-                    number: { $0.trackNumber },
-                    path: { $0.fileURL },
-                    title: { $0.title }
-                )
-                let albumInfo = Self.albumInfo(
-                    title: displayTitle, credit: displayArtist, tracks: tracks, rows: albumInfoByKey
-                )
-                return (album: albumInfo, tracks: orderedTracks)
-            }
+        return order.compactMap { groupKey in
+            guard let tracks = map[groupKey], !tracks.isEmpty else { return nil }
+            let displayTitle = Self.majorityValue(tracks.map(\.albumTitle))
+            let displayArtist = Self.majorityValue(tracks.map { lead($0.credit) })
+            let orderedTracks = TrackOrdering.ordered(
+                tracks,
+                number: { $0.trackNumber },
+                path: { $0.fileURL },
+                title: { $0.title }
+            )
+            let albumInfo = Self.albumInfo(
+                title: displayTitle, credit: displayArtist, tracks: tracks, rows: albumInfoByKey
+            )
+            return (album: albumInfo, tracks: orderedTracks)
         }
     }
 

@@ -85,4 +85,59 @@ final class TrackOrderingTests: XCTestCase {
     func testTitlePrefixDashDoesNotMatchDisc() {
         XCTAssertNil(TrackOrdering.discLabel("03-title.flac"))
     }
+
+    func testOrderingWithKeysFoldedOnceMatchesComparingStringsEachTime() {
+        var generator = SeededGenerator(seed: 20_261_120)
+        let pieces = ["a", "B", "cd", "Disc 1/", "CD2/", "0", "01", "1", "10", "2", "-", "_", " ", "é", "É", "ß", "track", "Side"]
+        for round in 0..<400 {
+            let count = 1 + round % 23
+            let rows = (0..<count).map { _ in
+                Row(
+                    path: (0..<Int.random(in: 1...6, using: &generator)).map { _ in pieces.randomElement(using: &generator)! }.joined(),
+                    number: Int.random(in: 0...(round.isMultiple(of: 2) ? 4 : 40), using: &generator),
+                    title: (0..<Int.random(in: 0...4, using: &generator)).map { _ in pieces.randomElement(using: &generator)! }.joined()
+                )
+            }
+            XCTAssertEqual(ordered(rows).map(\.path), referenceOrdered(rows).map(\.path), "round \(round)")
+            XCTAssertEqual(ordered(rows).map(\.title), referenceOrdered(rows).map(\.title), "round \(round)")
+        }
+    }
+
+    /// The ordering as it was written before its keys were folded once per
+    /// item: every comparison lowercases and compares the strings again.
+    private func referenceOrdered(_ rows: [Row]) -> [Row] {
+        let less: (Row, Row) -> Bool
+        if TrackOrdering.isMultiDisc(rows, number: { $0.number }) {
+            less = { TrackOrdering.naturalCompare($0.path.lowercased(), $1.path.lowercased()) == .orderedAscending }
+        } else {
+            less = { lhs, rhs in
+                if lhs.number != rhs.number { return lhs.number < rhs.number }
+                return TrackOrdering.lexicographicScalarCompare(lhs.title.lowercased(), rhs.title.lowercased()) == .orderedAscending
+            }
+        }
+        return rows.enumerated()
+            .sorted { lhs, rhs in
+                if less(lhs.element, rhs.element) { return true }
+                if less(rhs.element, lhs.element) { return false }
+                return lhs.offset < rhs.offset
+            }
+            .map(\.element)
+    }
+}
+
+private struct SeededGenerator: RandomNumberGenerator {
+
+    private var state: UInt64
+
+    init(seed: UInt64) {
+        state = seed
+    }
+
+    mutating func next() -> UInt64 {
+        state &+= 0x9e37_79b9_7f4a_7c15
+        var mixed = state
+        mixed = (mixed ^ (mixed >> 30)) &* 0xbf58_476d_1ce4_e5b9
+        mixed = (mixed ^ (mixed >> 27)) &* 0x94d0_49bb_1331_11eb
+        return mixed ^ (mixed >> 31)
+    }
 }
