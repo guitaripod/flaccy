@@ -33,7 +33,7 @@ final class AboutSettingsPane: SettingsPane {
         header.alignment = .centerX
         header.spacing = 6
         formStack.addArrangedSubview(header)
-        header.widthAnchor.constraint(equalTo: formStack.widthAnchor, constant: -56).isActive = true
+        header.widthAnchor.constraint(equalTo: formStack.widthAnchor, constant: -Self.fullWidthInset).isActive = true
 
         formStack.addArrangedSubview(separator())
         addFullWidth(explanation(String(localized: "Built with GRDB (SQLite), lyrics from lrclib.net, universal links by Songlink/Odesli, and scrobbling via the Last.fm API.")))

@@ -125235,6 +125235,106 @@
         }
       }
     },
+    "No setting matches. Check the spelling or search for fewer words.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen indstilling matcher. Tjek stavningen, eller søg med færre ord."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Einstellung passt. Prüfe die Schreibweise oder suche mit weniger Wörtern."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No setting matches. Check the spelling or search for fewer words."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ningún ajuste coincide. Revisa la ortografía o busca con menos palabras."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikään asetus ei täsmää. Tarkista kirjoitusasu tai hae harvemmilla sanoilla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun réglage ne correspond. Vérifiez l’orthographe ou cherchez avec moins de mots."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engin stilling passar. Athugaðu stafsetninguna eða leitaðu með færri orðum."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna impostazione corrisponde. Controlla l’ortografia o cerca con meno parole."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一致する設定がありません。つづりを確認するか、語数を減らして検索してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일치하는 설정이 없습니다. 철자를 확인하거나 더 적은 단어로 검색하세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen innstilling passer. Sjekk stavemåten, eller søk med færre ord."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Żadne ustawienie nie pasuje. Sprawdź pisownię lub wyszukaj mniej słów."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum ajuste corresponde. Confira a ortografia ou busque com menos palavras."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen inställning matchar. Kontrollera stavningen eller sök med färre ord."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有匹配的设置。请检查拼写，或用更少的词搜索。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有符合的設定。請檢查拼字，或用較少的字詞搜尋。"
+          }
+        }
+      }
+    },
     "No similar artists in your library yet.": {
       "localizations": {
         "da": {

@@ -294,6 +294,9 @@ enum DebugDrive {
             if let tabs = settingsWindow?.contentViewController as? SettingsTabViewController {
                 tabs.selectedTabViewItemIndex = paneIndex
             }
+            if let text = value(after: "--settings-search") {
+                (settingsWindow?.contentViewController as? SettingsTabViewController)?.debugSearch(text)
+            }
             try? await Task.sleep(for: .seconds(3))
             capture(window: settingsWindow, name: "flaccy-shot-settings-\(paneIndex)")
             return
