@@ -11,13 +11,19 @@ nonisolated struct RemoteCacheSidecar: Codable, Equatable, Sendable {
     var validator: String?
     var ranges: ByteRangeSet
     var lastUsed: Double
+    /// The download quality the server converted the file to, nil for the server's own file.
+    var conversion: String?
 
-    init(file: String, total: Int64?, validator: String? = nil, ranges: ByteRangeSet = ByteRangeSet(), lastUsed: Date) {
+    init(
+        file: String, total: Int64?, validator: String? = nil, ranges: ByteRangeSet = ByteRangeSet(), lastUsed: Date,
+        conversion: String? = nil
+    ) {
         self.file = file
         self.total = total
         self.validator = validator
         self.ranges = ranges
         self.lastUsed = lastUsed.timeIntervalSince1970
+        self.conversion = conversion
     }
 
     var lastUsedDate: Date {

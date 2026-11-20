@@ -80,7 +80,7 @@ enum RemoteDownloads {
 
     private nonisolated static func fetch(_ song: RemoteTrackPath) async -> String? {
         do {
-            try await RemoteStreamCache.shared.downloadComplete(song, pinnedFor: .user)
+            try await RemoteStreamCache.shared.download(song, quality: RemoteStreamCache.downloadQuality)
             return nil
         } catch is CancellationError {
             return String(localized: "The download was interrupted. Try again.")

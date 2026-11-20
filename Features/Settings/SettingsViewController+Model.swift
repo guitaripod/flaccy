@@ -135,7 +135,7 @@ extension SettingsViewController {
             case .aboutLegal: String(localized: "Built with GRDB (SQLite), lyrics from lrclib.net, universal links by Songlink/Odesli, and scrobbling via the Last.fm API.")
             case .playback: String(localized: "Gapless is exact on lossless files. MP3 and AAC files can keep tiny encoder gaps.")
             case .servers: String(localized: "Stream from Flaccy Server, Navidrome or another Subsonic server.")
-            case .serverCache: RemoteCopy.cacheFooter
+            case .serverCache: RemoteCopy.cacheFooter + " " + RemoteCopy.downloadQualityFooter
             default: nil
             }
         }
@@ -175,6 +175,7 @@ extension SettingsViewController {
         case server(RemoteServerRow)
         case addFlaccyServer
         case addServer
+        case downloadQuality(RemoteDownloadQuality)
         case cacheLimit
         case cacheUsage(String)
         case clearCache

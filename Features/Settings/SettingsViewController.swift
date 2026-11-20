@@ -290,7 +290,7 @@ final class SettingsViewController: UITableViewController {
         case .library: librarySections()
         case .servers: [
             (.servers, serverRows()),
-            (.serverCache, serversModel.rows.isEmpty ? [] : [.cacheLimit, .cacheUsage(serversModel.cacheCaption), .clearCache]),
+            (.serverCache, serversModel.rows.isEmpty ? [] : [.downloadQuality(serversModel.downloadQuality), .cacheLimit, .cacheUsage(serversModel.cacheCaption), .clearCache]),
         ]
         case .lastFM: [(.lastFM, lastFMRows())]
         case .about: [
@@ -541,7 +541,7 @@ final class SettingsViewController: UITableViewController {
         switch row {
         case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
-             .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
+             .downloadQuality, .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
             return false
         case .playerButtons(let isCustom): return isCustom
         case .server(let server): return server.flaccy != nil
@@ -584,7 +584,7 @@ final class SettingsViewController: UITableViewController {
         case .clearCache: handleClearCacheTap()
         case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
-             .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
+             .downloadQuality, .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
             break
         }
     }

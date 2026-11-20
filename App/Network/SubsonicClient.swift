@@ -81,6 +81,7 @@ actor SubsonicClient {
     private let streams: SubsonicStreamSession
 
     private static let requestTimeout: TimeInterval = 30
+    private static let conversionTimeout: TimeInterval = 180
     private static let songPageParameters: [(String, String)] = [
         ("query", ""), ("artistCount", "0"), ("albumCount", "0"),
     ]
@@ -230,6 +231,34 @@ actor SubsonicClient {
                 throw RemoteFailure.httpStatus((response as? HTTPURLResponse)?.statusCode ?? 0, host: host)
             }
             return location
+        } catch let error as URLError where pinning?.refusedKey(explaining: error) == true {
+            throw RemoteFailure.keyChanged(host: host)
+        } catch let error as URLError {
+            throw RemoteFailure(transport: error, host: host)
+        }
+    }
+
+    /// Downloads a song converted by the server into a temporary file, with the media type the
+    /// server sent it as. A conversion is written whole before its first byte on a Flaccy Server,
+    /// so the wait for it is longer than for a call.
+    func convertedDownload(id: String, parameters: [(String, String)]) async throws -> (file: URL, contentType: String?) {
+        var request = URLRequest(url: signedURL("stream", [("id", id)] + parameters))
+        request.timeoutInterval = Self.conversionTimeout
+        do {
+            let (location, response) = try await session.download(for: request)
+            let http = response as? HTTPURLResponse
+            guard let status = http?.statusCode, (200..<300).contains(status) else {
+                try? FileManager.default.removeItem(at: location)
+                throw RemoteFailure.httpStatus(http?.statusCode ?? 0, host: host)
+            }
+            if response.mimeType == "application/json" || response.mimeType?.hasSuffix("/xml") == true {
+                defer { try? FileManager.default.removeItem(at: location) }
+                let envelope = try SubsonicResponse.decode(Data(contentsOf: location))
+                throw RemoteFailure(
+                    subsonic: envelope.failure ?? .other(0), code: envelope.error?.code, message: envelope.error?.message, host: host
+                )
+            }
+            return (location, http?.value(forHTTPHeaderField: "Content-Type"))
         } catch let error as URLError where pinning?.refusedKey(explaining: error) == true {
             throw RemoteFailure.keyChanged(host: host)
         } catch let error as URLError {

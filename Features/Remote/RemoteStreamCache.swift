@@ -30,6 +30,14 @@ actor RemoteStreamCache {
         set { UserDefaults.standard.set(newValue, forKey: capKey) }
     }
 
+    static let downloadQualityKey = "flaccy.remote.downloadQuality"
+
+    /// The form the person's downloads are fetched in: AAC at 256 kbps unless they chose otherwise.
+    nonisolated static var downloadQuality: RemoteDownloadQuality {
+        get { RemoteDownloadQuality(storedName: UserDefaults.standard.string(forKey: downloadQualityKey)) }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: downloadQualityKey) }
+    }
+
     nonisolated let cachesRoot: URL
     nonisolated let pinnedRoot: URL
 
@@ -194,6 +202,41 @@ actor RemoteStreamCache {
         return entry.audioURL
     }
 
+    /// Keeps a song the person asked to download, in `quality`. A song already kept whole stays
+    /// as it is; a converted copy comes from the server's `stream` conversion and replaces any
+    /// cached copy, and a server that cannot convert gets the original file downloaded instead.
+    @discardableResult
+    func download(_ song: RemoteTrackPath, quality: RemoteDownloadQuality) async throws -> URL {
+        let entry = try entry(for: song)
+        if entry.isPinned, entry.sidecar.isComplete {
+            try await pin(song, reason: .user)
+            return entry.audioURL
+        }
+        discardCachedCopy(of: entry, unlessConvertedTo: quality)
+        let serverType = try? await RemoteServers.shared.server(id: song.serverID)?.serverType
+        guard let parameters = quality.streamParameters(serverType: serverType) else {
+            return try await downloadComplete(song, pinnedFor: .user)
+        }
+        if let cached = entries[song.path], cached.sidecar.isComplete, cached.sidecar.conversion == quality.rawValue {
+            try await pin(song, reason: .user)
+            return cached.audioURL
+        }
+        let client = try await RemoteServers.shared.client(for: song.serverID)
+        let converted: (file: URL, contentType: String?)
+        do {
+            converted = try await client.convertedDownload(id: song.songID, parameters: parameters)
+        } catch RemoteFailure.server(let code, let message) {
+            RemoteLog.error("The server could not convert \(song.path) (\(code) \(message)); downloading the original")
+            return try await downloadComplete(song, pinnedFor: .user)
+        }
+        guard let suffix = RemoteDownloadQuality.convertedSuffix(contentType: converted.contentType) else {
+            try? FileManager.default.removeItem(at: converted.file)
+            RemoteLog.info("The server sent \(converted.contentType ?? "no type") for \(song.path) instead of AAC; downloading the original")
+            return try await downloadComplete(song, pinnedFor: .user)
+        }
+        return try install(converted.file, suffix: suffix, quality: quality, for: song)
+    }
+
     func pin(_ song: RemoteTrackPath, reason: RemotePinReason) async throws {
         let entry = try entry(for: song)
         entry.pinReasons.insert(reason)
@@ -257,7 +300,7 @@ actor RemoteStreamCache {
             guard let song = RemoteTrackPath(path: RemoteTrackPath.scheme + key) else { continue }
             if let entry = entries.removeValue(forKey: song.path) { drop(entry, failingWaitersWith: CancellationError()) }
             Self.removeFiles(of: song, in: cachesRoot)
-            RemoteAvailability.shared.setComplete(song.path, false)
+            RemoteAvailability.shared.setComplete(song.path, completeFileURL(for: song) != nil)
             RemoteLog.info("Cache evicted \(key)")
         }
     }
@@ -284,7 +327,7 @@ actor RemoteStreamCache {
         for song in songs where RemoteSongDirectory.shared.source(for: song)?.pinned == true {
             Task {
                 do {
-                    try await self.downloadComplete(song, pinnedFor: .user)
+                    try await self.download(song, quality: Self.downloadQuality)
                     RemoteLog.info("Downloaded the new version of \(song.path) again")
                 } catch is CancellationError {
                 } catch {
@@ -306,7 +349,7 @@ actor RemoteStreamCache {
             guard let song = RemoteTrackPath(path: RemoteTrackPath.scheme + item.key) else { continue }
             if let entry = entries.removeValue(forKey: song.path) { drop(entry, failingWaitersWith: CancellationError()) }
             Self.removeFiles(of: song, in: cachesRoot)
-            RemoteAvailability.shared.setComplete(song.path, false)
+            RemoteAvailability.shared.setComplete(song.path, completeFileURL(for: song) != nil)
             freed += item.bytes
         }
         RemoteLog.info("Cache cleared: \(freed) bytes")
@@ -514,6 +557,7 @@ extension RemoteStreamCache {
         do {
             try FileManager.default.createDirectory(at: destinationAudio.deletingLastPathComponent(), withIntermediateDirectories: true)
             if pinned { Self.excludeFromBackup(destinationAudio.deletingLastPathComponent()) }
+            Self.removeFiles(of: entry.song, in: root)
             try Self.move(entry.audioURL, to: destinationAudio)
             persistSidecar(entry.sidecar, at: destinationSidecar)
             try? FileManager.default.removeItem(at: entry.sidecarURL)
@@ -524,6 +568,58 @@ extension RemoteStreamCache {
         entry.sidecarURL = destinationSidecar
         entry.isPinned = pinned
         if !entry.demands.isEmpty { startFetchIfNeeded(entry) }
+    }
+
+    /// Lets go of a cached conversion that is not what a download in `quality` would keep, so
+    /// the download fetches the original or the other conversion instead of pinning it. A copy
+    /// something is still reading stays.
+    private func discardCachedCopy(of entry: Entry, unlessConvertedTo quality: RemoteDownloadQuality) {
+        let wanted = quality == .original ? nil : quality.rawValue
+        guard !entry.isPinned, let held = entry.sidecar.conversion, held != wanted,
+              entry.demands.isEmpty, entry.fetchTask == nil
+        else { return }
+        entries[entry.song.path] = nil
+        drop(entry, failingWaitersWith: CancellationError())
+        Self.removeFiles(of: entry.song, in: cachesRoot)
+        RemoteAvailability.shared.setComplete(entry.song.path, completeFileURL(for: entry.song) != nil)
+    }
+
+    /// Puts a converted download in place as the song's kept file: whole, outside the cache
+    /// limit, and the file playback, lyrics and the watch read from now on. A copy that is
+    /// still being read keeps serving its reader and is left to the cache.
+    private func install(_ file: URL, suffix: String, quality: RemoteDownloadQuality, for song: RemoteTrackPath) throws -> URL {
+        let directory = RemoteCacheLayout.directory(in: pinnedRoot, song: song)
+        let fileName = song.escapedSongID + "." + suffix
+        let destination = directory.appendingPathComponent(fileName)
+        var reasons: Set<RemotePinReason> = [.user]
+        if let previous = entries.removeValue(forKey: song.path) {
+            reasons.formUnion(previous.pinReasons)
+            let idle = previous.demands.isEmpty && previous.fetchTask == nil
+            if idle { drop(previous, failingWaitersWith: CancellationError()) }
+            if previous.isPinned, previous.audioURL != destination { try? FileManager.default.removeItem(at: previous.audioURL) }
+            if idle { Self.removeFiles(of: song, in: cachesRoot) }
+        }
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            Self.excludeFromBackup(directory)
+            try Self.move(file, to: destination)
+        } catch {
+            try? FileManager.default.removeItem(at: file)
+            throw RemoteFailure.storage
+        }
+        let size = (try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
+        var ranges = ByteRangeSet()
+        ranges.insert(0..<size)
+        let sidecar = RemoteCacheSidecar(file: fileName, total: size, ranges: ranges, lastUsed: Date(), conversion: quality.rawValue)
+        let sidecarURL = RemoteCacheLayout.sidecarURL(in: pinnedRoot, song: song)
+        let entry = Entry(song: song, audioURL: destination, sidecarURL: sidecarURL, sidecar: sidecar, isPinned: true)
+        entry.pinReasons = reasons
+        entries[song.path] = entry
+        persist(entry)
+        markPinned(song, true)
+        RemoteAvailability.shared.setComplete(song.path, true)
+        RemoteLog.info("Downloaded \(song.path) as \(quality.rawValue), \(size) bytes")
+        return destination
     }
 
     private static func move(_ source: URL, to destination: URL) throws {

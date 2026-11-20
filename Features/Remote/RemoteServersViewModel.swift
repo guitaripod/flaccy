@@ -31,6 +31,14 @@ final class RemoteServersViewModel {
         }
     }
 
+    var downloadQuality: RemoteDownloadQuality {
+        get { RemoteStreamCache.downloadQuality }
+        set {
+            RemoteStreamCache.downloadQuality = newValue
+            RemoteLog.info("Download quality set to \(newValue.rawValue)")
+        }
+    }
+
     func start() {
         let center = NotificationCenter.default
         let names = [

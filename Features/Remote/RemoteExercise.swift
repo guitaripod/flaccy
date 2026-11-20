@@ -1,4 +1,5 @@
 #if DEBUG
+import AVFoundation
 import FlaccyCore
 import FlaccyEngine
 import Foundation
@@ -39,6 +40,9 @@ enum RemoteExercise {
 
     private static func run() async throws {
         if CommandLine.arguments.contains("--skip-keychain") { RemoteCredentialStore.shared.useMemoryBackend() }
+        let personsQuality = RemoteStreamCache.downloadQuality
+        RemoteStreamCache.downloadQuality = .original
+        defer { RemoteStreamCache.downloadQuality = personsQuality }
         try await Task.sleep(for: .seconds(3))
         let parts = (ProcessInfo.processInfo.environment[environmentKey] ?? "").components(separatedBy: "|")
         try expect(parts.count == 3, "the environment variable \(environmentKey) holds url|user|password")
@@ -86,6 +90,7 @@ enum RemoteExercise {
         try await pinAlbumAndCheck(containing: song, serverID: serverID)
         try await checkDownloadedNewVersionsComeBack(containing: song, client: client)
         try await checkDownloadEngine(containing: song, serverID: serverID)
+        try await checkConvertedDownload(track, song: song, client: client)
         try checkOfflineState(downloaded: song, others: remoteTracks, serverID: serverID)
         try await removeServerAndCheck(serverID: serverID, playlistID: playlistID)
         try? database.deletePlaylist(id: playlistID)
@@ -250,6 +255,52 @@ enum RemoteExercise {
             guard let member = RemoteTrackPath(path: path) else { continue }
             try expect(RemoteStreamCache.shared.completeFileURL(for: member)?.path.hasPrefix(pinnedRoot) == true, "\(path) is whole and downloaded again")
         }
+    }
+
+    /// A download in AAC comes from the server's conversion: a smaller AAC file under Application
+    /// Support, as long as the song, that the player opens instead of streaming the original.
+    /// Remove Download leaves it as cache, and a download of the original then replaces it.
+    private static func checkConvertedDownload(_ track: Track, song: RemoteTrackPath, client: SubsonicClient) async throws {
+        let cache = RemoteStreamCache.shared
+        _ = await RemoteDownloads.remove(paths: [song.path])
+        await cache.discardFiles(of: [song])
+        RemoteStreamCache.downloadQuality = .aac256
+        let outcome = await RemoteDownloads.download(paths: [song.path]) { _, _ in }
+        try expect(outcome.downloaded == 1, "the AAC download finished (\(outcome.failureReason ?? "no reason given"))")
+        let file = try require(cache.completeFileURL(for: song), "the AAC download is whole")
+        try expect(file.path.hasPrefix(RemoteCacheLayout.pinnedRoot().path), "the AAC download is kept under Application Support")
+        try expect(["m4a", "aac"].contains(file.pathExtension), "the download is stored as AAC (\(file.lastPathComponent))")
+        let original = try await client.download(id: song.songID)
+        defer { try? FileManager.default.removeItem(at: original) }
+        let convertedBytes = try require(try file.resourceValues(forKeys: [.fileSizeKey]).fileSize, "the AAC file has a size")
+        let originalBytes = try require(try original.resourceValues(forKeys: [.fileSizeKey]).fileSize, "the original has a size")
+        try expect(convertedBytes < originalBytes, "the AAC download is smaller than the original (\(convertedBytes) < \(originalBytes))")
+        let asset = AVURLAsset(url: file)
+        let decoded = try AVAudioFile(forReading: file)
+        let duration = Double(decoded.length) / decoded.processingFormat.sampleRate
+        let audio = try require(try await asset.loadTracks(withMediaType: .audio).first, "the AAC file has an audio track")
+        let format = try require(try await audio.load(.formatDescriptions).first, "the AAC track has a format")
+        try expect(CMFormatDescriptionGetMediaSubType(format) == kAudioFormatMPEG4AAC, "the AAC file holds AAC audio")
+        step("AAC download \(file.lastPathComponent): \(convertedBytes) bytes against \(originalBytes), \(duration) s against \(track.duration) s")
+        if file.pathExtension == "m4a" {
+            try expect(abs(duration - track.duration) < 0.001, "the m4a decodes to exactly the song's length, so it joins the next gaplessly")
+        }
+        try expect(RemoteAssetRoute.route(for: song, completeFile: cache.completeFileURL(for: song)) == .file(file), "the player opens the AAC file")
+        try expect(RemoteAvailability.shared.isDownloaded(path: song.path), "the AAC download is marked downloaded")
+        AudioPlayer.shared.play([track], startingAt: 0)
+        try await Task.sleep(for: .seconds(3))
+        let position = AudioPlayer.shared.currentTime
+        AudioPlayer.shared.togglePlayPause()
+        try expect(position > 1.5, "the AAC download plays (position \(position) s)")
+
+        _ = await RemoteDownloads.remove(paths: [song.path])
+        try expect(cache.completeFileURL(for: song)?.path.hasPrefix(RemoteCacheLayout.cachesRoot().path) == true, "Remove Download keeps the AAC file as cache")
+        RemoteStreamCache.downloadQuality = .original
+        let again = await RemoteDownloads.download(paths: [song.path]) { _, _ in }
+        try expect(again.downloaded == 1, "the original download finished (\(again.failureReason ?? "no reason given"))")
+        let kept = try require(cache.completeFileURL(for: song), "the original download is whole")
+        try expect(kept.path.hasPrefix(RemoteCacheLayout.pinnedRoot().path), "the original is kept under Application Support")
+        try expect(FileManager.default.contentsEqual(atPath: kept.path, andPath: original.path), "a download of the original replaces the cached AAC file with the server's bytes")
     }
 
     /// A song of a server that does not answer is dimmed unless it is whole on the device, playing it

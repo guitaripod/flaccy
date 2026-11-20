@@ -48,6 +48,14 @@ extension SettingsViewController {
             cell.accessibilityLabel = String(localized: "Add Other Server")
             cell.accessibilityIdentifier = "settings.row.addServer"
 
+        case .downloadQuality(let quality):
+            content.image = RowIcon.image(systemName: "arrow.down.circle.fill", tint: .systemBlue)
+            content.text = RemoteCopy.downloadQualityTitle
+            cell.selectionStyle = .none
+            cell.accessibilityTraits = []
+            cell.accessoryView = makeDownloadQualityButton(selected: quality)
+            cell.accessibilityIdentifier = "settings.row.downloadQuality"
+
         case .cacheLimit:
             content.image = RowIcon.image(systemName: "externaldrive.fill", tint: .systemTeal)
             content.text = String(localized: "Cache Limit")
@@ -128,6 +136,37 @@ extension SettingsViewController {
         button.showsMenuAsPrimaryAction = true
         button.accessibilityLabel = String(localized: "Actions for \(server.name)")
         button.frame = CGRect(x: 0, y: 0, width: 44, height: 44)
+        return button
+    }
+
+    /// A pull-down of the download qualities, each with what it costs in space.
+    func makeDownloadQualityButton(selected: RemoteDownloadQuality) -> UIView {
+        var configuration = UIButton.Configuration.plain()
+        configuration.title = RemoteCopy.downloadQualityName(selected)
+        configuration.image = UIImage(systemName: "chevron.up.chevron.down")
+        configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
+        configuration.imagePlacement = .trailing
+        configuration.imagePadding = 4
+        configuration.baseForegroundColor = .secondaryLabel
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0)
+        let button = UIButton(configuration: configuration)
+        button.menu = UIMenu(children: RemoteDownloadQuality.allCases.map { quality in
+            UIAction(
+                title: RemoteCopy.downloadQualityName(quality),
+                subtitle: RemoteCopy.downloadQualityDetail(quality),
+                state: quality == selected ? .on : .off
+            ) { [weak self] _ in
+                guard let self else { return }
+                self.selectionFeedback.selectionChanged()
+                self.serversModel.downloadQuality = quality
+                self.applySnapshot(animated: false)
+            }
+        })
+        button.showsMenuAsPrimaryAction = true
+        button.accessibilityLabel = RemoteCopy.downloadQualityTitle
+        button.accessibilityValue = RemoteCopy.downloadQualityName(selected)
+        button.accessibilityIdentifier = "settings.downloadQuality"
+        button.sizeToFit()
         return button
     }
 

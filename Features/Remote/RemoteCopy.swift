@@ -51,6 +51,30 @@ nonisolated enum RemoteCopy {
         String(localized: "Cleared \(byteText(bytes)) of cached songs. Downloads were not touched.")
     }
 
+    static var downloadQualityTitle: String {
+        String(localized: "Download Quality")
+    }
+
+    static func downloadQualityName(_ quality: RemoteDownloadQuality) -> String {
+        switch quality {
+        case .original: String(localized: "Original File")
+        case .aac256: String(localized: "AAC 256 kbps")
+        case .aac128: String(localized: "AAC 128 kbps")
+        }
+    }
+
+    static func downloadQualityDetail(_ quality: RemoteDownloadQuality) -> String {
+        switch quality {
+        case .original: String(localized: "Exactly as on the server")
+        case .aac256: String(localized: "What AirPods receive, about 2 MB a minute")
+        case .aac128: String(localized: "About 1 MB a minute")
+        }
+    }
+
+    static var downloadQualityFooter: String {
+        String(localized: "Download Quality applies to songs you download from now on. A server that can\u{2019}t convert sends the original file.")
+    }
+
     static var cacheFooter: String {
         String(localized: "Streamed songs stay here for replay. Downloads don\u{2019}t count toward the limit.")
     }

@@ -12,6 +12,7 @@ final class ServersSettingsPane: SettingsPane {
     let nudge = NSStackView()
     private let cacheLimitLabel = NSTextField(labelWithString: "")
     private let cacheLimitStepper = NSStepper()
+    private let downloadQualityPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
     private let cacheUsageLabel = NSTextField(labelWithString: "")
     private var rowsOnScreen: [RemoteServerRow] = []
 
@@ -49,6 +50,18 @@ final class ServersSettingsPane: SettingsPane {
         formStack.addArrangedSubview(separator())
 
         formStack.addArrangedSubview(sectionLabel(String(localized: "Server Cache")))
+        let qualityTitle = NSTextField(labelWithString: RemoteCopy.downloadQualityTitle)
+        qualityTitle.font = .systemFont(ofSize: 13)
+        for quality in RemoteDownloadQuality.allCases {
+            downloadQualityPopUp.addItem(withTitle: RemoteCopy.downloadQualityName(quality))
+            downloadQualityPopUp.lastItem?.toolTip = RemoteCopy.downloadQualityDetail(quality)
+            downloadQualityPopUp.lastItem?.representedObject = quality.rawValue
+        }
+        downloadQualityPopUp.target = self
+        downloadQualityPopUp.action = #selector(downloadQualityChosen)
+        downloadQualityPopUp.setAccessibilityLabel(RemoteCopy.downloadQualityTitle)
+        downloadQualityPopUp.setAccessibilityIdentifier("settings.downloadQuality")
+        addRow([qualityTitle, downloadQualityPopUp], spacing: 8)
         let limitTitle = NSTextField(labelWithString: String(localized: "Cache Limit"))
         limitTitle.font = .systemFont(ofSize: 13)
         cacheLimitLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .regular)
@@ -64,7 +77,7 @@ final class ServersSettingsPane: SettingsPane {
         let clear = NSButton(title: String(localized: "Clear Cache\u{2026}"), target: self, action: #selector(clearTapped))
         clear.bezelStyle = .rounded
         addRow([cacheUsageLabel, clear], spacing: 12)
-        addFullWidth(explanation(RemoteCopy.cacheFooter))
+        addFullWidth(explanation(RemoteCopy.cacheFooter + " " + RemoteCopy.downloadQualityFooter))
     }
 
     override func viewWillAppear() {
@@ -82,6 +95,7 @@ final class ServersSettingsPane: SettingsPane {
     }
 
     private func render() {
+        downloadQualityPopUp.selectItem(at: RemoteDownloadQuality.allCases.firstIndex(of: model.downloadQuality) ?? 0)
         cacheLimitStepper.integerValue = model.cacheLimitGigabytes
         cacheLimitLabel.stringValue = RemoteCopy.cacheLimit(gigabytes: model.cacheLimitGigabytes)
         cacheUsageLabel.stringValue = model.cacheCaption.isEmpty ? "\u{2026}" : model.cacheCaption
@@ -150,6 +164,13 @@ final class ServersSettingsPane: SettingsPane {
 
     func presentAddServer(link: ServerLink?, address: String? = nil) {
         presentAsSheet(AddServerPanelViewController(servers: model, link: link, address: address))
+    }
+
+    @objc private func downloadQualityChosen() {
+        let chosen = (downloadQualityPopUp.selectedItem?.representedObject as? String).flatMap(RemoteDownloadQuality.init(rawValue:))
+        guard let chosen else { return }
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        model.downloadQuality = chosen
     }
 
     @objc private func limitStepped() {
