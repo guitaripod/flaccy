@@ -624,6 +624,22 @@ extension PlaylistDetailViewController: UITableViewDataSource {
     }
 }
 
+#if DEBUG
+extension PlaylistDetailViewController {
+
+    /// The page's cover as it is on screen.
+    func debugCoverSnapshot() -> CGImage? {
+        guard mosaicView.bounds.width > 0 else { return nil }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(bounds: mosaicView.bounds, format: format)
+        return renderer.image { _ in
+            mosaicView.drawHierarchy(in: mosaicView.bounds, afterScreenUpdates: true)
+        }.cgImage
+    }
+}
+#endif
+
 private final class PlaylistTrackCell: UITableViewCell {
 
     static let reuseID = "PlaylistTrackCell"

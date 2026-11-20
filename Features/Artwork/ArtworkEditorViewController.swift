@@ -59,7 +59,10 @@ final class ArtworkEditorViewController: UIViewController {
         present(for: ArtworkSubject(album: album), from: presenter, onSaved: onSaved)
     }
 
-    static func present(for subject: ArtworkSubject, from presenter: UIViewController, onSaved: (() -> Void)? = nil) {
+    @discardableResult
+    static func present(
+        for subject: ArtworkSubject, from presenter: UIViewController, onSaved: (() -> Void)? = nil
+    ) -> ArtworkEditorViewController {
         let editor = ArtworkEditorViewController(subject: subject)
         editor.onSaved = onSaved
         let navigation = UINavigationController(rootViewController: editor)
@@ -69,6 +72,7 @@ final class ArtworkEditorViewController: UIViewController {
             sheet.prefersGrabberVisible = true
         }
         presenter.present(navigation, animated: true)
+        return editor
     }
 
     override func viewDidLoad() {
@@ -783,6 +787,25 @@ extension ArtworkEditorViewController: UIDropInteractionDelegate {
         }
     }
 }
+
+#if DEBUG
+extension ArtworkEditorViewController {
+
+    var debugCrop: ArtworkCropView { cropView }
+
+    var debugSaveEnabled: Bool { saveButton.isEnabled }
+
+    /// Hands bytes to the sheet through the same decode the photo picker's
+    /// result goes through.
+    func debugLoad(_ data: Data, source: String) {
+        load(data: data, source: source)
+    }
+
+    func debugSave() {
+        save()
+    }
+}
+#endif
 
 private final class ArtworkCandidateCell: UICollectionViewCell {
 

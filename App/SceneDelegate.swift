@@ -73,6 +73,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         LyricsMeaningExercise.runIfRequested()
         PlaylistMakerExercise.runIfRequested()
         EqualizerDescribeExercise.runIfRequested()
+        PlaylistCoverExercise.runIfRequested(window: window)
         EqualizerShots.runIfRequested(in: window)
         #endif
         #if DEBUG && targetEnvironment(simulator)

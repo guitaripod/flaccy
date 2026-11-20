@@ -188,6 +188,7 @@ targets:
           - ArtistDetail/ArtistListCells.swift
           - Artwork/ArtworkCropView.swift
           - Artwork/ArtworkEditorViewController.swift
+          - Artwork/PlaylistCoverExercise.swift
           - Debut/LibraryDebutSheetController.swift
           - Debut/LibraryDebutSummaryCard.swift
           - Debut/LibraryDebutView.swift

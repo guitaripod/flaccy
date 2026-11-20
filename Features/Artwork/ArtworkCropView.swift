@@ -102,12 +102,25 @@ final class ArtworkCropView: UIView, UIScrollViewDelegate {
         image = newImage
         hasUserFraming = userInitiated
         placeholder.isHidden = true
+        resetZoom()
         imageView.image = newImage
         imageView.frame = CGRect(origin: .zero, size: newImage.size)
         scrollView.contentSize = newImage.size
         needsInitialFit = true
         fitIfPossible()
         UIAccessibility.post(notification: .layoutChanged, argument: nil)
+    }
+
+    /// Takes the previous picture's zoom off the image view before the next
+    /// picture is laid in. The zoom lives on the view as a scale transform, and
+    /// a frame set under it sized the new picture by the old scale, so a photo
+    /// chosen after another picture arrived several times too large and could
+    /// not be pinched back out to the frame.
+    private func resetZoom() {
+        scrollView.minimumZoomScale = 1
+        scrollView.maximumZoomScale = 1
+        scrollView.zoomScale = 1
+        imageView.transform = .identity
     }
 
     private func fitIfPossible() {
@@ -169,16 +182,12 @@ final class ArtworkCropView: UIView, UIScrollViewDelegate {
     }
 
     /// The visible square at `side` pixels, drawn straight from the source so
-    /// panning to a corner of a large photo keeps its full detail.
+    /// panning to a corner of a large photo keeps its full detail. The square
+    /// is read off the screen in the picture's own coordinates, so what is
+    /// saved is exactly what the frame shows.
     func croppedImage(side: CGFloat) -> UIImage? {
         guard let image, bounds.width > 0 else { return nil }
-        let zoom = scrollView.zoomScale
-        let visible = CGRect(
-            x: scrollView.contentOffset.x / zoom,
-            y: scrollView.contentOffset.y / zoom,
-            width: bounds.width / zoom,
-            height: bounds.height / zoom
-        )
+        let visible = scrollView.convert(scrollView.bounds, to: imageView)
         let outputSide = min(side, max(visible.width, visible.height) * image.scale)
         let factor = outputSide / visible.width
         let format = UIGraphicsImageRendererFormat()
@@ -246,6 +255,24 @@ final class ArtworkCropView: UIView, UIScrollViewDelegate {
         if scrollView.isTracking || scrollView.isDecelerating || scrollView.isZooming { markFramed() }
     }
 }
+
+#if DEBUG
+extension ArtworkCropView {
+
+    var debugSide: CGFloat { bounds.width }
+
+    var debugDisplayedSize: CGSize { imageView.frame.size }
+
+    var debugAtMinimumZoom: Bool {
+        abs(scrollView.zoomScale - scrollView.minimumZoomScale) < scrollView.minimumZoomScale * 0.01
+    }
+
+    func debugPinch(by factor: CGFloat) {
+        scrollView.setZoomScale(scrollView.zoomScale * factor, animated: false)
+        markFramed()
+    }
+}
+#endif
 
 private final class CropGuidesView: UIView {
 
