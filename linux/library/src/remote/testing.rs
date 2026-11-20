@@ -30,6 +30,7 @@ struct State {
     reject: AtomicBool,
     plain: AtomicBool,
     empty_search: AtomicBool,
+    converts: AtomicBool,
 }
 
 /// The running fixture.
@@ -110,6 +111,11 @@ impl FixtureServer {
 
     pub fn answer_plain_subsonic(&self) {
         self.state.plain.store(true, Ordering::SeqCst);
+    }
+
+    /// Answers `stream` with `format=aac` as a stand-in AAC body, `aac:<id>`.
+    pub fn convert_to_aac(&self) {
+        self.state.converts.store(true, Ordering::SeqCst);
     }
 
     pub fn empty_search_results(&self) {
@@ -342,6 +348,9 @@ fn stream_song(
         Some(song) => (song.bytes.clone(), song.modified.clone()),
         None => return reply(out, 404, "text/plain", b"missing", &[]),
     };
+    if state.converts.load(Ordering::SeqCst) && params.get("format").map(String::as_str) == Some("aac") {
+        return reply(out, 200, "audio/aac", format!("aac:{id}").as_bytes(), &[]);
+    }
     let total = bytes.len() as u64;
     let if_range = headers.get("if-range").cloned();
     if let Some(value) = &if_range {

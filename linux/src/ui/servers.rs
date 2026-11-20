@@ -488,9 +488,49 @@ fn cache_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
             render_usage(&usage);
         });
     }
+    group.add(&download_quality_row(ui));
     group.add(&limit);
     group.add(&usage);
     group
+}
+
+/// Original File, AAC 256 kbps or AAC 128 kbps for the songs downloaded from now on.
+fn download_quality_row(ui: &Rc<Ui>) -> adw::ComboRow {
+    use flaccy_shared::remote::download_quality::DownloadQuality;
+    let model = gtk::StringList::new(&["Original File", "AAC 256 kbps", "AAC 128 kbps"]);
+    let row = adw::ComboRow::builder()
+        .title("Download Quality")
+        .model(&model)
+        .build();
+    let current = ui.core.config.borrow().remote_download_quality();
+    row.set_selected(DownloadQuality::ALL.iter().position(|quality| *quality == current).unwrap_or(1) as u32);
+    row.set_subtitle(download_quality_detail(current));
+    {
+        let ui = Rc::clone(ui);
+        row.connect_selected_notify(move |row| {
+            let quality = DownloadQuality::ALL
+                .get(row.selected() as usize)
+                .copied()
+                .unwrap_or(flaccy_shared::remote::download_quality::DEFAULT_QUALITY);
+            ui.core.config.borrow_mut().remote_download_quality = quality.stored_name().to_string();
+            ui.core.save_config();
+            if let Some(remote) = crate::remote::handle() {
+                remote.set_download_quality(quality);
+            }
+            row.set_subtitle(download_quality_detail(quality));
+            crate::logger::info("remote", &format!("download quality set to {}", quality.stored_name()));
+        });
+    }
+    row
+}
+
+fn download_quality_detail(quality: flaccy_shared::remote::download_quality::DownloadQuality) -> &'static str {
+    use flaccy_shared::remote::download_quality::DownloadQuality;
+    match quality {
+        DownloadQuality::Original => "Exactly as on the server. Applies to songs you download from now on",
+        DownloadQuality::Aac256 => "What AirPods receive, about 2 MB a minute. Applies to songs you download from now on",
+        DownloadQuality::Aac128 => "About 1 MB a minute. Applies to songs you download from now on",
+    }
 }
 
 fn render_usage(row: &adw::ActionRow) {

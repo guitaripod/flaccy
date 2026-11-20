@@ -38,6 +38,10 @@ pub struct Sidecar {
     pub ranges: ByteRangeSet,
     #[serde(default)]
     pub last_used_ms: i64,
+    /// The download quality the server converted the file to, `None` for the
+    /// server's own file.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversion: Option<String>,
 }
 
 impl Sidecar {
@@ -50,6 +54,7 @@ impl Sidecar {
             validator: None,
             ranges: ByteRangeSet::new(),
             last_used_ms: 0,
+            conversion: None,
         }
     }
 

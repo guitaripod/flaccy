@@ -11,6 +11,7 @@ use super::cache::{Location, Sidecar, Store};
 use super::client::{Client, RemoteError, Streamed};
 use super::redact::redact;
 use crate::db::RemoteSongMeta;
+use flaccy_shared::remote::download_quality::{self, DownloadQuality};
 use flaccy_shared::remote::remote_path;
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
@@ -159,6 +160,7 @@ pub struct Manager {
     complete: RwLock<HashSet<String>>,
     pinned: RwLock<HashSet<String>>,
     cap_bytes: AtomicU64,
+    download_quality: RwLock<DownloadQuality>,
     reachable: Mutex<HashMap<String, bool>>,
     last_enforced: Mutex<Option<Instant>>,
 }
@@ -176,6 +178,7 @@ impl Manager {
             complete: RwLock::new(HashSet::new()),
             pinned: RwLock::new(HashSet::new()),
             cap_bytes: AtomicU64::new(cap_bytes),
+            download_quality: RwLock::new(download_quality::DEFAULT_QUALITY),
             reachable: Mutex::new(HashMap::new()),
             last_enforced: Mutex::new(None),
         });
@@ -204,6 +207,15 @@ impl Manager {
 
     pub fn set_cap_bytes(&self, cap_bytes: u64) {
         self.cap_bytes.store(cap_bytes, Ordering::SeqCst);
+    }
+
+    /// The form songs downloaded from now on are fetched in.
+    pub fn set_download_quality(&self, quality: DownloadQuality) {
+        *self.download_quality.write().unwrap_or_else(|poisoned| poisoned.into_inner()) = quality;
+    }
+
+    fn download_quality(&self) -> DownloadQuality {
+        *self.download_quality.read().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     /// Reads the folders once at start so the answers to "is it downloaded"
@@ -720,6 +732,17 @@ impl Manager {
     }
 
     fn pin_one(&self, server: &str, song: &str) -> Result<(), FetchError> {
+        let kept_whole = self
+            .store
+            .find(server, song)
+            .is_some_and(|(location, _, sidecar)| location == Location::Pinned && sidecar.is_complete());
+        if !kept_whole && self.download_converted(server, song)? {
+            let key = remote_path::encode(server, song);
+            self.pinned.write().unwrap_or_else(|poisoned| poisoned.into_inner()).insert(key.clone());
+            self.complete.write().unwrap_or_else(|poisoned| poisoned.into_inner()).insert(key);
+            self.emit(CacheEvent::Changed);
+            return Ok(());
+        }
         let entry = self.entry(server, song)?;
         self.move_to_pinned(&entry)?;
         self.pinned
@@ -736,6 +759,84 @@ impl Manager {
                 other => return other,
             }
         }
+    }
+
+    /// Keeps the song as the server's AAC conversion when the download quality
+    /// asks for one. `false` leaves the song to the original download: the
+    /// quality is the original, or the server sent something other than AAC or
+    /// refused to convert.
+    fn download_converted(&self, server: &str, song: &str) -> Result<bool, FetchError> {
+        let quality = self.download_quality();
+        let client = (self.clients)(server).ok_or(FetchError::UnknownServer)?;
+        let Some(parameters) = quality.stream_parameters(client.server_type()) else {
+            return Ok(false);
+        };
+        let key = remote_path::encode(server, song);
+        let (bytes, content_type) = match client.converted(song, &parameters) {
+            Ok(converted) => converted,
+            Err(RemoteError::Rejected { cause, .. }) => {
+                crate::logger::warn(
+                    "remote",
+                    &format!("{key} could not be converted ({}); downloading the original", redact(&cause)),
+                );
+                return Ok(false);
+            }
+            Err(error) => return Err(FetchError::Remote(error)),
+        };
+        let Some(suffix) = download_quality::converted_suffix(content_type.as_deref()) else {
+            crate::logger::info(
+                "remote",
+                &format!("{key} came as {} instead of AAC; downloading the original", content_type.unwrap_or_default()),
+            );
+            return Ok(false);
+        };
+        self.install_converted(server, song, quality, suffix, &bytes)?;
+        crate::logger::info(
+            "remote",
+            &format!("downloaded {key} as {}, {} bytes", quality.stored_name(), bytes.len()),
+        );
+        Ok(true)
+    }
+
+    /// Puts a converted download in place of whatever was held for the song. A
+    /// cached copy still being read keeps serving its reader and stays cached.
+    fn install_converted(
+        &self,
+        server: &str,
+        song: &str,
+        quality: DownloadQuality,
+        suffix: &str,
+        bytes: &[u8],
+    ) -> Result<(), FetchError> {
+        let key = remote_path::encode(server, song);
+        let busy = self
+            .entries
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .remove(&key)
+            .is_some_and(|entry| entry.readers.load(Ordering::SeqCst) > 0);
+        self.store.remove(Location::Pinned, server, song);
+        if !busy {
+            self.store.remove(Location::Cache, server, song);
+        }
+        let target = self.store.file_path(Location::Pinned, server, song, suffix);
+        if let Some(parent) = target.parent() {
+            std::fs::create_dir_all(parent).map_err(|error| FetchError::Disk(error.to_string()))?;
+        }
+        let mut staging = target.clone().into_os_string();
+        staging.push(".flaccy-part");
+        let staging = PathBuf::from(staging);
+        std::fs::write(&staging, bytes).map_err(|error| FetchError::Disk(error.to_string()))?;
+        std::fs::rename(&staging, &target).map_err(|error| {
+            let _ = std::fs::remove_file(&staging);
+            FetchError::Disk(error.to_string())
+        })?;
+        let mut sidecar = Sidecar::new(server, song, suffix);
+        sidecar.total = bytes.len() as u64;
+        sidecar.ranges.insert(0..sidecar.total);
+        sidecar.last_used_ms = crate::db::now_ms();
+        sidecar.conversion = Some(quality.stored_name().to_string());
+        Store::write_sidecar(&target, &sidecar).map_err(|error| FetchError::Disk(error.to_string()))
     }
 
     fn move_to_pinned(&self, entry: &Entry) -> Result<(), FetchError> {

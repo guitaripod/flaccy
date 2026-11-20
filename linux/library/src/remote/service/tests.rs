@@ -184,6 +184,33 @@ fn keeping_songs_downloads_them_into_the_data_folder() {
 }
 
 #[test]
+fn a_download_in_aac_keeps_the_servers_conversion_and_the_original_quality_keeps_the_file() {
+    let rig = rig("keep-aac");
+    seed_songs(&rig, 2);
+    rig.fixture.convert_to_aac();
+    let id = add_fixture_server(&rig);
+    rig.remote.sync(&id, &|_| {}).unwrap();
+    let converted = format!("remote://{id}/song-0");
+    let original = format!("remote://{id}/song-1");
+    crate::remote::testing::http_request(rig.remote.proxy_port(), "GET", &format!("/{id}/song-0"), None);
+    rig.remote.set_download_quality(flaccy_shared::remote::download_quality::DownloadQuality::Aac256);
+    rig.remote.pin(std::slice::from_ref(&converted));
+    wait_until(|| rig.remote.is_downloaded(&converted));
+    let folder = rig.base.join("data/remote").join(&id);
+    assert_eq!(std::fs::read(folder.join("song-0.aac")).unwrap(), b"aac:song-0");
+    let sidecar = crate::remote::cache::Store::read_sidecar(&folder.join("song-0.aac")).unwrap();
+    assert_eq!(sidecar.conversion.as_deref(), Some("aac256"));
+    assert!(!rig.base.join("cache/remote").join(&id).join("song-0.flac").exists(), "the cached original went");
+    let served = crate::remote::testing::http_request(rig.remote.proxy_port(), "GET", &format!("/{id}/song-0"), None);
+    assert_eq!(served.body, b"aac:song-0");
+
+    rig.remote.set_download_quality(flaccy_shared::remote::download_quality::DownloadQuality::Original);
+    rig.remote.pin(std::slice::from_ref(&original));
+    wait_until(|| rig.remote.is_downloaded(&original));
+    assert_eq!(std::fs::read(folder.join("song-1.flac")).unwrap(), song_bytes(1_200_001, 1));
+}
+
+#[test]
 fn scrobbles_and_stars_reach_the_server() {
     let rig = rig("state");
     seed_songs(&rig, 1);

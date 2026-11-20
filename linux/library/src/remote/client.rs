@@ -6,6 +6,7 @@
 use super::pinned_tls::{self, PinnedTls};
 use super::redact::redact;
 use super::servers::Server;
+use flaccy_shared::remote::download_quality;
 use flaccy_shared::remote::server_address;
 use flaccy_shared::remote::subsonic_request::{self, Credentials};
 use flaccy_shared::remote::subsonic_response::{Child, Envelope, Root, SubsonicFailure};
@@ -16,6 +17,7 @@ use std::time::Duration;
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const READ_TIMEOUT: Duration = Duration::from_secs(30);
+const CONVERSION_TIMEOUT: Duration = Duration::from_secs(180);
 const MAX_BODY_BYTES: u64 = 64 * 1024 * 1024;
 const SALT_LENGTH: usize = 16;
 
@@ -119,6 +121,7 @@ pub struct Streamed {
 #[derive(Clone)]
 pub struct Client {
     server_id: String,
+    flaccy_server: bool,
     host: String,
     base: String,
     credentials: Credentials,
@@ -143,6 +146,7 @@ impl Client {
         let agent = builder.build();
         Ok(Self {
             server_id: server.id.clone(),
+            flaccy_server: server.flaccy_server,
             host,
             base,
             credentials: server.credentials(),
@@ -152,6 +156,11 @@ impl Client {
 
     pub fn server_id(&self) -> &str {
         &self.server_id
+    }
+
+    /// The type the server reports in `ping`, as far as this computer knows it.
+    pub fn server_type(&self) -> Option<&'static str> {
+        self.flaccy_server.then_some(download_quality::FLACCY_SERVER_TYPE)
     }
 
     /// The `host:port` the requests go to, safe to show and to log.
@@ -391,6 +400,42 @@ impl Client {
                 cause: redact(&error.to_string()),
             })?;
         Ok(bytes)
+    }
+
+    /// The song converted by the server's `stream` call, with the media type it
+    /// was sent as. A Flaccy Server converts the whole song before the first
+    /// byte, so the wait is longer than for a call.
+    pub fn converted(&self, song: &str, parameters: &[(&str, String)]) -> Result<(Vec<u8>, Option<String>), RemoteError> {
+        let mut pairs: Vec<(&str, &str)> = vec![("id", song)];
+        pairs.extend(parameters.iter().map(|(name, value)| (*name, value.as_str())));
+        let response = self
+            .agent
+            .get(&self.url("stream", &pairs))
+            .timeout(CONVERSION_TIMEOUT)
+            .call()
+            .map_err(|error| self.map_transport(error))?;
+        let content_type = response.header("Content-Type").map(str::to_string);
+        let mut bytes = Vec::new();
+        response
+            .into_reader()
+            .read_to_end(&mut bytes)
+            .map_err(|error| RemoteError::Incomplete {
+                host: self.host.clone(),
+                cause: redact(&error.to_string()),
+            })?;
+        let media = content_type.as_deref().unwrap_or_default();
+        if media.starts_with("application/json") || media.ends_with("/xml") {
+            let text = String::from_utf8_lossy(&bytes);
+            let root = serde_json::from_str::<Root>(&text).map_err(|_| RemoteError::NotOpenSubsonic {
+                host: self.host.clone(),
+            })?;
+            self.check(root.response)?;
+            return Err(RemoteError::Rejected {
+                host: self.host.clone(),
+                cause: "it answered the conversion with a message instead of audio".to_string(),
+            });
+        }
+        Ok((bytes, content_type))
     }
 
     /// Opens the song's untranscoded stream. `range` asks for those bytes only

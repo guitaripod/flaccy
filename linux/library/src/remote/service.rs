@@ -470,6 +470,11 @@ impl Remote {
         self.manager.prefetch(decode(current), decode(next));
     }
 
+    /// The form songs downloaded from now on are fetched in.
+    pub fn set_download_quality(&self, quality: flaccy_shared::remote::download_quality::DownloadQuality) {
+        self.manager.set_download_quality(quality);
+    }
+
     pub fn set_cap_bytes(&self, cap_bytes: u64) {
         self.manager.set_cap_bytes(cap_bytes);
         self.manager.enforce_cap_now();

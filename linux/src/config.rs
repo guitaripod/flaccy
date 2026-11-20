@@ -88,6 +88,9 @@ pub struct Config {
     /// How much disk the remote songs' cache may use before the least recently
     /// played go, in gigabytes. Kept downloads sit outside it.
     pub remote_cache_cap_gb: u32,
+    /// The form songs downloaded from a server are kept in: `original`,
+    /// `aac256` or `aac128`; empty or unknown means AAC at 256 kbps.
+    pub remote_download_quality: String,
     /// Which source the Songs page is narrowed to: empty for all of them,
     /// `local` for the music folder, or a server id.
     pub songs_source: String,
@@ -164,6 +167,11 @@ impl Config {
         ) * 1024
             * 1024
             * 1024
+    }
+
+    /// The form songs downloaded from a server are kept in.
+    pub fn remote_download_quality(&self) -> flaccy_shared::remote::download_quality::DownloadQuality {
+        flaccy_shared::remote::download_quality::DownloadQuality::from_stored_name(Some(&self.remote_download_quality))
     }
 
     /// The remote cache cap in bytes, kept inside the range Preferences offers.
@@ -247,6 +255,7 @@ impl Default for Config {
             precache_video: true,
             precache_video_cap_gb: PRECACHE_VIDEO_CAP_DEFAULT_GB,
             remote_cache_cap_gb: REMOTE_CACHE_CAP_DEFAULT_GB,
+            remote_download_quality: String::new(),
             songs_source: String::new(),
             flaccy_server_name: String::new(),
             flaccy_server_nudge_dismissed: false,

@@ -23,6 +23,7 @@ pub fn start(config: &Config, db_path: &std::path::Path) -> Option<Arc<Remote>> 
     };
     match Remote::start(paths, config.remote_cache_cap_bytes()) {
         Ok(remote) => {
+            remote.set_download_quality(config.remote_download_quality());
             let _ = REMOTE.set(Arc::clone(&remote));
             Some(remote)
         }
