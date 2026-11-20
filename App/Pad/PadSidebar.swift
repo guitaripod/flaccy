@@ -131,6 +131,7 @@ final class PadSidebar: NSObject {
     }
 
     private var primaryTabs: [UITab] = []
+    private var displayedPivot: String?
 
     /// The tabs the window always has, in tab bar order; the sidebar adds the
     /// Playlists and Discover sections after them.
@@ -248,13 +249,24 @@ extension PadSidebar: UITabBarControllerDelegate {
 
     /// The four pivots are one Library screen showing different segments, so
     /// each of them puts that same screen at the root of the Library's stack.
+    /// UIKit asks again for the pivot already showing whenever the window
+    /// crosses between a sidebar and a tab bar (a Split View divider dragged,
+    /// a window resized), and answering with the root alone closed whatever
+    /// album, artist or playlist was open; the stack on screen is kept then,
+    /// and only a different pivot starts from the Library's root.
     func tabBarController(
         _ tabBarController: UITabBarController,
         displayedViewControllersFor tab: UITab,
         proposedViewControllers: [UIViewController]
     ) -> [UIViewController] {
         guard let tabs else { return proposedViewControllers }
-        if tab.parent === libraryGroup || tab === libraryGroup { return [tabs.library] }
+        if tab.parent === libraryGroup || tab === libraryGroup {
+            let pivot = tab === libraryGroup ? (libraryGroup.selectedChild?.identifier ?? displayedPivot) : tab.identifier
+            let stack = tabs.libraryNavigation.viewControllers
+            defer { displayedPivot = pivot }
+            guard pivot == displayedPivot, stack.count > 1, stack.first === tabs.library else { return [tabs.library] }
+            return stack
+        }
         if tab.parent === playlistsGroup, let controller = tab.viewController { return [controller] }
         return proposedViewControllers
     }
