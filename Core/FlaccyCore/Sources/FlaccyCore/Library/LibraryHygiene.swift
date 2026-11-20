@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 /// Shared library-hygiene primitives: edition-aware title/artist normalization,
 /// duplicate-track grouping, and album-variation consolidation. This is the
@@ -31,6 +32,24 @@ public enum LibraryHygiene {
     /// artists (";", "/", "×") so single names containing "&" or "," ("Corvid &
     /// Crane", "Earth, Wind & Fire") are preserved.
     public static func primaryArtist(_ raw: String) -> String {
+        if let known = primaryArtists.withLock({ $0[raw] }) { return known }
+        let primary = splitPrimaryArtist(raw)
+        primaryArtists.withLock { known in
+            if known.count >= primaryArtistMemoLimit { known.removeAll(keepingCapacity: true) }
+            known[raw] = primary
+        }
+        return primary
+    }
+
+    /// The same credit is asked about once per song and once per play — a library of twelve
+    /// thousand songs and a history of a hundred and sixty thousand plays name a few thousand
+    /// artists — and each answer is seventeen case-insensitive searches, which was most of the
+    /// CPU an iPad spent settling album credits and building Recap at launch. The answer never
+    /// changes for a credit, so it is kept, up to a bound.
+    private static let primaryArtists = Mutex<[String: String]>([:])
+    private static let primaryArtistMemoLimit = 50_000
+
+    private static func splitPrimaryArtist(_ raw: String) -> String {
         var name = raw
         for separator in [";", " / ", " × ", " x ", " & ", " + ", " vs. ", " vs ", " feat. ", " feat ",
                           " ft. ", " ft ", " featuring ", " (feat.", " (ft.", " (featuring", " with "] {
