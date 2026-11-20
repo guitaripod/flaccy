@@ -134,7 +134,42 @@ nonisolated final class AdaptiveLayoutTests: XCTestCase {
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 1376, height: 1032), horizontalFold: nil), .landscape)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 1180, height: 820), horizontalFold: nil), .landscape)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 1032, height: 1376), horizontalFold: nil), .portrait)
-        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 951, height: 669), horizontalFold: nil), .portrait)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 951, height: 669), horizontalFold: nil, hasFold: true), .portrait)
+    }
+
+    @MainActor func testASquarishIPadWindowPutsTheCoverBesideTheControls() {
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 800, height: 834), horizontalFold: nil), .landscape)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 834, height: 600), horizontalFold: nil), .landscape)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 951, height: 669), horizontalFold: nil), .landscape)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 720, height: 800), horizontalFold: nil), .landscape)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 834, height: 1210), horizontalFold: nil), .portrait)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 744, height: 1133), horizontalFold: nil), .portrait)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 592, height: 834), horizontalFold: nil), .portrait)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 700, height: 600), horizontalFold: nil), .portrait)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 440, height: 956), horizontalFold: nil), .portrait)
+    }
+
+    @MainActor func testAWindowAgainstOneSideOfTheScreenIsReachedFromThatSide() {
+        let screen = CGRect(x: 0, y: 0, width: 1194, height: 834)
+        XCTAssertEqual(AdaptiveLayout.outerSide(window: CGRect(x: 0, y: 0, width: 798, height: 834), screen: screen), .left)
+        XCTAssertEqual(AdaptiveLayout.outerSide(window: CGRect(x: 819, y: 0, width: 375, height: 834), screen: screen), .right)
+        XCTAssertEqual(AdaptiveLayout.outerSide(window: CGRect(x: 0.5, y: 0, width: 600, height: 834), screen: screen), .left)
+        XCTAssertNil(AdaptiveLayout.outerSide(window: screen, screen: screen))
+        XCTAssertNil(AdaptiveLayout.outerSide(window: CGRect(x: 0, y: 0, width: 1194, height: 417), screen: screen))
+        XCTAssertEqual(AdaptiveLayout.outerSide(window: CGRect(x: 360, y: 60, width: 818, height: 700), screen: screen), .right)
+        XCTAssertEqual(AdaptiveLayout.outerSide(window: CGRect(x: 20, y: 60, width: 600, height: 700), screen: screen), .left)
+        XCTAssertNil(AdaptiveLayout.outerSide(window: CGRect(x: 120, y: 80, width: 700, height: 600), screen: screen))
+        XCTAssertNil(AdaptiveLayout.outerSide(window: CGRect(x: 30, y: 0, width: 1140, height: 834), screen: screen))
+        XCTAssertNil(AdaptiveLayout.outerSide(window: .zero, screen: screen))
+    }
+
+    @MainActor func testControlsFollowTheThumbThatReachesTheWindow() {
+        XCTAssertEqual(AdaptiveLayout.controlsSide(outer: nil, rightToLeft: false, otherwise: .trailing), .trailing)
+        XCTAssertEqual(AdaptiveLayout.controlsSide(outer: nil, rightToLeft: true, otherwise: .leading), .leading)
+        XCTAssertEqual(AdaptiveLayout.controlsSide(outer: .left, rightToLeft: false, otherwise: .trailing), .leading)
+        XCTAssertEqual(AdaptiveLayout.controlsSide(outer: .right, rightToLeft: false, otherwise: .leading), .trailing)
+        XCTAssertEqual(AdaptiveLayout.controlsSide(outer: .left, rightToLeft: true, otherwise: .leading), .trailing)
+        XCTAssertEqual(AdaptiveLayout.controlsSide(outer: .right, rightToLeft: true, otherwise: .trailing), .leading)
     }
 
     @MainActor func testHomeGoesWideOnlyWithRoomForTheHeroBesideTwoColumnsOfTiles() {

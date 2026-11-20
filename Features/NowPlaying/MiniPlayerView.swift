@@ -1,3 +1,4 @@
+import MidgarCore
 import UIKit
 
 final class MiniPlayerView: UIView {
@@ -22,6 +23,15 @@ final class MiniPlayerView: UIView {
     private let artworkView = UIImageView()
     private let glassView = LiquidGlass.view(cornerRadius: 16)
     private var artworkInsets: [NSLayoutConstraint] = []
+    private var controlsFirstConstraints: [NSLayoutConstraint] = []
+    private var controlsLastConstraints: [NSLayoutConstraint] = []
+    private let textStack = UIStackView()
+    private let rowStack = UIStackView()
+
+    /// Which end of the dock holds play, next and the queue: the leading end,
+    /// as on the iPhone, unless the window shares the screen from its trailing
+    /// side, where the thumb that reaches it rests.
+    private(set) var controlsSide: AdaptiveLayout.Side = .leading
     private var isCompact = false
     private let titleLabel = UILabel()
     private let artistLabel = UILabel()
@@ -68,13 +78,10 @@ final class MiniPlayerView: UIView {
         artistLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         artistLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        titleLabel.textAlignment = .right
-        artistLabel.textAlignment = .right
-
-        let textStack = UIStackView(arrangedSubviews: [titleLabel, artistLabel])
+        textStack.addArrangedSubview(titleLabel)
+        textStack.addArrangedSubview(artistLabel)
         textStack.axis = .vertical
         textStack.spacing = 0
-        textStack.alignment = .trailing
 
         let buttonConfig = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
 
@@ -107,14 +114,13 @@ final class MiniPlayerView: UIView {
         artworkView.clipsToBounds = true
         artworkView.layer.cornerRadius = 16
         artworkView.layer.cornerCurve = .continuous
-        artworkView.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
         artworkView.backgroundColor = .tertiarySystemFill
         artworkView.tintColor = .secondaryLabel
         artworkView.image = UIImage(systemName: "music.note")
         artworkView.translatesAutoresizingMaskIntoConstraints = false
         blur.contentView.addSubview(artworkView)
 
-        let hStack = UIStackView(arrangedSubviews: [queueButton, playPauseButton, nextButton, textStack])
+        let hStack = rowStack
         hStack.spacing = 10
         hStack.alignment = .center
         hStack.translatesAutoresizingMaskIntoConstraints = false
@@ -125,8 +131,9 @@ final class MiniPlayerView: UIView {
             artworkView.topAnchor.constraint(equalTo: blur.contentView.topAnchor),
             artworkView.trailingAnchor.constraint(equalTo: blur.contentView.trailingAnchor),
             artworkView.bottomAnchor.constraint(equalTo: blur.contentView.bottomAnchor),
+            artworkView.leadingAnchor.constraint(equalTo: blur.contentView.leadingAnchor),
         ]
-        NSLayoutConstraint.activate(artworkInsets)
+        NSLayoutConstraint.activate([artworkInsets[0], artworkInsets[2]])
 
         NSLayoutConstraint.activate([
             blur.topAnchor.constraint(equalTo: topAnchor),
@@ -148,8 +155,6 @@ final class MiniPlayerView: UIView {
             queueButton.widthAnchor.constraint(equalToConstant: 30),
             queueButton.heightAnchor.constraint(equalToConstant: 36),
 
-            hStack.leadingAnchor.constraint(equalTo: blur.contentView.leadingAnchor, constant: 10),
-            hStack.trailingAnchor.constraint(equalTo: artworkView.leadingAnchor, constant: -10),
             hStack.topAnchor.constraint(equalTo: blur.contentView.topAnchor),
             hStack.bottomAnchor.constraint(equalTo: blur.contentView.bottomAnchor),
         ])
@@ -169,13 +174,26 @@ final class MiniPlayerView: UIView {
 
         NSLayoutConstraint.activate([
             timerLabel.topAnchor.constraint(equalTo: blur.contentView.topAnchor, constant: 4),
-            timerLabel.trailingAnchor.constraint(equalTo: artworkView.leadingAnchor, constant: -6),
             timerLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 42),
             timerLabel.heightAnchor.constraint(equalToConstant: 18),
         ])
 
         let tap = UITapGestureRecognizer(target: self, action: #selector(viewTapped))
         addGestureRecognizer(tap)
+
+        controlsFirstConstraints = [
+            artworkInsets[1],
+            hStack.leadingAnchor.constraint(equalTo: blur.contentView.leadingAnchor, constant: 10),
+            hStack.trailingAnchor.constraint(equalTo: artworkView.leadingAnchor, constant: -10),
+            timerLabel.trailingAnchor.constraint(equalTo: artworkView.leadingAnchor, constant: -6),
+        ]
+        controlsLastConstraints = [
+            artworkInsets[3],
+            hStack.leadingAnchor.constraint(equalTo: artworkView.trailingAnchor, constant: 10),
+            hStack.trailingAnchor.constraint(equalTo: blur.contentView.trailingAnchor, constant: -10),
+            timerLabel.leadingAnchor.constraint(equalTo: artworkView.trailingAnchor, constant: 6),
+        ]
+        arrangeRow()
 
         setupAccessibility()
         registerForCompactEnvironment()
@@ -189,6 +207,13 @@ final class MiniPlayerView: UIView {
         NotificationCenter.default.addObserver(
             self, selector: #selector(artworkDidChange), name: AlbumArtworkCache.didChangeNotification, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(sceneDidActivate), name: UIScene.didActivateNotification, object: nil
+        )
+    }
+
+    @objc private func sceneDidActivate() {
+        refreshControlsSide()
     }
 
     /// Re-lays the dock for the system accessory: no glass or shadow of its own,
@@ -203,10 +228,9 @@ final class MiniPlayerView: UIView {
         artworkInsets[0].constant = inset
         artworkInsets[1].constant = -inset
         artworkInsets[2].constant = -inset
+        artworkInsets[3].constant = inset
         artworkView.layer.cornerRadius = accessory ? 10 : 16
-        artworkView.layer.maskedCorners = accessory
-            ? [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
-            : [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+        applyArtworkCorners()
         progressFill.isHidden = accessory
         setNeedsLayout()
     }
@@ -226,6 +250,61 @@ final class MiniPlayerView: UIView {
         queueButton.isHidden = compact
         nextButton.isHidden = compact
         artistLabel.isHidden = compact
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        refreshControlsSide()
+    }
+
+    /// Moves play, next and the queue to the end of the dock the person's
+    /// thumb reaches for the window as it sits now, and the artwork and title
+    /// to the other end. Asked on every layout pass, which a resize, a new
+    /// tile or a turn of the iPad brings, whenever the window comes forward,
+    /// and with each tick of playback progress: iPadOS tells an app nothing
+    /// when its window only moves, and a window dragged to the other side
+    /// while music plays follows within a quarter of a second.
+    func refreshControlsSide() {
+        let side = reachableControlsSide(otherwise: .leading)
+        guard side != controlsSide else { return }
+        controlsSide = side
+        arrangeRow()
+        MidgarLog.debug("Mini player controls moved to the \(side) end", category: .ui)
+    }
+
+    /// True when the artwork sits at the dock's right-hand end on screen.
+    var artworkIsOnRight: Bool {
+        (controlsSide == .leading) == (effectiveUserInterfaceLayoutDirection == .leftToRight)
+    }
+
+    private func arrangeRow() {
+        let controlsFirst = controlsSide == .leading
+        NSLayoutConstraint.deactivate(controlsFirst ? controlsLastConstraints : controlsFirstConstraints)
+        NSLayoutConstraint.activate(controlsFirst ? controlsFirstConstraints : controlsLastConstraints)
+        for view in rowStack.arrangedSubviews { rowStack.removeArrangedSubview(view) }
+        let controls: [UIView] = [queueButton, playPauseButton, nextButton]
+        for view in controlsFirst ? controls + [textStack] : [textStack] + controls {
+            rowStack.addArrangedSubview(view)
+        }
+        rowStack.setCustomSpacing(controlsFirst ? 10 : 16, after: controlsFirst ? nextButton : textStack)
+        textStack.alignment = controlsFirst ? .trailing : .leading
+        let alignment: NSTextAlignment = artworkIsOnRight ? .right : .left
+        titleLabel.textAlignment = alignment
+        artistLabel.textAlignment = alignment
+        applyArtworkCorners()
+        setNeedsLayout()
+    }
+
+    /// The accessory's artwork is a rounded square; the floating card's is
+    /// flush with the card's own rounded end.
+    private func applyArtworkCorners() {
+        guard style == .floating else {
+            artworkView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+            return
+        }
+        artworkView.layer.maskedCorners = artworkIsOnRight
+            ? [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+            : [.layerMinXMinYCorner, .layerMinXMaxYCorner]
     }
 
     @objc private func artworkDidChange() {
@@ -248,6 +327,7 @@ final class MiniPlayerView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        refreshControlsSide()
         expandElement.accessibilityFrameInContainerSpace = bounds
     }
 
@@ -388,6 +468,7 @@ final class MiniPlayerView: UIView {
 
     @objc private func progressDidChange() {
         updateProgressBar()
+        refreshControlsSide()
     }
 
     @objc private func sleepTimerDidUpdate() {

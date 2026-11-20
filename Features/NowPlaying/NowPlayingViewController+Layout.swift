@@ -14,10 +14,14 @@ extension NowPlayingViewController {
         let focus = isFocused
             ? AdaptiveLayout.splitGeometry(width: size.width, division: view.divisionRegionFrame)
             : nil
-        let desired = AdaptiveLayout.playerLayout(size: size, horizontalFold: view.activeHorizontalFold, focus: focus)
-        if desired != layoutMode {
-            MidgarLog.debug("Now Playing layout \(desired) for \(size), fold \(String(describing: view.activeHorizontalFold))", category: .ui)
+        let desired = AdaptiveLayout.playerLayout(
+            size: size, horizontalFold: view.activeHorizontalFold, focus: focus, hasFold: view.divisionRegionFrame != nil
+        )
+        let controlsSide = view.reachableControlsSide(otherwise: .trailing)
+        if desired != layoutMode || (desired == .landscape && controlsSide != landscapeControlsSide) {
+            MidgarLog.debug("Now Playing layout \(desired) for \(size), fold \(String(describing: view.activeHorizontalFold)), controls \(controlsSide)", category: .ui)
             layoutMode = desired
+            landscapeControlsSide = controlsSide
             switch desired {
             case .laptop(let top, let bottom): activateLayoutMode(desired, foldTop: top, foldBottom: bottom)
             default: activateLayoutMode(desired, foldTop: nil, foldBottom: nil)
@@ -77,11 +81,8 @@ extension NowPlayingViewController {
             controlsCentered.priority = .defaultHigh
             constraints = [
                 centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 12),
-                centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
                 centerContainer.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -12),
-                centerContainer.widthAnchor.constraint(equalTo: safe.widthAnchor, multiplier: centerState == .artwork ? 0.36 : 0.5),
-                landscapeControlsRegion.leadingAnchor.constraint(equalTo: centerContainer.trailingAnchor, constant: 28),
-                landscapeControlsRegion.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+            ] + landscapeSides(in: safe) + [
                 bottomControls.centerXAnchor.constraint(equalTo: landscapeControlsRegion.centerXAnchor),
                 bottomControls.widthAnchor.constraint(lessThanOrEqualToConstant: AdaptiveLayout.playerControlsMaximumWidth),
                 controlsFillRegion,
@@ -163,6 +164,35 @@ extension NowPlayingViewController {
     }
 
     static let portraitMediaInset: CGFloat = 24
+
+    /// Puts the controls column against the side of the window the person's
+    /// thumb reaches (the screen edge a shared window lies against, the
+    /// trailing side otherwise), no wider than the controls read well, so on
+    /// a whole landscape iPad play and skip sit within a thumb's reach of the
+    /// edge rather than in the middle of the screen; the cover, the lyrics or
+    /// the queue take the rest of the width.
+    private func landscapeSides(in safe: UILayoutGuide) -> [NSLayoutConstraint] {
+        let preferredWidth = landscapeControlsRegion.widthAnchor.constraint(
+            equalToConstant: AdaptiveLayout.playerSideControlsWidth
+        )
+        preferredWidth.priority = .defaultHigh
+        let width = [
+            preferredWidth,
+            landscapeControlsRegion.widthAnchor.constraint(lessThanOrEqualTo: safe.widthAnchor, multiplier: 0.6),
+        ]
+        guard landscapeControlsSide == .leading else {
+            return width + [
+                centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
+                landscapeControlsRegion.leadingAnchor.constraint(equalTo: centerContainer.trailingAnchor, constant: 28),
+                landscapeControlsRegion.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+            ]
+        }
+        return width + [
+            centerContainer.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+            landscapeControlsRegion.trailingAnchor.constraint(equalTo: centerContainer.leadingAnchor, constant: -28),
+            landscapeControlsRegion.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
+        ]
+    }
 
     /// Lets the cover of the iPhone Duo's Now Playing half rise beside the
     /// status cluster in its top corner instead of under the whole band that

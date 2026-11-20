@@ -78,6 +78,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     let wrappedBadgeLine = UIStackView()
     var volumeRowView = UIView()
     var layoutMode: AdaptiveLayout.PlayerLayout = .portrait
+    var landscapeControlsSide: AdaptiveLayout.Side = .trailing
     var modeConstraints: [NSLayoutConstraint] = []
     var laptopFoldTopConstraint: NSLayoutConstraint?
     var laptopFoldBottomConstraint: NSLayoutConstraint?
@@ -196,6 +197,27 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(
             self, selector: #selector(songVolumeDidChange), name: SongVolumeStore.didChange, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(sceneDidActivate), name: UIScene.didActivateNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(followWindowSide), name: AudioPlayer.playbackProgressDidChange, object: nil
+        )
+    }
+
+    /// iPadOS tells an app nothing when its window only moves, so the side the
+    /// controls face is read again whenever the window comes forward.
+    @objc private func sceneDidActivate() {
+        view.setNeedsLayout()
+    }
+
+    /// Moves the controls column to the other side when the window was
+    /// dragged against the other edge of the screen, read with each tick of
+    /// playback progress while the cover sits beside the controls.
+    @objc private func followWindowSide() {
+        guard layoutMode == .landscape, view.window != nil,
+              view.reachableControlsSide(otherwise: .trailing) != landscapeControlsSide else { return }
+        view.setNeedsLayout()
     }
 
     override func viewWillAppear(_ animated: Bool) {

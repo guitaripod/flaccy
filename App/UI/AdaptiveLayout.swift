@@ -27,8 +27,11 @@ enum AdaptiveLayout {
 
     static let playerLandscapeMaximumHeight: CGFloat = 560
     static let playerWideLandscapeMinimumWidth: CGFloat = 1000
+    static let playerSideBySideMinimumWidth: CGFloat = 720
+    static let playerSideBySideMinimumAspect: CGFloat = 0.9
     static let playerContentMaximumWidth: CGFloat = 640
     static let playerControlsMaximumWidth: CGFloat = 560
+    static let playerSideControlsWidth: CGFloat = 440
     static let playerRoomyPortraitMinimumHeight: CGFloat = 700
     static let playerRoomyLandscapeMinimumHeight: CGFloat = 500
     static let paneQueueMinimumHeight: CGFloat = 150
@@ -269,8 +272,15 @@ enum AdaptiveLayout {
     /// enough to hold a full-size cover beside the controls (an iPad's whole
     /// window), puts the artwork beside the controls; everything else is the
     /// single column.
+    ///
+    /// A window with no fold (an iPad's) also puts the cover beside the
+    /// controls once it is about as wide as it is tall and has room for both,
+    /// such as two thirds of a landscape iPad or the top half of a portrait
+    /// one: there the single column shrank the cover to a thumbnail above
+    /// controls stretched across the window. A foldable's inner display keeps
+    /// the rules its fold decides.
     static func playerLayout(
-        size: CGSize, horizontalFold: ClosedRange<CGFloat>?, focus: SplitGeometry? = nil
+        size: CGSize, horizontalFold: ClosedRange<CGFloat>?, focus: SplitGeometry? = nil, hasFold: Bool = false
     ) -> PlayerLayout {
         if let focus, size.width >= splitMinimumWidth, size.height >= splitMinimumHeight {
             return .focus(focus)
@@ -282,11 +292,73 @@ enum AdaptiveLayout {
            size.height <= playerLandscapeMaximumHeight || size.width >= playerWideLandscapeMinimumWidth {
             return .landscape
         }
+        if !hasFold, size.width >= playerSideBySideMinimumWidth,
+           size.width >= size.height * playerSideBySideMinimumAspect {
+            return .landscape
+        }
         return .portrait
+    }
+
+    /// A physical side of the screen, whatever the writing direction.
+    enum ScreenSide: Equatable {
+        case left
+        case right
+    }
+
+    /// A side of a view in its own writing direction.
+    enum Side: Equatable {
+        case leading
+        case trailing
+    }
+
+    static let screenEdgeReach: CGFloat = 48
+
+    /// The one side edge of the screen a window lies against or close beside,
+    /// or nil when it reaches both (the whole screen, a full-width top or
+    /// bottom half) or neither (a window floating in the middle). Held in both
+    /// hands, the thumb on that side is the one that reaches the window
+    /// without crossing the app beside it.
+    static func outerSide(window: CGRect, screen: CGRect) -> ScreenSide? {
+        guard window.width > 0, screen.width > 0 else { return nil }
+        let left = window.minX <= screen.minX + screenEdgeReach
+        let right = window.maxX >= screen.maxX - screenEdgeReach
+        switch (left, right) {
+        case (true, false): return .left
+        case (false, true): return .right
+        default: return nil
+        }
+    }
+
+    /// Where a window's frequent controls go: against the screen edge the
+    /// window shares with the thumb that reaches it, and where they would go
+    /// anyway when the window spans the screen or floats.
+    static func controlsSide(outer: ScreenSide?, rightToLeft: Bool, otherwise: Side) -> Side {
+        switch (outer, rightToLeft) {
+        case (nil, _): return otherwise
+        case (.left, false), (.right, true): return .leading
+        case (.right, false), (.left, true): return .trailing
+        }
     }
 }
 
 extension UIView {
+
+    /// The one side edge of the screen this view's window lies against, read
+    /// from where the window sits on the screen right now; nil for a window
+    /// that spans the screen, floats clear of both sides, or has none yet.
+    var outerScreenSide: AdaptiveLayout.ScreenSide? {
+        guard let window, let screen = window.windowScene?.screen else { return nil }
+        let frame = window.convert(window.bounds, to: screen.coordinateSpace)
+        return AdaptiveLayout.outerSide(window: frame, screen: screen.bounds)
+    }
+
+    /// Where this view's frequent controls go for the window it is in, with
+    /// `otherwise` for a window that spans the screen or floats.
+    func reachableControlsSide(otherwise: AdaptiveLayout.Side) -> AdaptiveLayout.Side {
+        AdaptiveLayout.controlsSide(
+            outer: outerScreenSide, rightToLeft: effectiveUserInterfaceLayoutDirection == .rightToLeft, otherwise: otherwise
+        )
+    }
 
     /// The fold region in this view's own coordinate space, whether or not the
     /// device is folded right now, or nil where the system reports none (the

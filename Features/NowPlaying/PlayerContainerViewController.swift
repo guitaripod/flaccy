@@ -370,6 +370,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
 
     private func recomputeGeometry() {
         view.layoutIfNeeded()
+        miniPlayer.refreshControlsSide()
         let height = view.bounds.height
         let width = view.bounds.width
         if let accessory = externalDockFrame?(), !accessory.isEmpty {
@@ -395,7 +396,8 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         miniPlayerHeight.constant = dockHeight
         let inset = MorphTuning.accessoryArtworkInset
         let side = dockHeight - inset * 2
-        dockArtRect = CGRect(x: accessory.maxX - inset - side, y: accessory.minY + inset, width: side, height: side)
+        let artX = miniPlayer.artworkIsOnRight ? accessory.maxX - inset - side : accessory.minX + inset
+        dockArtRect = CGRect(x: artX, y: accessory.minY + inset, width: side, height: side)
     }
 
     private func applyFloatingDockGeometry(in size: CGSize) {
@@ -411,7 +413,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         dockTopConstant = size.height - safeBottom - MorphTuning.dockBottomGap - dockHeight
         dockBottomConstant = -(safeBottom + MorphTuning.dockBottomGap)
         dockArtRect = CGRect(
-            x: size.width + dockTrailingConstant - dockHeight,
+            x: miniPlayer.artworkIsOnRight ? size.width + dockTrailingConstant - dockHeight : dockLeadingConstant,
             y: dockTopConstant,
             width: dockHeight,
             height: dockHeight
@@ -455,9 +457,10 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         } else {
             proxyView.frame = interpolate(dockArtRect, fullArtRect, t)
             proxyView.layer.cornerRadius = lerp(dockArtworkCorner, fullArtCornerRadius, t)
-            proxyView.layer.maskedCorners = t < 0.03 && !usesExternalDock
+            let flushCorners: CACornerMask = miniPlayer.artworkIsOnRight
                 ? [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
-                : [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+                : [.layerMinXMinYCorner, .layerMinXMaxYCorner]
+            proxyView.layer.maskedCorners = t < 0.03 && !usesExternalDock ? flushCorners : .allCorners
         }
         CATransaction.commit()
 
