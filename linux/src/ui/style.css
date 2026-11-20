@@ -2019,6 +2019,7 @@ button.artist-sticky-play {
 .sound-tint-orange { background-color: #ff9f0a; }
 .sound-tint-gray   { background-color: #8e8e93; }
 .sound-tint-pink   { background-color: #ff375f; }
+.sound-tint-red    { background-color: #ff453a; }
 .sound-tint-purple { background-color: #bf5af2; }
 .sound-tint-teal   { background-color: #30b0c7; }
 .sound-tint-faint  { background-color: alpha(@window_fg_color, 0.28); }
@@ -2097,4 +2098,29 @@ button.artist-sticky-play {
 /* ---- search results ------------------------------------------------------ */
 .search-songs > row {
   min-height: 52px;
+}
+
+/* ---- preferences ---------------------------------------------------------- */
+.prefs-sidebar > row {
+  border-radius: 9px;
+  margin: 1px 8px;
+}
+
+.prefs-sidebar > row:selected {
+  background-image: none;
+  background-color: @accent_bg_color;
+  box-shadow: none;
+  color: @accent_fg_color;
+}
+
+.prefs-sidebar > row:selected image.prefs-tile,
+.prefs-sidebar > row image.prefs-tile {
+  color: #ffffff;
+}
+
+.prefs-tile {
+  min-width: 26px;
+  min-height: 26px;
+  border-radius: 7px;
+  box-shadow: inset 0 1px 0 alpha(#fff, 0.22), 0 1px 2px alpha(#000, 0.25);
 }

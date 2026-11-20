@@ -13,48 +13,360 @@ use gtk::glib;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-pub fn present(ui: &Rc<Ui>) {
-    let dialog = adw::PreferencesDialog::builder()
-        .title("Preferences")
-        .build();
-    let page = adw::PreferencesPage::builder()
-        .title("General")
-        .icon_name("flaccy-settings-symbolic")
-        .build();
+/// The Preferences dialog as its pages know it: somewhere to push a page of
+/// their own, and a way to close it.
+#[derive(Clone)]
+pub struct PrefsDialog {
+    dialog: adw::Dialog,
+    pages: adw::NavigationView,
+}
 
-    page.add(&hero_group(ui));
-    page.add(&startup_group(ui));
-    page.add(&appearance_group(ui));
-    page.add(&lyrics_group(ui));
-    if musicvideo::available() {
-        page.add(&music_video_group(ui));
-    }
-    page.add(&prepare_group(ui));
-    page.add(&library_group(ui));
-    page.add(&metadata_group(ui));
-    if lastfm::keys_available() {
-        page.add(&lastfm_group(ui));
-    }
-    page.add(&about_group());
+pub struct WeakPrefsDialog {
+    dialog: glib::WeakRef<adw::Dialog>,
+    pages: glib::WeakRef<adw::NavigationView>,
+}
 
-    dialog.add(&page);
-    let sound_page = crate::ui::prefs_sound::page(ui, &dialog);
-    dialog.add(&sound_page);
-    let servers_page = crate::ui::servers::page(ui);
-    dialog.add(&servers_page);
-    match std::env::var("FLACCY_DEMO_PREFS").as_deref() {
-        Ok("servers") => dialog.set_visible_page(&servers_page),
-        Ok("sound") => dialog.set_visible_page(&sound_page),
-        Ok("song-volumes") => {
-            crate::ui::prefs_sound::seed_demo_song_volumes(ui);
-            dialog.set_visible_page(&sound_page);
-            let (ui, dialog) = (Rc::clone(ui), dialog.clone());
-            glib::timeout_add_local_once(std::time::Duration::from_millis(600), move || {
-                crate::ui::prefs_sound::push_song_volumes(&ui, &dialog);
-            });
+impl PrefsDialog {
+    pub fn downgrade(&self) -> WeakPrefsDialog {
+        WeakPrefsDialog {
+            dialog: self.dialog.downgrade(),
+            pages: self.pages.downgrade(),
         }
-        _ => {}
     }
+
+    pub fn push_subpage(&self, page: &adw::NavigationPage) {
+        self.pages.push(page);
+    }
+
+    pub fn close(&self) {
+        self.dialog.close();
+    }
+}
+
+impl WeakPrefsDialog {
+    pub fn upgrade(&self) -> Option<PrefsDialog> {
+        Some(PrefsDialog {
+            dialog: self.dialog.upgrade()?,
+            pages: self.pages.upgrade()?,
+        })
+    }
+}
+
+/// One entry of the Preferences sidebar and the page it opens.
+struct Section {
+    id: &'static str,
+    title: &'static str,
+    icon: &'static str,
+    tint: &'static str,
+    page: adw::PreferencesPage,
+}
+
+fn section(
+    id: &'static str,
+    title: &'static str,
+    icon: &'static str,
+    tint: &'static str,
+    groups: Vec<adw::PreferencesGroup>,
+) -> Section {
+    let page = adw::PreferencesPage::new();
+    for group in &groups {
+        if group.title() == title {
+            group.set_title("");
+        }
+        page.add(group);
+    }
+    Section {
+        id,
+        title,
+        icon,
+        tint,
+        page,
+    }
+}
+
+/// Every page of Preferences in sidebar order. Pages for features this build
+/// or this computer lacks are left out.
+fn sections(ui: &Rc<Ui>, dialog: &PrefsDialog) -> Vec<Section> {
+    let mut sections = vec![
+        section(
+            "general",
+            "General",
+            "flaccy-settings-symbolic",
+            "sound-tint-gray",
+            vec![hero_group(ui), startup_group(ui), playback_group(ui)],
+        ),
+        section(
+            "appearance",
+            "Appearance",
+            "flaccy-appearance-symbolic",
+            "sound-tint-blue",
+            vec![appearance_group(ui)],
+        ),
+        Section {
+            id: "sound",
+            title: "Sound",
+            icon: "flaccy-sound-symbolic",
+            tint: "sound-tint-pink",
+            page: crate::ui::prefs_sound::page(ui, dialog),
+        },
+        section(
+            "lyrics",
+            "Lyrics",
+            "flaccy-lyrics-symbolic",
+            "sound-tint-purple",
+            vec![lyrics_group(ui)],
+        ),
+    ];
+    if musicvideo::available() {
+        sections.push(section(
+            "music-videos",
+            "Music Videos",
+            "flaccy-video-symbolic",
+            "sound-tint-indigo",
+            vec![music_video_group(ui)],
+        ));
+    }
+    sections.push(section(
+        "prepare",
+        "Prepare Ahead",
+        "flaccy-prepare-symbolic",
+        "sound-tint-teal",
+        vec![prepare_group(ui)],
+    ));
+    sections.push(section(
+        "library",
+        "Library",
+        "flaccy-library-symbolic",
+        "sound-tint-orange",
+        vec![library_group(ui), metadata_group(ui)],
+    ));
+    sections.push(Section {
+        id: "servers",
+        title: "Servers",
+        icon: "flaccy-server-symbolic",
+        tint: "sound-tint-green",
+        page: crate::ui::servers::page(ui),
+    });
+    if lastfm::keys_available() {
+        sections.push(section(
+            "lastfm",
+            "Last.fm",
+            "flaccy-lastfm-symbolic",
+            "sound-tint-red",
+            vec![lastfm_group(ui)],
+        ));
+    }
+    sections.push(section(
+        "about",
+        "About",
+        "flaccy-about-symbolic",
+        "sound-tint-faint",
+        vec![about_group()],
+    ));
+    sections
+}
+
+/// Everything a page says, folded for the sidebar's search: its name and the
+/// title and subtitle of every group and row on it.
+fn search_text(section: &Section) -> String {
+    fn collect(widget: &gtk::Widget, words: &mut Vec<String>) {
+        if let Some(row) = widget.downcast_ref::<adw::PreferencesRow>() {
+            words.push(row.title().to_string());
+        }
+        if let Some(row) = widget.downcast_ref::<adw::ActionRow>() {
+            words.extend(row.subtitle().map(|subtitle| subtitle.to_string()));
+        }
+        if let Some(group) = widget.downcast_ref::<adw::PreferencesGroup>() {
+            words.push(group.title().to_string());
+            words.extend(group.description().map(|description| description.to_string()));
+        }
+        let mut child = widget.first_child();
+        while let Some(next) = child {
+            collect(&next, words);
+            child = next.next_sibling();
+        }
+    }
+    let mut words = vec![section.title.to_string()];
+    collect(section.page.upcast_ref(), &mut words);
+    let fields: Vec<&str> = words.iter().map(String::as_str).collect();
+    flaccy_shared::library_search::haystack(&fields)
+}
+
+fn sidebar_row(section: &Section) -> gtk::ListBoxRow {
+    let row_box = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(10)
+        .margin_top(5)
+        .margin_bottom(5)
+        .margin_start(6)
+        .margin_end(6)
+        .build();
+    let tile = crate::ui::prefs_sound::icon_tile(section.icon, section.tint);
+    tile.add_css_class("prefs-tile");
+    row_box.append(&tile);
+    row_box.append(&gtk::Label::builder().label(section.title).xalign(0.0).build());
+    gtk::ListBoxRow::builder().child(&row_box).build()
+}
+
+/// A page of Preferences under a header bar that names it, ready to be the
+/// root of the dialog's content.
+fn content_page(section: &Section) -> adw::NavigationPage {
+    let toolbar = adw::ToolbarView::new();
+    toolbar.add_top_bar(&adw::HeaderBar::new());
+    toolbar.set_content(Some(&section.page));
+    adw::NavigationPage::builder()
+        .title(section.title)
+        .tag(section.id)
+        .child(&toolbar)
+        .build()
+}
+
+const DIALOG_WIDTH: i32 = 940;
+const DIALOG_HEIGHT: i32 = 700;
+const COLLAPSE_BELOW: f64 = 660.0;
+
+/// Preferences, laid out the way a system's own settings are: a searchable
+/// list of pages on the left, each led by a colored icon, and the chosen page
+/// on the right. In a narrow window the list and the page take turns.
+/// `FLACCY_DEMO_PREFS` names the page a demo opens on.
+pub fn present(ui: &Rc<Ui>) {
+    let pages = adw::NavigationView::new();
+    let split = adw::NavigationSplitView::builder()
+        .min_sidebar_width(220.0)
+        .max_sidebar_width(260.0)
+        .build();
+    let dialog = adw::Dialog::builder()
+        .title("Preferences")
+        .content_width(DIALOG_WIDTH)
+        .content_height(DIALOG_HEIGHT)
+        .child(&split)
+        .build();
+    let handle = PrefsDialog {
+        dialog: dialog.clone(),
+        pages: pages.clone(),
+    };
+    let sections = sections(ui, &handle);
+
+    let list = gtk::ListBox::builder()
+        .selection_mode(gtk::SelectionMode::Single)
+        .build();
+    list.add_css_class("navigation-sidebar");
+    list.add_css_class("prefs-sidebar");
+    let nothing = gtk::Label::builder()
+        .label("No setting matches. Check the spelling or search for fewer words.")
+        .wrap(true)
+        .justify(gtk::Justification::Center)
+        .margin_top(24)
+        .margin_start(16)
+        .margin_end(16)
+        .build();
+    nothing.add_css_class("dim");
+    list.set_placeholder(Some(&nothing));
+    let roots: Vec<adw::NavigationPage> = sections.iter().map(content_page).collect();
+    let texts: Rc<Vec<String>> = Rc::new(sections.iter().map(search_text).collect());
+    for section in &sections {
+        list.append(&sidebar_row(section));
+    }
+
+    let search = gtk::SearchEntry::builder()
+        .placeholder_text("Search")
+        .margin_start(10)
+        .margin_end(10)
+        .margin_bottom(6)
+        .build();
+    let query = Rc::new(RefCell::new(flaccy_shared::library_search::Query::default()));
+    {
+        let (texts, query) = (Rc::clone(&texts), Rc::clone(&query));
+        list.set_filter_func(move |row| {
+            texts
+                .get(row.index().max(0) as usize)
+                .is_none_or(|text| query.borrow().matches_haystack(text))
+        });
+    }
+    {
+        let (list, query) = (list.clone(), Rc::clone(&query));
+        search.connect_search_changed(move |entry| {
+            *query.borrow_mut() = flaccy_shared::library_search::Query::new(&entry.text());
+            list.invalidate_filter();
+        });
+    }
+    {
+        let list = list.clone();
+        search.connect_activate(move |_| {
+            let first = (0..).map_while(|index| list.row_at_index(index)).find(|row| row.is_child_visible());
+            if let Some(row) = first {
+                list.select_row(Some(&row));
+                row.activate();
+            }
+        });
+    }
+
+    {
+        let (pages, split) = (pages.clone(), split.clone());
+        let roots = roots.clone();
+        list.connect_row_selected(move |_, row| {
+            let Some(root) = row.and_then(|row| roots.get(row.index().max(0) as usize)) else {
+                return;
+            };
+            if pages.visible_page().as_ref() != Some(root) {
+                pages.replace(std::slice::from_ref(root));
+            }
+        });
+        list.connect_row_activated(move |_, _| split.set_show_content(true));
+    }
+
+    let sidebar_scroll = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .vexpand(true)
+        .child(&list)
+        .build();
+    let sidebar_body = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    sidebar_body.append(&search);
+    sidebar_body.append(&sidebar_scroll);
+    let sidebar_toolbar = adw::ToolbarView::new();
+    sidebar_toolbar.add_top_bar(&adw::HeaderBar::new());
+    sidebar_toolbar.set_content(Some(&sidebar_body));
+    split.set_sidebar(Some(
+        &adw::NavigationPage::builder()
+            .title("Preferences")
+            .child(&sidebar_toolbar)
+            .build(),
+    ));
+    split.set_content(Some(
+        &adw::NavigationPage::builder()
+            .title("Preferences")
+            .child(&pages)
+            .build(),
+    ));
+    let narrow = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+        adw::BreakpointConditionLengthType::MaxWidth,
+        COLLAPSE_BELOW,
+        adw::LengthUnit::Sp,
+    ));
+    narrow.add_setter(&split, "collapsed", Some(&true.to_value()));
+    dialog.add_breakpoint(narrow);
+
+    let wanted = std::env::var("FLACCY_DEMO_PREFS").unwrap_or_default();
+    let opening = match wanted.as_str() {
+        "song-volumes" => "sound",
+        other => other,
+    };
+    let start = sections
+        .iter()
+        .position(|section| section.id == opening)
+        .unwrap_or(0);
+    list.select_row(list.row_at_index(start as i32).as_ref());
+    if wanted == "song-volumes" {
+        crate::ui::prefs_sound::seed_demo_song_volumes(ui);
+        let (ui, handle) = (Rc::clone(ui), handle.clone());
+        glib::timeout_add_local_once(std::time::Duration::from_millis(600), move || {
+            crate::ui::prefs_sound::push_song_volumes(&ui, &handle);
+        });
+    }
+    if let Ok(text) = std::env::var("FLACCY_DEMO_PREFS_SEARCH") {
+        search.set_text(&text);
+    }
+    dialog.set_focus(Some(&list));
     dialog.present(Some(&ui.window));
     republish_job_progress(ui);
 }
@@ -267,6 +579,29 @@ fn startup_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
         });
     }
     group.add(&row);
+    group
+}
+
+/// What playback does without being asked.
+fn playback_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder().title("Playback").build();
+    let autoplay_row = adw::SwitchRow::builder()
+        .title("Autoplay Similar Music")
+        .subtitle("Keep the music going when the queue ends")
+        .active(ui.core.config.borrow().autoplay_continuation)
+        .build();
+    {
+        let ui = Rc::clone(ui);
+        autoplay_row.connect_active_notify(move |row| {
+            ui.core.config.borrow_mut().autoplay_continuation = row.is_active();
+            ui.core.save_config();
+            crate::logger::info(
+                "ui",
+                &format!("autoplay continuation set to {}", row.is_active()),
+            );
+        });
+    }
+    group.add(&autoplay_row);
     group
 }
 
@@ -863,24 +1198,6 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     }
     folder_row.add_suffix(&choose);
     group.add(&folder_row);
-
-    let autoplay_row = adw::SwitchRow::builder()
-        .title("Autoplay Similar Music")
-        .subtitle("Keep the music going when the queue ends")
-        .active(ui.core.config.borrow().autoplay_continuation)
-        .build();
-    {
-        let ui = Rc::clone(ui);
-        autoplay_row.connect_active_notify(move |row| {
-            ui.core.config.borrow_mut().autoplay_continuation = row.is_active();
-            ui.core.save_config();
-            crate::logger::info(
-                "ui",
-                &format!("autoplay continuation set to {}", row.is_active()),
-            );
-        });
-    }
-    group.add(&autoplay_row);
 
     let clean_library_row = adw::SwitchRow::builder()
         .title("Clean Library")

@@ -20,7 +20,7 @@ use std::rc::Rc;
 
 /// The Sound page of Preferences. `dialog` is the Preferences dialog it sits
 /// in, which pushes the Song Volumes list and closes on the way to the guide.
-pub fn page(ui: &Rc<Ui>, dialog: &adw::PreferencesDialog) -> adw::PreferencesPage {
+pub fn page(ui: &Rc<Ui>, dialog: &crate::ui::prefs::PrefsDialog) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title("Sound")
         .icon_name("flaccy-speaker-symbolic")
@@ -115,7 +115,7 @@ pub fn page(ui: &Rc<Ui>, dialog: &adw::PreferencesDialog) -> adw::PreferencesPag
 /// What the Sound page shows and keeps current.
 struct SoundPage {
     ui: Rc<Ui>,
-    dialog: glib::WeakRef<adw::PreferencesDialog>,
+    dialog: crate::ui::prefs::WeakPrefsDialog,
     path: SignalPathCard,
     output_group: adw::PreferencesGroup,
     output_rows: RefCell<Vec<adw::ActionRow>>,
@@ -395,7 +395,7 @@ fn set_tint(widget: &impl IsA<gtk::Widget>, tint: &str) {
 
 /// A small coloured tile holding a symbolic icon, the way each row of the
 /// Apple Settings leads.
-fn icon_tile(icon: &str, tint: &str) -> gtk::Image {
+pub(crate) fn icon_tile(icon: &str, tint: &str) -> gtk::Image {
     let image = gtk::Image::from_icon_name(icon);
     image.set_pixel_size(16);
     image.set_valign(gtk::Align::Center);
@@ -563,7 +563,7 @@ fn adjusted_songs(library: &Library, levels: &HashMap<String, i32>) -> Vec<(Trac
 
 /// Pushes the Song Volumes list onto the Preferences dialog: every song with a
 /// volume of its own, each with its level and a reset, and Reset All.
-pub fn push_song_volumes(ui: &Rc<Ui>, dialog: &adw::PreferencesDialog) {
+pub fn push_song_volumes(ui: &Rc<Ui>, dialog: &crate::ui::prefs::PrefsDialog) {
     let group = adw::PreferencesGroup::builder()
         .description("Set a song's own volume from Now Playing. Reset one here to put it back.")
         .build();
