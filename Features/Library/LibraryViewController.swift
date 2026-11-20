@@ -252,10 +252,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         settingsItem.accessibilityIdentifier = "library.settings"
         navigationItem.leftBarButtonItem = settingsItem
 
-        Task {
-            await viewModel.loadLibrary()
-            viewModel.restorePlaybackState()
-        }
+        viewModel.restorePlaybackState()
+        Task { await viewModel.loadLibrary() }
 
         observeWantlist()
         playlistSummariesToken = DatabaseManager.shared.observePlaylistSummaries { [weak self] _ in

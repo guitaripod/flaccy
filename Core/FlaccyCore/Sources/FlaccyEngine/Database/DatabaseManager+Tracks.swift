@@ -153,10 +153,12 @@ extension DatabaseManager {
 
     /// Every track's relative path with the date it entered the library.
     public func fetchTrackDateAddedByPath() throws -> [(path: String, dateAdded: Date)] {
-        try dbQueue.read { db in
-            let rows = try Row.fetchAll(db, sql: "SELECT fileURL, dateAdded FROM tracks")
-            return rows.map { (path: $0["fileURL"], dateAdded: $0["dateAdded"]) }
-        }
+        try dbQueue.read { db in try Self.trackDateAddedByPath(db) }
+    }
+
+    static func trackDateAddedByPath(_ db: Database) throws -> [(path: String, dateAdded: Date)] {
+        let rows = try Row.fetchAll(db, sql: "SELECT fileURL, dateAdded FROM tracks")
+        return rows.map { (path: $0["fileURL"], dateAdded: $0["dateAdded"]) }
     }
 
     public func fetchTrack(byRelativePath path: String) throws -> TrackRecord? {
@@ -164,6 +166,28 @@ extension DatabaseManager {
             try TrackRecord.filter(Column("fileURL") == path).fetchOne(db)
         }
     }
+
+    /// The rows for `paths` keyed by path, read in one transaction a few
+    /// hundred paths at a time; a path with no row is simply absent.
+    public func fetchTracks(byRelativePaths paths: [String]) throws -> [String: TrackRecord] {
+        let unique = Array(Set(paths))
+        guard !unique.isEmpty else { return [:] }
+        return try dbQueue.read { db in
+            var byPath: [String: TrackRecord] = [:]
+            byPath.reserveCapacity(unique.count)
+            var start = 0
+            while start < unique.count {
+                let chunk = Array(unique[start..<min(start + Self.pathLookupChunk, unique.count)])
+                for record in try TrackRecord.filter(chunk.contains(Column("fileURL"))).fetchAll(db) {
+                    byPath[record.fileURL] = record
+                }
+                start += Self.pathLookupChunk
+            }
+            return byPath
+        }
+    }
+
+    private static let pathLookupChunk = 500
 
     public func deleteTrack(id: Int64) throws {
         try dbQueue.write { db in

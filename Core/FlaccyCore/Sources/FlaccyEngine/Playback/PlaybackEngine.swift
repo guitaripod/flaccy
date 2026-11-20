@@ -16,6 +16,9 @@ public final class PlaybackEngine {
     public static let shuffleRepeatDidChange = Notification.Name("com.midgarcorp.flaccy.ShuffleRepeatDidChange")
     public static let queueDidChange = Notification.Name("com.midgarcorp.flaccy.QueueDidChange")
     public static let sleepTimerDidUpdate = Notification.Name("com.midgarcorp.flaccy.SleepTimerDidUpdate")
+    /// Posted once a launch's queue restore has finished, whether or not it
+    /// found anything to put back.
+    public static let queueRestoreDidFinish = Notification.Name("com.midgarcorp.flaccy.QueueRestoreDidFinish")
 
     var player: AVQueuePlayer?
     var timeObserver: Any?
@@ -31,7 +34,9 @@ public final class PlaybackEngine {
 
     var originalQueue: [Track] = []
     var lastKnownPlaybackPosition: TimeInterval = 0
-    var isRestoringQueue: Bool = false
+    /// True while the queue a previous launch saved is being read back, the
+    /// window in which an empty queue only means it is not back yet.
+    public internal(set) var isRestoringQueue: Bool = false
     var wasPlayingBeforeInterruption = false
     var userPausedPlayback = false {
         didSet {

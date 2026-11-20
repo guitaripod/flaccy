@@ -65,12 +65,37 @@ nonisolated struct HomeFeed: Sendable {
         recentlyAdded: [], onThisDay: nil, week: nil
     )
 
+    /// What leads the page, in words for the log: the hero and the one thing
+    /// it offers, so a lead that moves after the first frame shows up there.
+    var leadDescription: String {
+        if let promo, promo.placement == .replacesHero { return "promo \(promo)" }
+        switch hero {
+        case .resume: return "resume \(resume?.context.key ?? "")"
+        case .upNext: return "upNext \(upNext?.mix.id ?? "") \(upNext?.mix.title ?? "")"
+        case .dayOne: return "dayOne"
+        case .empty: return "empty"
+        }
+    }
+
     /// This feed with the promo card and the proof lines behind it.
     func with(promo: HomePromo?, proofLines: [PaywallProof.Line]) -> HomeFeed {
         var copy = self
         copy.promo = promo
         copy.proofLines = proofLines
         return copy
+    }
+}
+
+/// Logs what leads Home when it first opens and each time it moves after.
+nonisolated struct HomeLeadLog {
+
+    private var shown: String?
+
+    mutating func note(_ feed: HomeFeed) {
+        let lead = feed.leadDescription
+        guard lead != shown else { return }
+        MidgarLog.info(shown == nil ? "Home opens on \(lead)" : "Home lead moved to \(lead)", category: .ui)
+        shown = lead
     }
 }
 
@@ -136,28 +161,65 @@ nonisolated struct HomeFeedInputs: Sendable {
     }
 }
 
+/// Times the stages of one Home build, for the first frame's log line.
+nonisolated struct HomeBuildClock: Sendable {
+
+    private var mark = DispatchTime.now().uptimeNanoseconds
+    private(set) var stages: [String] = []
+
+    mutating func lap(_ stage: String) {
+        let now = DispatchTime.now().uptimeNanoseconds
+        stages.append("\(stage) \((now - mark) / 1_000_000)")
+        mark = now
+    }
+
+    var summary: String {
+        stages.joined(separator: ", ")
+    }
+}
+
 /// Builds a `HomeFeed`. Pure apart from the database reads, and cheap on a
 /// large history: the scrobble table is read by date ranges, never whole,
 /// except where the existing suggestions already read it.
 nonisolated enum HomeFeedBuilder {
 
     nonisolated static func build(_ inputs: HomeFeedInputs, database: DatabaseManager = .shared) -> HomeFeed {
+        var clock = HomeBuildClock()
+        return build(inputs, database: database, history: nil, clock: &clock)
+    }
+
+    /// Builds from `history` when it was read moments ago (the launch
+    /// prefetch), else reads it first.
+    nonisolated static func build(
+        _ inputs: HomeFeedInputs,
+        database: DatabaseManager = .shared,
+        history prefetched: HomeHistoryRows?,
+        clock: inout HomeBuildClock
+    ) -> HomeFeed {
         let promo = promoCard(inputs.promo, database: database)
+        clock.lap("promo")
         guard !inputs.tracks.isEmpty else { return HomeFeed.empty.with(promo: promo.card, proofLines: promo.proof) }
+        let history = prefetched ?? readHistory(now: inputs.now, calendar: inputs.calendar, database: database)
+        clock.lap(prefetched == nil ? "history" : "prefetched")
         let index = AlbumIndex(albums: inputs.albums)
-        let hasHistory = (try? database.hasLivePlays()) ?? false
+        let hasHistory = history.hasLivePlays
 
         let resume = resumeCard(inputs, index: index)
         let canResume = resume.map { $0.point.isResumable(now: inputs.now) } ?? false
-        let mixes = hasHistory ? SuggestedPlaylistService.build(pool: CleanLibrarySetting.uniquePool(inputs.tracks)) : []
+        let mixes = hasHistory
+            ? SuggestedPlaylistService.build(pool: CleanLibrarySetting.uniquePool(inputs.tracks), tallies: history.tallies, now: inputs.now)
+            : []
+        clock.lap("mixes")
 
         let playingKey = inputs.queue.isEmpty ? nil : inputs.context.key
-        let historyEntries = historyAlbums(database: database, index: index)
+        let historyEntries = historyAlbums(history.recentAlbums, index: index)
         let items = jumpBackIn(inputs, history: historyEntries, excluding: Set([playingKey].compactMap { $0 }), index: index, mixes: mixes, database: database)
+        clock.lap("jump")
 
-        let recentlyAdded = recentlyAddedAlbums(inputs, database: database)
-        let memory = onThisDay(inputs, database: database, index: index)
-        let week = weekGlance(inputs, database: database)
+        let recentlyAdded = recentlyAddedAlbums(inputs, dateAdded: history.dateAddedByPath)
+        let memory = onThisDay(inputs, rows: history.onThisDay, index: index)
+        let week = WeekGlance.compute(homePlays(history.week), now: inputs.now, calendar: inputs.calendar)
+        clock.lap("added+memory+week")
 
         let facts = HomeAvailability(
             libraryTrackCount: inputs.tracks.count,
@@ -188,6 +250,22 @@ nonisolated enum HomeFeedBuilder {
             week: week.hasPlays ? week : nil,
             promo: promo.card,
             proofLines: promo.proof
+        )
+    }
+
+    /// Everything Home reads from the history for a build at `now`, in one read.
+    nonisolated static func readHistory(now: Date, calendar: Calendar, database: DatabaseManager = .shared) -> HomeHistoryRows {
+        (try? database.homeHistory(historyRequest(now: now, calendar: calendar))) ?? .nothing(at: now)
+    }
+
+    nonisolated static func historyRequest(now: Date, calendar: Calendar) -> HomeHistoryRequest {
+        HomeHistoryRequest(
+            now: now,
+            tallyWindows: SuggestedPlaylistService.tallyWindows(now: now),
+            recentAlbumLimit: 60,
+            datedSince: HomePlay.earliestDated,
+            onThisDaySpans: onThisDaySpans(now: now, calendar: calendar),
+            weekSpan: DateInterval(start: now.addingTimeInterval(-2 * WeekGlance.window), end: now.addingTimeInterval(1))
         )
     }
 
@@ -261,9 +339,10 @@ nonisolated enum HomeFeedBuilder {
         )
     }
 
-    nonisolated private static func historyAlbums(database: DatabaseManager, index: AlbumIndex) -> [RecentContexts.Entry] {
-        let rows = (try? database.recentlyPlayedAlbums(limit: 60, since: HomePlay.earliestDated)) ?? []
-        return rows
+    nonisolated private static func historyAlbums(
+        _ rows: [(albumTitle: String, artist: String, lastPlayed: Date)], index: AlbumIndex
+    ) -> [RecentContexts.Entry] {
+        rows
             .compactMap { row in
                 guard let album = index.album(title: row.albumTitle, artist: row.artist) else { return nil }
                 return RecentContexts.Entry(context: albumContext(album), playedAt: row.lastPlayed)
@@ -378,11 +457,7 @@ nonisolated enum HomeFeedBuilder {
 
     /// Newest first by the newest track each album holds, through the same
     /// rule the Recently Added chip uses, capped for Home.
-    nonisolated private static func recentlyAddedAlbums(_ inputs: HomeFeedInputs, database: DatabaseManager) -> [Album] {
-        let added = Dictionary(
-            ((try? database.fetchTrackDateAddedByPath()) ?? []).map { ($0.path, $0.dateAdded) },
-            uniquingKeysWith: { first, _ in first }
-        )
+    nonisolated private static func recentlyAddedAlbums(_ inputs: HomeFeedInputs, dateAdded added: [String: Date]) -> [Album] {
         let root = LibraryPaths.root.standardizedFileURL.path
         let entries: [(id: String, dateAdded: Date)] = inputs.albums.map { album in
             let newest = album.tracks.compactMap { track -> Date? in
@@ -397,11 +472,12 @@ nonisolated enum HomeFeedBuilder {
         return ids.prefix(HomeComposer.recentlyAddedLimit).compactMap { byID[$0] }
     }
 
-    nonisolated private static func onThisDay(_ inputs: HomeFeedInputs, database: DatabaseManager, index: AlbumIndex) -> HomeFeed.Memory? {
-        let calendar = inputs.calendar
-        var rows: [ScrobbleRecord] = []
-        let today = calendar.dateComponents([.year, .month, .day], from: inputs.now)
-        guard let thisYear = today.year else { return nil }
+    /// The spans On This Day reads: this calendar day in each earlier year
+    /// with dated plays, and the week around this day a year ago.
+    nonisolated static func onThisDaySpans(now: Date, calendar: Calendar) -> [DateInterval] {
+        var spans: [DateInterval] = []
+        let today = calendar.dateComponents([.year, .month, .day], from: now)
+        guard let thisYear = today.year else { return [] }
         let firstYear = calendar.component(.year, from: HomePlay.earliestDated)
         if firstYear < thisYear {
             for year in firstYear..<thisYear {
@@ -410,30 +486,31 @@ nonisolated enum HomeFeedBuilder {
                 guard let start = calendar.date(from: parts),
                       calendar.component(.day, from: start) == today.day,
                       let end = calendar.date(byAdding: .day, value: 1, to: start) else { continue }
-                rows += (try? database.fetchScrobbleRows(from: start, to: end)) ?? []
+                spans.append(DateInterval(start: start, end: end))
             }
         }
-        if let yearAgo = calendar.date(byAdding: .year, value: -1, to: inputs.now) {
+        if let yearAgo = calendar.date(byAdding: .year, value: -1, to: now) {
             let anchor = calendar.startOfDay(for: yearAgo)
             if let start = calendar.date(byAdding: .day, value: -OnThisDay.weekSpanDays, to: anchor),
                let end = calendar.date(byAdding: .day, value: OnThisDay.weekSpanDays + 1, to: anchor) {
-                rows += (try? database.fetchScrobbleRows(from: start, to: end)) ?? []
+                spans.append(DateInterval(start: start, end: end))
             }
         }
+        return spans
+    }
+
+    nonisolated private static func onThisDay(_ inputs: HomeFeedInputs, rows: [ScrobbleRecord], index: AlbumIndex) -> HomeFeed.Memory? {
         var seen = Set<Int64>()
         let plays = rows.compactMap { row -> HomePlay? in
             if let id = row.id, !seen.insert(id).inserted { return nil }
             return HomePlay(album: row.albumTitle, artist: row.artist, at: row.timestamp, seconds: row.duration)
         }
-        guard let pick = OnThisDay.pick(plays, now: inputs.now, calendar: calendar),
+        guard let pick = OnThisDay.pick(plays, now: inputs.now, calendar: inputs.calendar),
               let album = index.album(title: pick.album, artist: pick.artist) else { return nil }
         return HomeFeed.Memory(pick: pick, album: album)
     }
 
-    nonisolated private static func weekGlance(_ inputs: HomeFeedInputs, database: DatabaseManager) -> WeekGlance {
-        let start = inputs.now.addingTimeInterval(-2 * WeekGlance.window)
-        let rows = (try? database.fetchScrobbleRows(from: start, to: inputs.now.addingTimeInterval(1))) ?? []
-        let plays = rows.map { HomePlay(album: $0.albumTitle, artist: $0.artist, at: $0.timestamp, seconds: $0.duration) }
-        return WeekGlance.compute(plays, now: inputs.now, calendar: inputs.calendar)
+    nonisolated private static func homePlays(_ rows: [ScrobbleRecord]) -> [HomePlay] {
+        rows.map { HomePlay(album: $0.albumTitle, artist: $0.artist, at: $0.timestamp, seconds: $0.duration) }
     }
 }

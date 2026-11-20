@@ -39,6 +39,9 @@ struct State {
     backdrop: HomeBackdrop,
     mode: Cell<Option<PageMode>>,
     fetched: RefCell<Fetched>,
+    has_fetched: Cell<bool>,
+    built_at: std::time::Instant,
+    shown_lead: RefCell<Option<String>>,
     index: RefCell<(Rc<Library>, Rc<AlbumIndex>)>,
     fetching: Cell<bool>,
     fetch_again: Cell<Option<bool>>,
@@ -111,6 +114,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         backdrop,
         mode: Cell::new(None),
         fetched: RefCell::new(Fetched::default()),
+        has_fetched: Cell::new(false),
+        built_at: std::time::Instant::now(),
+        shown_lead: RefCell::new(None),
         index: RefCell::new((Rc::clone(&library), Rc::new(AlbumIndex::new(&library)))),
         fetching: Cell::new(false),
         fetch_again: Cell::new(None),
@@ -200,6 +206,7 @@ impl State {
             if let Some(fetched) = fetched {
                 *state.fetched.borrow_mut() = fetched;
             }
+            state.has_fetched.set(true);
             state.render();
             if let Some(with_mixes) = state.fetch_again.take() {
                 state.refresh(with_mixes);
@@ -279,8 +286,11 @@ impl State {
         );
     }
 
+    /// Draws the page from what is fetched. The first frame also waits for the
+    /// first fetch, so Home opens with its mixes and history in place rather
+    /// than leading with one hero and swapping it when they land.
     fn render(self: &Rc<Self>) {
-        if self.ui.core.holds_home_first_frame() {
+        if self.ui.core.holds_home_first_frame() || !self.has_fetched.get() {
             return;
         }
         if !self.scroll.is_mapped() {
@@ -301,8 +311,28 @@ impl State {
             return;
         }
         *self.fingerprint.borrow_mut() = fingerprint;
+        self.note_lead(&model);
         self.rebuild(&model, mode);
         self.reveal_feed();
+    }
+
+    /// Logs what leads Home when it first opens, with how long it took, and
+    /// each time the lead moves after.
+    fn note_lead(&self, model: &HomeModel) {
+        let lead = model.lead_description();
+        let mut shown = self.shown_lead.borrow_mut();
+        if shown.as_deref() == Some(lead.as_str()) {
+            return;
+        }
+        let line = match shown.as_ref() {
+            None => format!(
+                "Home opens on {lead}, {} ms after the page was built",
+                self.built_at.elapsed().as_millis()
+            ),
+            Some(_) => format!("Home lead moved to {lead}"),
+        };
+        crate::logger::info("home", &line);
+        *shown = Some(lead);
     }
 
     fn rebuild(self: &Rc<Self>, model: &HomeModel, mode: PageMode) {

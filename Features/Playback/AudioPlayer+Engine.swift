@@ -6,6 +6,7 @@ extension AudioPlayer {
     var queue: [Track] { engine.queue }
     var currentIndex: Int { engine.currentIndex }
     var isPlaying: Bool { engine.isPlaying }
+    var isRestoringQueue: Bool { engine.isRestoringQueue }
     var currentTrack: Track? { engine.currentTrack }
     var currentTime: TimeInterval { engine.currentTime }
     var duration: TimeInterval { engine.duration }

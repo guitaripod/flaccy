@@ -14,6 +14,7 @@ protocol AudioPlaying: AnyObject {
     var queue: [Track] { get }
     var currentIndex: Int { get }
     var isPlaying: Bool { get }
+    var isRestoringQueue: Bool { get }
     var currentTrack: Track? { get }
     var currentTime: TimeInterval { get }
     var duration: TimeInterval { get }
@@ -68,6 +69,7 @@ final class AudioPlayer: AudioPlaying {
     static let shuffleRepeatDidChange = PlaybackEngine.shuffleRepeatDidChange
     static let queueDidChange = PlaybackEngine.queueDidChange
     static let sleepTimerDidUpdate = PlaybackEngine.sleepTimerDidUpdate
+    static let queueRestoreDidFinish = PlaybackEngine.queueRestoreDidFinish
     #if os(macOS)
     static let volumeDidChange = PlaybackEngine.volumeDidChange
     #endif

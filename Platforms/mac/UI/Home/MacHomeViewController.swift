@@ -45,10 +45,15 @@ final class MacHomeViewController: NSViewController {
     private var feed: HomeFeed?
     private var generation = 0
     private var refreshPending = false
+    private lazy var launchGate = HomeLaunchGate { [weak self] in self?.scheduleRefresh() }
     private var isVisible = false
     private var hasRevealed = false
+    private var leadLog = HomeLeadLog()
+    private let historyPrefetch = HomeHistoryPrefetch()
 
     override func loadView() {
+        historyPrefetch.start()
+        HomeFirstScreen.preloadRemembered()
         let root = AppearanceObservingView()
         root.wantsLayer = true
         view = root
@@ -193,17 +198,15 @@ final class MacHomeViewController: NSViewController {
         guard observers.isEmpty else { return }
         let center = NotificationCenter.default
         let names: [Notification.Name] = [
-            Library.didUpdateNotification,
             AudioPlayer.trackDidChange,
             AudioPlayer.playbackStateDidChange,
             AudioPlayer.queueDidChange,
             RecentContextStore.didChange,
             HomeLayoutStore.didChange,
             PurchaseManager.stateDidChange,
-            PurchaseManager.entitlementsDidLoad,
             AlbumArtworkCache.didChangeNotification,
             NSApplication.didBecomeActiveNotification,
-        ]
+        ] + HomeLaunchGate.openingNotifications
         for name in names {
             observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.scheduleRefresh() }
@@ -239,23 +242,39 @@ final class MacHomeViewController: NSViewController {
 
     /// Reads what Home needs on the main actor, builds the feed off it, and
     /// keeps the answer only if nothing newer has been asked for since.
-    /// Until the first frame is up it waits for the library a previous launch
-    /// indexed, and keeps the build that started first even when a newer one
-    /// overtakes it, then loads the covers that frame shows before revealing it.
+    /// Until the first frame is up it waits for what a launch puts back
+    /// (`HomeLaunchGate`), and keeps the build that started first even when a
+    /// newer one overtakes it, then loads the covers that frame shows before
+    /// revealing it.
     private func refresh() {
-        guard isVisible, !Library.shared.isRestoringIndexedLibrary else { return }
+        guard isVisible, hasRevealed || !launchGate.isHolding else { return }
         generation += 1
         let token = generation
         let inputs = HomeFeedInputs.current()
         let isFirstFrame = !hasRevealed
+        let launchHistory = isFirstFrame ? historyPrefetch.claim() : nil
+        let began = DispatchTime.now().uptimeNanoseconds
         Task.detached(priority: .userInitiated) { [weak self] in
+            var clock = HomeBuildClock()
             if isFirstFrame { SpellingMemo.warm(for: inputs.tracks) }
-            let built = HomeFeedBuilder.build(inputs)
+            clock.lap("spelling")
+            let prefetched = await HomeHistoryPrefetch.rows(launchHistory, at: inputs.now)
+            clock.lap("wait")
+            let built = HomeFeedBuilder.build(inputs, history: prefetched, clock: &clock)
+            let firstScreen = HomeFirstScreen.albums(in: built, mixCovers: [:])
+            HomeFirstScreen.remember(firstScreen)
             if isFirstFrame {
-                await HomeFirstScreen.prewarmCovers(HomeFirstScreen.albums(in: built, mixCovers: [:]))
+                let missing = HomeFirstScreen.missingCovers(firstScreen)
+                await HomeFirstScreen.prewarmCovers(firstScreen)
+                clock.lap("covers \(missing)/\(firstScreen.count)")
             }
+            let stages = clock.summary
             await MainActor.run {
                 guard let self, self.generation == token || !self.hasRevealed else { return }
+                if !self.hasRevealed {
+                    let milliseconds = (DispatchTime.now().uptimeNanoseconds - began) / 1_000_000
+                    MidgarLog.info("Home first frame built in \(milliseconds) ms (\(stages))", category: .performance)
+                }
                 self.apply(built)
             }
         }
@@ -263,6 +282,7 @@ final class MacHomeViewController: NSViewController {
 
     private func apply(_ feed: HomeFeed) {
         self.feed = feed
+        leadLog.note(feed)
         let clip = scrollView.contentView
         let restore = clip.bounds.origin.y
         clearColumn()

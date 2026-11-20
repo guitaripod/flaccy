@@ -39,9 +39,10 @@ extension PlaybackEngine {
     }
 
     /// Reads the persisted queue keys synchronously, then resolves the saved
-    /// paths into records off the main actor before hydrating tracks and
-    /// rebuilding the paused player, so restoring a long queue never stalls
-    /// launch with per-track database reads.
+    /// paths into records off the main actor in one read before hydrating
+    /// tracks and rebuilding the paused player, so restoring a long queue never
+    /// stalls launch with per-track database reads. Announces
+    /// `queueRestoreDidFinish` when it is done, found or not.
     public func restoreQueueState() {
         guard let paths = UserDefaults.standard.stringArray(forKey: "flaccy.queue.paths"),
               !paths.isEmpty else { return }
@@ -56,13 +57,14 @@ extension PlaybackEngine {
             ? UserDefaults.standard.stringArray(forKey: "flaccy.queue.originalPaths")
             : nil
 
+        guard !isRestoringQueue else { return }
         isRestoringQueue = true
         Task { [weak self] in
             let fetched = await Task.detached {
                 Self.fetchRestorableRecords(paths: paths, originalPaths: savedOriginalPaths)
             }.value
-            defer { self?.isRestoringQueue = false }
-            self?.applyRestoredQueue(
+            guard let self else { return }
+            self.applyRestoredQueue(
                 records: fetched.records,
                 originalRecords: fetched.originalRecords,
                 savedIndex: savedIndex,
@@ -71,20 +73,21 @@ extension PlaybackEngine {
                 savedRepeat: savedRepeat,
                 savedCurrentPath: savedCurrentPath
             )
-            self?.applyRestoredContext(savedContext)
+            self.applyRestoredContext(savedContext)
+            self.isRestoringQueue = false
+            self.postOnMain(PlaybackEngine.queueRestoreDidFinish)
         }
     }
 
     nonisolated static func fetchRestorableRecords(
         paths: [String], originalPaths: [String]?
     ) -> (records: [(path: String, record: TrackRecord)], originalRecords: [TrackRecord]?) {
+        let wanted = paths + (originalPaths ?? [])
+        let byPath = (try? DatabaseManager.shared.fetchTracks(byRelativePaths: wanted)) ?? [:]
         let records = paths.compactMap { path -> (path: String, record: TrackRecord)? in
-            guard let record = try? DatabaseManager.shared.fetchTrack(byRelativePath: path) else { return nil }
-            return (path, record)
+            byPath[path].map { (path, $0) }
         }
-        let originalRecords = originalPaths?.compactMap {
-            try? DatabaseManager.shared.fetchTrack(byRelativePath: $0)
-        }
+        let originalRecords = originalPaths?.compactMap { byPath[$0] }
         return (records, originalRecords)
     }
 

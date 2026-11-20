@@ -37,6 +37,9 @@ final class HomeViewModel {
     private var isBuildingFirstFrame = false
     private var cancellables = Set<AnyCancellable>()
     private let refreshRequests = PassthroughSubject<Void, Never>()
+    private lazy var launchGate = HomeLaunchGate { [weak self] in self?.refresh() }
+    private let historyPrefetch = HomeHistoryPrefetch()
+    private var leadLog = HomeLeadLog()
 
     private static let coalesceInterval: RunLoop.SchedulerTimeType.Stride = .milliseconds(120)
 
@@ -45,13 +48,16 @@ final class HomeViewModel {
             .debounce(for: Self.coalesceInterval, scheduler: RunLoop.main)
             .sink { [weak self] in self?.reload() }
             .store(in: &cancellables)
+        historyPrefetch.start()
+        HomeFirstScreen.preloadRemembered()
         observeSources()
     }
 
-    /// Whether the first frame is still waiting for the library a previous
-    /// launch indexed. A feed built before it is back would have no songs in it.
-    var awaitsLibrary: Bool {
-        Library.shared.isRestoringIndexedLibrary
+    /// Whether the first frame is still waiting for what a launch puts back
+    /// (`HomeLaunchGate`). A feed built before then would lead with something
+    /// else and change under the person a moment later.
+    var awaitsLaunch: Bool {
+        !hasLoaded && launchGate.isHolding
     }
 
     private func observeSources() {
@@ -61,11 +67,9 @@ final class HomeViewModel {
             AudioPlayer.queueDidChange,
             RecentContextStore.didChange,
             HomeLayoutStore.didChange,
-            Library.didUpdateNotification,
             PurchaseManager.stateDidChange,
-            PurchaseManager.entitlementsDidLoad,
             UIApplication.willEnterForegroundNotification,
-        ]
+        ] + HomeLaunchGate.openingNotifications
         for name in names {
             NotificationCenter.default.publisher(for: name)
                 .sink { [weak self] _ in self?.refresh() }
@@ -88,26 +92,39 @@ final class HomeViewModel {
     /// when a newer one overtakes it: launch fires a burst of changes, and
     /// restarting on each would hold the page back.
     func reload() {
-        guard !awaitsLibrary else { return }
+        guard !awaitsLaunch else { return }
         generation += 1
         let mine = generation
+        let began = DispatchTime.now().uptimeNanoseconds
+        var clock = HomeBuildClock()
         let inputs = HomeFeedInputs.current()
+        clock.lap("inputs")
         let isFirstFrame = !hasLoaded
         if isFirstFrame { isBuildingFirstFrame = true }
-        let began = DispatchTime.now().uptimeNanoseconds
-        Task.detached(priority: .userInitiated) { [weak self] in
+        let launchHistory = isFirstFrame ? historyPrefetch.claim() : nil
+        Task.detached(priority: .userInitiated) { [weak self, clock] in
+            var clock = clock
             if isFirstFrame { SpellingMemo.warm(for: inputs.tracks) }
-            let built = Self.build(inputs)
+            clock.lap("spelling")
+            let prefetched = await HomeHistoryPrefetch.rows(launchHistory, at: inputs.now)
+            clock.lap("wait")
+            let built = Self.build(inputs, history: prefetched, clock: &clock)
+            let firstScreen = HomeFirstScreen.albums(in: built.feed, mixCovers: built.mixCovers)
+            HomeFirstScreen.remember(firstScreen)
             if isFirstFrame {
-                await HomeFirstScreen.prewarmCovers(HomeFirstScreen.albums(in: built.feed, mixCovers: built.mixCovers))
+                let missing = HomeFirstScreen.missingCovers(firstScreen)
+                await HomeFirstScreen.prewarmCovers(firstScreen)
+                clock.lap("covers \(missing)/\(firstScreen.count)")
             }
+            let stages = clock.summary
             await MainActor.run {
                 guard let self, mine == self.generation || !self.hasLoaded else { return }
                 if isFirstFrame { self.isBuildingFirstFrame = false }
                 if !self.hasLoaded {
                     let milliseconds = (DispatchTime.now().uptimeNanoseconds - began) / 1_000_000
-                    MidgarLog.info("Home first frame built in \(milliseconds) ms", category: .performance)
+                    MidgarLog.info("Home first frame built in \(milliseconds) ms (\(stages))", category: .performance)
                 }
+                self.leadLog.note(built.feed)
                 self.model = built
                 self.hasLoaded = true
                 HomePromoOffers.loadIfNeeded(for: built.feed.promo)
@@ -116,13 +133,16 @@ final class HomeViewModel {
         }
     }
 
-    nonisolated private static func build(_ inputs: HomeFeedInputs) -> HomeScreenModel {
-        let feed = HomeFeedBuilder.build(inputs)
+    nonisolated private static func build(
+        _ inputs: HomeFeedInputs, history: HomeHistoryRows?, clock: inout HomeBuildClock
+    ) -> HomeScreenModel {
+        let feed = HomeFeedBuilder.build(inputs, history: history, clock: &clock)
         let index = HomeFeedBuilder.AlbumIndex(albums: inputs.albums)
         var covers: [String: [Album]] = [:]
         for mix in feed.mixes {
             covers[mix.id] = HomeFeedBuilder.coverAlbums(mix.tracks, index: index)
         }
+        clock.lap("compose")
         return HomeScreenModel(feed: feed, mixCovers: covers)
     }
 }

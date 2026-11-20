@@ -437,6 +437,19 @@ pub fn compose(inputs: &Inputs) -> HomeModel {
     }
 }
 
+impl HomeModel {
+    /// What leads the page, in words for the log: the hero and the one thing
+    /// it offers, so a lead that moves after the first frame shows up there.
+    pub fn lead_description(&self) -> String {
+        match &self.hero {
+            HeroModel::Resume(hero) => format!("resume {}", hero.title),
+            HeroModel::UpNext(hero) => format!("upNext {} {}", hero.id, hero.title),
+            HeroModel::DayOne(_) => "dayOne".to_string(),
+            HeroModel::Empty => "empty".to_string(),
+        }
+    }
+}
+
 fn day_one(inputs: &Inputs) -> HeroModel {
     let library = inputs.library;
     let hi_res = library
