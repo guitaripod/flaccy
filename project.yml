@@ -112,7 +112,7 @@ targets:
         Debug:
           CODE_SIGN_IDENTITY: "Apple Development: Marcus Ziadé (AUJJ76QHS7)"
           CODE_SIGN_STYLE: Manual
-          PROVISIONING_PROFILE_SPECIFIER: flaccy Dev Air
+          PROVISIONING_PROFILE_SPECIFIER: flaccy Dev Devices
         Release:
           CODE_SIGN_IDENTITY: *distributionIdentity
           CODE_SIGN_STYLE: Manual
