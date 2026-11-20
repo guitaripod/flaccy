@@ -54,6 +54,9 @@ pub enum AppEvent {
         title: String,
     },
     SearchChanged(String),
+    /// Enter was pressed in the search box: the results page opens its first
+    /// result.
+    SearchSubmitted,
     /// Ctrl+J: bring the playing song into view in the Songs table.
     LocateCurrent,
     /// The Songs table changed what its columns count (the Plays column moved

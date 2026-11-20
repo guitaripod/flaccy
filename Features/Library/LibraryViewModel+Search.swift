@@ -16,43 +16,63 @@ extension LibraryViewModel {
         }
     }
 
-    /// Albums, artists, songs and playlists matching `query`, through the same
-    /// predicates the Library's own segments use and in the person's own sort
-    /// order. Pure: it changes neither the segment nor the stored query.
+    /// Albums, artists, songs and playlists matching `query` by the shared
+    /// search rules, each kind ordered by how well its name answers the query
+    /// and, between equal answers, in the person's own sort order. Pure: it
+    /// changes neither the segment nor the stored query.
     func searchResults(for query: String) -> SearchResults {
-        let folded = Self.searchFold(query.trimmingCharacters(in: .whitespacesAndNewlines))
-        guard !folded.isEmpty else { return SearchResults() }
+        let words = LibrarySearch.Query(query)
+        guard !words.isEmpty else { return SearchResults() }
         return SearchResults(
-            albums: matchingAlbums(sortedAlbums, folded: folded),
-            artists: matchingArtists(sortedArtists, folded: folded),
-            songs: collapsingDuplicates(in: matchingSongs(sortedSongs, folded: folded)),
-            playlists: matchingPlaylists(playlists, folded: folded)
+            albums: Self.bestFirst(matchingAlbums(sortedAlbums, query: words)) {
+                words.rank(name: $0.title, other: [$0.artist])
+            },
+            artists: Self.bestFirst(matchingArtists(sortedArtists, query: words)) { words.rank(name: $0.name) },
+            songs: Self.bestFirst(collapsingDuplicates(in: matchingSongs(sortedSongs, query: words))) {
+                Self.songRank($0, for: words)
+            },
+            playlists: Self.bestFirst(matchingPlaylists(playlists, query: words)) { words.rank(name: $0.name) }
         )
     }
 
-    func matchingAlbums(_ albums: [Album], folded query: String) -> [Album] {
-        guard !query.isEmpty else { return albums }
-        return albums.filter {
-            Self.searchFold($0.title).contains(query) || Self.searchFold($0.artist).contains(query)
-        }
+    /// How well a song answers a query. A title that is the query, or begins
+    /// with it, comes first; past that a word somewhere in the title says no
+    /// more than the artist or the album matching, so those are one group.
+    private static func songRank(_ track: Track, for query: LibrarySearch.Query) -> LibrarySearch.Rank? {
+        guard let rank = query.rank(name: track.title, other: [track.artist, track.albumTitle]) else { return nil }
+        return rank > .prefix ? .elsewhere : rank
     }
 
-    func matchingSongs(_ songs: [Track], folded query: String) -> [Track] {
+    /// `rows` with the best answers first, keeping the order they came in
+    /// between rows that answer equally well.
+    private static func bestFirst<Row>(_ rows: [Row], rank: (Row) -> LibrarySearch.Rank?) -> [Row] {
+        rows.enumerated()
+            .map { (rank: rank($0.element) ?? .elsewhere, index: $0.offset, row: $0.element) }
+            .sorted { ($0.rank, $0.index) < ($1.rank, $1.index) }
+            .map(\.row)
+    }
+
+    func matchingAlbums(_ albums: [Album], query: LibrarySearch.Query) -> [Album] {
+        guard !query.isEmpty else { return albums }
+        return albums.filter { query.matches(fields: [$0.title, $0.artist]) }
+    }
+
+    func matchingSongs(_ songs: [Track], query: LibrarySearch.Query) -> [Track] {
         guard !query.isEmpty else { return songs }
         let keys = songSearchKeys()
         return songs.filter { track in
-            if let key = keys[track.fileURL.absoluteString] { return key.contains(query) }
-            return Self.searchFold("\(track.title)\n\(track.artist)\n\(track.albumTitle)").contains(query)
+            if let key = keys[track.fileURL.absoluteString] { return query.matches(haystack: key) }
+            return query.matches(fields: [track.title, track.artist, track.albumTitle])
         }
     }
 
-    func matchingArtists(_ artists: [ArtistItem], folded query: String) -> [ArtistItem] {
+    func matchingArtists(_ artists: [ArtistItem], query: LibrarySearch.Query) -> [ArtistItem] {
         guard !query.isEmpty else { return artists }
-        return artists.filter { Self.searchFold($0.name).contains(query) }
+        return artists.filter { query.matches(fields: [$0.name]) }
     }
 
-    func matchingPlaylists(_ playlists: [PlaylistItem], folded query: String) -> [PlaylistItem] {
+    func matchingPlaylists(_ playlists: [PlaylistItem], query: LibrarySearch.Query) -> [PlaylistItem] {
         guard !query.isEmpty else { return playlists }
-        return playlists.filter { Self.searchFold($0.name).contains(query) }
+        return playlists.filter { query.matches(fields: [$0.name]) }
     }
 }

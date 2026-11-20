@@ -3,6 +3,7 @@ use crate::recap::Period;
 use flaccy_shared::library_filter::{
     self as rules, AddedEntry, PlayedEntry, RediscoverEntry, ALBUM_THRESHOLDS, SONG_THRESHOLDS,
 };
+use flaccy_shared::library_search::Query;
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::hash_map::DefaultHasher;
@@ -139,62 +140,41 @@ pub fn cmp_ignore_case(a: &str, b: &str) -> Ordering {
         .cmp(b.chars().flat_map(char::to_lowercase))
 }
 
-thread_local! {
-    static LOWERCASE_SCRATCH: RefCell<String> = const { RefCell::new(String::new()) };
-}
-
-/// Whether `haystack.to_lowercase()` contains `needle_lower`, which the caller
-/// has already lowercased. Allocation-free for ASCII; other text is lowercased
-/// into one reused buffer.
-pub fn contains_ignore_case(haystack: &str, needle_lower: &str) -> bool {
-    if needle_lower.is_empty() {
-        return true;
-    }
-    if haystack.is_ascii() {
-        let needle = needle_lower.as_bytes();
-        return haystack.len() >= needle.len()
-            && haystack.as_bytes().windows(needle.len()).any(|window| {
-                window
-                    .iter()
-                    .zip(needle)
-                    .all(|(byte, wanted)| byte.to_ascii_lowercase() == *wanted)
-            });
-    }
-    if haystack.contains(CAPITAL_SIGMA) {
-        return haystack.to_lowercase().contains(needle_lower);
-    }
-    LOWERCASE_SCRATCH.with(|scratch| {
-        let mut scratch = scratch.borrow_mut();
-        scratch.clear();
-        scratch.extend(haystack.chars().flat_map(char::to_lowercase));
-        scratch.contains(needle_lower)
-    })
-}
-
-/// The search box text a page filters rows by, lowercased once per query
-/// rather than once per row per keystroke. It follows the query it is handed,
-/// so a page never filters by a stale needle.
+/// The search box text a page filters rows by, cut into folded words once per
+/// query rather than once per row per keystroke. It follows the query it is
+/// handed, so a page never filters by a stale needle.
 #[derive(Default)]
 pub struct SearchNeedle {
     source: RefCell<String>,
-    lowered: RefCell<String>,
+    words: RefCell<Query>,
 }
 
 impl SearchNeedle {
-    /// Whether any of `fields` contains `query`, ignoring case. An empty query
-    /// matches everything.
+    fn follow(&self, query: &str) {
+        if *self.source.borrow() != query {
+            *self.source.borrow_mut() = query.to_string();
+            *self.words.borrow_mut() = Query::new(query);
+        }
+    }
+
+    /// Whether every word of `query` is in one of `fields`, by the shared
+    /// search rules. An empty query matches everything.
     pub fn matches(&self, query: &str, fields: &[&str]) -> bool {
         if query.is_empty() {
             return true;
         }
-        if *self.source.borrow() != query {
-            *self.source.borrow_mut() = query.to_string();
-            *self.lowered.borrow_mut() = query.to_lowercase();
+        self.follow(query);
+        self.words.borrow().matches(fields)
+    }
+
+    /// The same for a row whose fields were folded ahead of time with
+    /// `library_search::haystack`.
+    pub fn matches_haystack(&self, query: &str, haystack: &str) -> bool {
+        if query.is_empty() {
+            return true;
         }
-        let lowered = self.lowered.borrow();
-        fields
-            .iter()
-            .any(|field| contains_ignore_case(field, &lowered))
+        self.follow(query);
+        self.words.borrow().matches_haystack(haystack)
     }
 }
 
@@ -603,20 +583,6 @@ mod tests {
     }
 
     #[test]
-    fn case_blind_search_matches_lowercasing_the_haystack() {
-        let needles = ["abbey", "ödön", "ß", "ς", "σ", "οδος", "i̇stanbul", "東", "", "zz"];
-        for haystack in SAMPLES {
-            for needle in needles {
-                assert_eq!(
-                    contains_ignore_case(haystack, needle),
-                    haystack.to_lowercase().contains(needle),
-                    "{haystack:?} contains {needle:?}"
-                );
-            }
-        }
-    }
-
-    #[test]
     fn a_search_needle_follows_the_query_it_is_given() {
         let needle = SearchNeedle::default();
         assert!(needle.matches("", &["anything"]));
@@ -624,6 +590,12 @@ mod tests {
         assert!(!needle.matches("ROAD", &["Abbey", "Lane"]));
         assert!(needle.matches("lane", &["Abbey", "Penny Lane"]));
         assert!(!needle.matches("lane", &["Abbey Road"]));
+        assert!(needle.matches("beatles abbey", &["Abbey Road", "The Beatles"]));
+        assert!(needle.matches("sigur ros", &["Sigur Rós"]));
+        let folded = flaccy_shared::library_search::haystack(&["AC/DC", "Back in Black"]);
+        assert!(needle.matches_haystack("acdc black", &folded));
+        assert!(!needle.matches_haystack("acdc white", &folded));
+        assert!(needle.matches_haystack("", &folded));
     }
 
     #[test]

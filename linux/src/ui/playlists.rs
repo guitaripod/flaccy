@@ -81,7 +81,7 @@ pub(crate) struct PlaylistCard {
 }
 
 impl PlaylistCard {
-    fn subtitle(&self) -> String {
+    pub(crate) fn subtitle(&self) -> String {
         if self.tracks == 0 {
             "Empty".to_string()
         } else {
@@ -308,15 +308,15 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     )));
     let cards: Rc<RefCell<Vec<PlaylistCard>>> = Rc::new(RefCell::new(Vec::new()));
 
-    let needle = Rc::new(RefCell::new(ui.query.borrow().to_lowercase()));
+    let needle = Rc::new(RefCell::new(ui.query.borrow().clone()));
     let filter = {
         let needle = Rc::clone(&needle);
+        let words = crate::filters::SearchNeedle::default();
         gtk::CustomFilter::new(move |obj| {
             let Some(boxed) = obj.downcast_ref::<BoxedAnyObject>() else {
                 return true;
             };
-            let needle = needle.borrow();
-            needle.is_empty() || boxed.borrow::<PlaylistCard>().name_key.contains(needle.as_str())
+            words.matches(&needle.borrow(), &[&boxed.borrow::<PlaylistCard>().name])
         })
     };
     let filter_model = gtk::FilterListModel::new(Some(store.clone()), Some(filter.clone()));
@@ -639,7 +639,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             .subscribe_widget(&stack, move |_, event| match event {
                 AppEvent::LibraryReloaded => request(false),
                 AppEvent::SearchChanged(query) => {
-                    *needle.borrow_mut() = query.to_lowercase();
+                    *needle.borrow_mut() = query.clone();
                     filter.changed(gtk::FilterChange::Different);
                 }
                 AppEvent::AlbumEnriched { title, artist }
@@ -889,12 +889,12 @@ pub fn present_add_to_playlist(ui: &Rc<Ui>, rel_path: &str) {
         list.append(&row);
     }
 
-    let names: Rc<Vec<String>> =
-        Rc::new(cards.iter().map(|card| card.name_key.clone()).collect());
+    let names: Rc<Vec<String>> = Rc::new(cards.iter().map(|card| card.name.clone()).collect());
     let query = Rc::new(RefCell::new(String::new()));
     {
         let names = Rc::clone(&names);
         let query = Rc::clone(&query);
+        let words = crate::filters::SearchNeedle::default();
         list.set_filter_func(move |row| {
             let index = row.index();
             let query = query.borrow();
@@ -903,7 +903,7 @@ pub fn present_add_to_playlist(ui: &Rc<Ui>, rel_path: &str) {
             }
             names
                 .get(index as usize - 1)
-                .is_some_and(|name| name.contains(query.as_str()))
+                .is_some_and(|name| words.matches(&query, &[name]))
         });
     }
 
@@ -923,7 +923,7 @@ pub fn present_add_to_playlist(ui: &Rc<Ui>, rel_path: &str) {
             let list = list.clone();
             let query = Rc::clone(&query);
             search.connect_search_changed(move |entry| {
-                *query.borrow_mut() = entry.text().to_lowercase();
+                *query.borrow_mut() = entry.text().to_string();
                 list.invalidate_filter();
             });
         }

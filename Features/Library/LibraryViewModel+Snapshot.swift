@@ -12,11 +12,11 @@ extension LibraryViewModel {
 
     func buildSnapshot() -> Snapshot {
         var snapshot = Snapshot()
-        let query = Self.searchFold(searchQuery)
+        let query = LibrarySearch.Query(searchQuery)
         switch currentSegment {
         case .albums:
             let all = filteredAlbums(sortedAlbums)
-            let filtered = matchingAlbums(all, folded: query)
+            let filtered = matchingAlbums(all, query: query)
             let showsRecentShelf = query.isEmpty && filter == .all && layoutMode == .grid && albumSort == .title
             let recent = showsRecentShelf ? recentlyPlayedAlbums : []
             if !recent.isEmpty {
@@ -31,14 +31,14 @@ extension LibraryViewModel {
         case .songs:
             snapshot.appendSections([0])
             var songs = filteredSongs(sortedSongs)
-            songs = matchingSongs(songs, folded: query)
+            songs = matchingSongs(songs, query: query)
             songs = collapsingDuplicates(in: songs)
             visibleSongs = songs
             snapshot.appendItems(songs.map { .song($0) })
             repaint(revisedSongItems(in: songs), in: &snapshot)
         case .artists:
             snapshot.appendSections([0])
-            let filtered = matchingArtists(sortedArtists, folded: query)
+            let filtered = matchingArtists(sortedArtists, query: query)
             snapshot.appendItems(filtered.map { .artist($0) })
         case .playlists:
             snapshot.appendSections([0])
@@ -50,7 +50,7 @@ extension LibraryViewModel {
                 playlistItems.append(.wantlist)
                 playlistItems.append(contentsOf: (cachedSuggestions ?? []).map { .suggestedPlaylist($0) })
             }
-            let filtered = matchingPlaylists(playlists, folded: query)
+            let filtered = matchingPlaylists(playlists, query: query)
             playlistItems.append(contentsOf: filtered.map { .playlist($0) })
             snapshot.appendItems(playlistItems)
             repaint(filtered.map { .playlist($0) }, in: &snapshot)

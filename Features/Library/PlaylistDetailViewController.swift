@@ -167,14 +167,11 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
     /// Sorts and searches `rows` into what the page lists, and repaints.
     func refreshShownRows(animated: Bool) {
         var shown = order.sorted(rows, entryId: \.entryId, track: \.track)
-        let folded = query.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            .trimmingCharacters(in: .whitespaces)
-        if !folded.isEmpty {
+        let words = LibrarySearch.Query(query)
+        if !words.isEmpty {
             shown = shown.filter { row in
-                guard let track = row.track else { return row.file.localizedCaseInsensitiveContains(folded) }
-                return [track.title, track.artist, track.albumTitle].contains {
-                    $0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(folded)
-                }
+                guard let track = row.track else { return words.matches(fields: [row.file]) }
+                return words.matches(fields: [track.title, track.artist, track.albumTitle])
             }
         }
         shownRows = shown

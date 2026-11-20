@@ -1,4 +1,5 @@
 import AppKit
+import FlaccyCore
 import MidgarCore
 
 /// Playlist list: stacked-artwork mosaics, create/rename/delete via header
@@ -172,13 +173,10 @@ final class PlaylistsViewController: NSViewController {
         do {
             let records = try DatabaseManager.shared.fetchAllPlaylists()
             let withCovers = (try? DatabaseManager.shared.playlistIdsWithCovers()) ?? []
-            let query = searchQuery.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            let query = LibrarySearch.Query(searchQuery)
             return try records.compactMap { record in
                 guard let id = record.id else { return nil }
-                if !query.isEmpty {
-                    let folded = record.name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-                    guard folded.contains(query) else { return nil }
-                }
+                guard query.matches(fields: [record.name]) else { return nil }
                 let playlistTracks = try DatabaseManager.shared.fetchPlaylistTracks(playlistId: id)
                 let resolved = playlistTracks.compactMap { tracksByPath[canonicalSyncPath($0.trackFileURL)] }
                 return Entry(

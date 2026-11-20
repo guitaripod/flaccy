@@ -42,6 +42,7 @@ mod render;
 mod samples;
 pub(crate) use flaccy_library::scanner;
 mod scrobbler;
+mod search;
 mod scrub_drill;
 mod server_sync;
 mod songlink;

@@ -452,10 +452,10 @@ final class SongsTableViewModel {
     }
 
     nonisolated private static func filtered(_ rows: [Row], query rawQuery: String) -> [Row] {
-        let query = fold(rawQuery)
+        let query = LibrarySearch.Query(rawQuery)
         guard !query.isEmpty else { return rows }
         return rows.filter {
-            fold("\($0.track.title)\n\($0.track.artist)\n\($0.track.albumTitle)").contains(query)
+            query.matches(fields: [$0.track.title, $0.track.artist, $0.track.albumTitle])
         }
     }
 
@@ -468,10 +468,6 @@ final class SongsTableViewModel {
         }
         let urls = Set(kept.tracks.map(\.fileURL))
         return rows.filter { urls.contains($0.track.fileURL) }
-    }
-
-    nonisolated private static func fold(_ s: String) -> String {
-        s.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
     }
 
     /// Stable multi-tier sort: rows are compared tier by tier, the first

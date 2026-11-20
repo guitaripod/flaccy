@@ -101,9 +101,8 @@ final class PlaylistAddSongsViewController: UIViewController {
 
     private func applySnapshot() {
         var snapshot = NSDiffableDataSourceSnapshot<Section, URL>()
-        let folded = query.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            .trimmingCharacters(in: .whitespaces)
-        if folded.isEmpty {
+        let words = LibrarySearch.Query(query)
+        if words.isEmpty {
             let suggested = suggestions.map(\.fileURL)
             if !suggested.isEmpty {
                 snapshot.appendSections([.suggested])
@@ -115,9 +114,7 @@ final class PlaylistAddSongsViewController: UIViewController {
         } else {
             snapshot.appendSections([.songs])
             snapshot.appendItems(library.filter { track in
-                [track.title, track.artist, track.albumTitle].contains {
-                    $0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(folded)
-                }
+                words.matches(fields: [track.title, track.artist, track.albumTitle])
             }.map(\.fileURL), toSection: .songs)
         }
         dataSource.apply(snapshot, animatingDifferences: false)

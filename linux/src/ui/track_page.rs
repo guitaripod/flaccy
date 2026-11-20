@@ -32,27 +32,22 @@ pub fn layout_icon(layout: TrackLayout) -> &'static str {
     }
 }
 
-const FIELD_BREAK: char = '\0';
-
-/// What a page's filter box searches in one song: title, artist and album,
-/// lowercased once and kept apart by a NUL that a typed needle can never
-/// contain, so a match can never straddle two fields. Built once per song per
-/// page build, not once per keystroke.
-pub fn search_text(track: &Track) -> String {
-    let capacity = track.title.len() + track.artist.len() + track.album.len() + 2;
-    let mut text = String::with_capacity(capacity);
-    text.push_str(&track.title.to_lowercase());
-    text.push(FIELD_BREAK);
-    text.push_str(&track.artist.to_lowercase());
-    text.push(FIELD_BREAK);
-    text.push_str(&track.album.to_lowercase());
-    text
+thread_local! {
+    static FILTER_NEEDLE: crate::filters::SearchNeedle = crate::filters::SearchNeedle::default();
 }
 
-/// Whether a song's `search_text` answers a page's filter box; `needle` is
-/// already lowercase.
+/// What a page's filter box searches in one song: title, artist and album,
+/// folded once by the shared search rules and kept apart so a match can never
+/// straddle two fields. Built once per song per page build, not once per
+/// keystroke.
+pub fn search_text(track: &Track) -> String {
+    flaccy_shared::library_search::haystack(&[&track.title, &track.artist, &track.album])
+}
+
+/// Whether a song's `search_text` holds every word typed in a page's filter
+/// box.
 pub fn matches_text(text: &str, needle: &str) -> bool {
-    needle.is_empty() || text.contains(needle)
+    FILTER_NEEDLE.with(|filter| filter.matches_haystack(needle, text))
 }
 
 /// The page shell both song pages share: a hero, a scrolling body, and — in a
@@ -621,34 +616,19 @@ mod tests {
         }
     }
 
-    fn reference(track: &Track, needle: &str) -> bool {
-        needle.is_empty()
-            || track.title.to_lowercase().contains(needle)
-            || track.artist.to_lowercase().contains(needle)
-            || track.album.to_lowercase().contains(needle)
-    }
-
     #[test]
-    fn search_text_answers_like_lowercasing_each_field() {
-        let tracks = [
-            song("Blue Monday", "New Order", "Power, Corruption & Lies"),
-            song("ÄÖ Straße", "Σίσυφος", "ΟΔΥΣΣΕΥΣ"),
-            song("", "", ""),
-        ];
-        let needles = [
-            "", "blue", "order", "lies", "monday new", "new order power", "ö str", "σίσυφος",
-            "οδυσσευσ", "ς", "\u{1}", "zzz",
-        ];
-        for track in &tracks {
-            let text = search_text(track);
-            for needle in needles {
-                assert_eq!(
-                    matches_text(&text, needle),
-                    reference(track, needle),
-                    "{:?} against {needle:?}",
-                    track.title
-                );
-            }
+    fn search_text_answers_every_word_in_any_field() {
+        let blue = song("Blue Monday", "New Order", "Power, Corruption & Lies");
+        let text = search_text(&blue);
+        for needle in ["", "blue", "order", "lies", "monday new", "new order power", "LIES blue"] {
+            assert!(matches_text(&text, needle), "{needle:?}");
+        }
+        for needle in ["zzz", "blue tuesday", "\u{1}"] {
+            assert!(!matches_text(&text, needle), "{needle:?}");
+        }
+        let accented = search_text(&song("ÄÖ Straße", "Σίσυφος", "Ágætis byrjun"));
+        for needle in ["ao strasse", "σίσυφος", "agaetis"] {
+            assert!(matches_text(&accented, needle), "{needle:?}");
         }
     }
 

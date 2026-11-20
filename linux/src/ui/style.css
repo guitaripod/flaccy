@@ -2093,3 +2093,8 @@ button.artist-sticky-play {
 .overview-tag-plain {
   background-color: alpha(@window_fg_color, 0.08);
 }
+
+/* ---- search results ------------------------------------------------------ */
+.search-songs > row {
+  min-height: 52px;
+}

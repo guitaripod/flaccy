@@ -339,7 +339,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 /// Picks each artist's cover-source album — the one with the most tracks, so a
 /// stray single doesn't win over the artist's main record — keyed by artist
 /// name to the album's `(title, artist)` artwork-cache lookup pair.
-fn representative_covers(albums: &[Album]) -> HashMap<String, (String, String)> {
+pub(crate) fn representative_covers(albums: &[Album]) -> HashMap<String, (String, String)> {
     let mut best: HashMap<String, &Album> = HashMap::new();
     for album in albums {
         let credit_key = crate::hygiene::artist_key(&album.artist);
@@ -366,7 +366,7 @@ fn representative_covers(albums: &[Album]) -> HashMap<String, (String, String)> 
 /// The line under an artist's name. An artist credited with no album of their
 /// own — a composer on a compilation, a guest — is described by what they
 /// actually appear on, so the cell never reads "0 albums".
-fn artist_counts_label(artist: &ArtistEntry) -> String {
+pub(crate) fn artist_counts_label(artist: &ArtistEntry) -> String {
     fn plural(count: usize, noun: &str) -> String {
         format!("{count} {noun}{}", if count == 1 { "" } else { "s" })
     }

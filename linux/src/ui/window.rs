@@ -39,10 +39,77 @@ pub fn page_index(name: &str) -> Option<i32> {
         .map(|index| index as i32)
 }
 
-/// Selects the sidebar row of page `name`, which shows the page.
+/// Selects the sidebar row of page `name`, which shows the page. A row that
+/// is already selected is activated instead, so a page the search results
+/// stand in front of comes back.
 pub fn show_page(sidebar: &gtk::ListBox, name: &str) {
     if let Some(row) = page_index(name).and_then(|index| sidebar.row_at_index(index)) {
-        sidebar.select_row(Some(&row));
+        if row.is_selected() {
+            row.activate();
+        } else {
+            sidebar.select_row(Some(&row));
+        }
+    }
+}
+
+/// Puts the search results in front of a page that has no list of its own to
+/// filter, for as long as the search box holds a query, then gives the page
+/// back. Typing over a page pushed onto such a page returns to the results.
+/// Choosing a page in the sidebar leaves the results, and clears the search
+/// when that page would not filter by it.
+fn attach_search_results(
+    ui: &Rc<Ui>,
+    stack: &gtk::Stack,
+    nav: &adw::NavigationView,
+    sidebar: &gtk::ListBox,
+    search: &gtk::SearchEntry,
+) {
+    let behind: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
+    {
+        let nav = nav.clone();
+        let behind = Rc::clone(&behind);
+        ui.core.hub.subscribe_widget(stack, move |stack, event| {
+            let AppEvent::SearchChanged(query) = event else {
+                return;
+            };
+            let visible = stack.visible_child_name().map(|name| name.to_string());
+            let on_results = visible.as_deref() == Some(ui::search::PAGE);
+            if query.trim().is_empty() {
+                if on_results {
+                    let page = behind.borrow_mut().take();
+                    stack.set_visible_child_name(page.as_deref().unwrap_or("home"));
+                }
+                return;
+            }
+            let Some(visible) = visible else { return };
+            if ui::search::page_filters_itself(&visible) {
+                return;
+            }
+            if !on_results {
+                *behind.borrow_mut() = Some(visible);
+                stack.set_visible_child_name(ui::search::PAGE);
+            }
+            if nav.visible_page().and_then(|page| page.tag()).as_deref() != Some("root") {
+                nav.pop_to_tag("root");
+            }
+        });
+    }
+    {
+        let stack = stack.clone();
+        let search = search.clone();
+        sidebar.connect_row_activated(move |_, row| {
+            if stack.visible_child_name().as_deref() != Some(ui::search::PAGE) {
+                return;
+            }
+            let Some(page) = SIDEBAR_PAGES.get(row.index().max(0) as usize) else {
+                return;
+            };
+            behind.borrow_mut().take();
+            stack.set_visible_child_name(page.name);
+            if !ui::search::page_filters_itself(page.name) {
+                search.set_text("");
+            }
+        });
     }
 }
 
@@ -177,6 +244,10 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
             ui.core.hub.emit(&AppEvent::SearchChanged(text));
         });
     }
+    {
+        let hub = Rc::clone(&core.hub);
+        search.connect_activate(move |_| hub.emit(&AppEvent::SearchSubmitted));
+    }
     header.pack_end(&search_clamp);
 
     let progress = gtk::ProgressBar::builder()
@@ -246,6 +317,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     stack.add_named(&ui::wantlist::build(&ui), Some("wantlist"));
     stack.add_named(&ui::downloads::build(&ui), Some("downloads"));
     stack.add_named(&ui::guide::build(&ui), Some("guide"));
+    stack.add_named(&ui::search::build(&ui), Some(ui::search::PAGE));
 
     let sidebar = gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::Single)
@@ -367,6 +439,8 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
             }
         });
     }
+
+    attach_search_results(&ui, &stack, &nav, &sidebar, &search);
 
     let side_stack = gtk::Stack::builder()
         .transition_type(gtk::StackTransitionType::Crossfade)
@@ -540,6 +614,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     attach_playback_keys(&ui);
     attach_list_navigation(&ui);
     attach_search_reset(&ui, &search);
+    schedule_demo_search(&search);
     attach_file_drop(&ui, &toast_overlay);
     attach_paste_to_download(&ui, &sidebar);
     ui::equalizer::install(&ui);
@@ -1959,6 +2034,28 @@ fn restore_side_panel(core: &Rc<AppCore>) {
             "lyrics" => hub.emit(&AppEvent::LyricsToggled(true)),
             "queue" => hub.emit(&AppEvent::QueueToggled(true)),
             _ => {}
+        }
+    });
+}
+
+/// Demo mode helper: FLACCY_DEMO_SEARCH types its value into the search box
+/// once the library has had time to load, and FLACCY_DEMO_SEARCH_ENTER then
+/// presses Enter in it.
+fn schedule_demo_search(search: &gtk::SearchEntry) {
+    if !config::demo_mode() {
+        return;
+    }
+    let Ok(query) = std::env::var("FLACCY_DEMO_SEARCH") else {
+        return;
+    };
+    let search = search.clone();
+    glib::timeout_add_local_once(std::time::Duration::from_millis(2500), move || {
+        search.set_text(&query);
+        crate::logger::info("ui", &format!("demo search: {query}"));
+        if std::env::var_os("FLACCY_DEMO_SEARCH_ENTER").is_some() {
+            glib::timeout_add_local_once(std::time::Duration::from_millis(1200), move || {
+                search.emit_activate();
+            });
         }
     });
 }

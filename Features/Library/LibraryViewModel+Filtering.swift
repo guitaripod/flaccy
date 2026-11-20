@@ -210,20 +210,16 @@ extension LibraryViewModel {
         }
     }
 
-    static func searchFold(_ s: String) -> String {
-        s.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-    }
-
-    /// Folded "title artist album" haystacks keyed by file URL, computed once
-    /// per library generation so typing in search does plain substring scans
-    /// instead of locale-aware compares over every track.
+    /// Each song's title, artist and album folded by the shared search rules
+    /// and keyed by file URL, computed once per library generation so typing
+    /// in search scans plain text instead of folding every track again.
     func songSearchKeys() -> [String: String] {
         if let cached = cachedSongSearchKeys { return cached }
         var map = [String: String]()
         let tracks = library.allTracks
         map.reserveCapacity(tracks.count)
         for track in tracks {
-            map[track.fileURL.absoluteString] = Self.searchFold("\(track.title)\n\(track.artist)\n\(track.albumTitle)")
+            map[track.fileURL.absoluteString] = LibrarySearch.haystack([track.title, track.artist, track.albumTitle])
         }
         cachedSongSearchKeys = map
         return map
