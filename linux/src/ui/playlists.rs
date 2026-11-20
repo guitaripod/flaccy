@@ -976,10 +976,10 @@ pub fn prompt_new_playlist(ui: &Rc<Ui>, add_rel_path: Option<String>) {
         if name.is_empty() {
             return;
         }
-        match ui.core.db.create_playlist(&name) {
-            Ok(id) => {
-                if let Some(rel) = &add_rel_path {
-                    let _ = ui.core.db.add_track_to_playlist(id, rel);
+        let tracks: Vec<String> = add_rel_path.iter().cloned().collect();
+        match ui.core.db.create_playlist_with_tracks(&name, &tracks) {
+            Ok(_) => {
+                if !tracks.is_empty() {
                     ui.core.toast(&format!("Added to {name}"));
                 }
                 crate::logger::info("database", &format!("created playlist '{name}'"));
@@ -1030,13 +1030,8 @@ pub fn prompt_save_tracks(ui: &Rc<Ui>, default_name: &str, rel_paths: Vec<String
         if name.is_empty() {
             return;
         }
-        let saved = ui
-            .core
-            .db
-            .create_playlist(&name)
-            .and_then(|id| ui.core.db.add_tracks_to_playlist(id, &rel_paths));
-        match saved {
-            Ok(()) => {
+        match ui.core.db.create_playlist_with_tracks(&name, &rel_paths) {
+            Ok(_) => {
                 crate::logger::info(
                     "database",
                     &format!("saved {} songs as playlist '{name}'", rel_paths.len()),
@@ -1090,6 +1085,7 @@ struct DetailView {
     show_albums: Cell<bool>,
     applied: Cell<u64>,
     source: RefCell<Option<DetailSource>>,
+    shelf: Rc<crate::ui::playlist_suggestions::Shelf>,
 }
 
 /// Rows built before the first frame of a long list; the rest follow while the
@@ -1426,11 +1422,15 @@ impl DetailView {
         }
         let duration: f64 = found.iter().map(|(_, track)| track.duration).sum();
         let created = created_text(self.created_at);
-        let mut info_parts = if found.is_empty() {
+        let missing = rows.len() - found.len();
+        let mut info_parts = if found.is_empty() && missing == 0 {
             vec!["No songs yet".to_string()]
         } else {
-            vec![songs_text(found.len()), span_text(duration)]
+            vec![songs_text(rows.len()), span_text(duration)]
         };
+        if missing > 0 {
+            info_parts.push(format!("{missing} missing"));
+        }
         if !created.is_empty() {
             info_parts.push(format!("Created {created}"));
         }
@@ -1472,6 +1472,8 @@ impl DetailView {
         }
 
         let has_tracks = !self.entries.borrow().is_empty();
+        let listed: Vec<Track> = self.entries.borrow().iter().map(|(_, track)| track.clone()).collect();
+        self.shelf.update(&listed);
         self.play.set_sensitive(has_tracks);
         self.shuffle.set_sensitive(has_tracks);
         self.stack.set_visible(has_tracks);
@@ -1928,7 +1930,29 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
         more.set_create_popup_func(move |button| {
             let has_cover = ui.core.db.has_playlist_cover(playlist_id);
             let downloads = context::playlist_downloads(&ui.core, playlist_id);
-            button.set_menu_model(Some(&playlist_manage_menu(playlist_id, has_cover, downloads)));
+            let menu = gio::Menu::new();
+            let queue = gio::Menu::new();
+            queue.append_item(&playlist_item("Play Next", "win.playlist-play-next", playlist_id));
+            queue.append_item(&playlist_item("Add to Queue", "win.playlist-queue", playlist_id));
+            menu.append_section(None, &queue);
+            let page = gio::Menu::new();
+            let shown = crate::ui::playlist_suggestions::is_shown(&ui.core);
+            page.append_item(&playlist_item(
+                if shown { crate::ui::playlist_suggestions::HIDE } else { crate::ui::playlist_suggestions::SHOW },
+                "win.playlist-suggestions-toggle",
+                playlist_id,
+            ));
+            let missing = missing_entries(&ui, playlist_id).len();
+            if missing > 0 {
+                page.append_item(&playlist_item(
+                    &format!("Remove {missing} Missing Songs"),
+                    "win.playlist-remove-missing",
+                    playlist_id,
+                ));
+            }
+            menu.append_section(None, &page);
+            menu.append_section(None, &playlist_manage_menu(playlist_id, has_cover, downloads));
+            button.set_menu_model(Some(&menu));
         });
     }
     let buttons = gtk::Box::builder()
@@ -2037,6 +2061,8 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
     frame.body.append(&stack);
     frame.body.append(&empty);
     frame.body.append(&hint);
+    let shelf = crate::ui::playlist_suggestions::Shelf::new(ui, playlist_id);
+    frame.body.append(&shelf.root);
 
     let overlay = gtk::Overlay::new();
     overlay.set_child(Some(&backdrop));
@@ -2081,6 +2107,7 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
         show_albums: Cell::new(true),
         applied: Cell::new(0),
         source: RefCell::new(None),
+        shelf,
     });
     *slot.borrow_mut() = Some(Rc::downgrade(&view));
 
@@ -2219,6 +2246,8 @@ pub(crate) fn playlist_list_menu(
         "win.playlist-shuffle",
         playlist_id,
     ));
+    play_section.append_item(&playlist_item("Play Next", "win.playlist-play-next", playlist_id));
+    play_section.append_item(&playlist_item("Add to Queue", "win.playlist-queue", playlist_id));
     menu.append_section(None, &play_section);
     menu.append_section(None, &playlist_manage_menu(playlist_id, has_cover, downloads));
     menu
@@ -2235,6 +2264,7 @@ fn playlist_manage_menu(playlist_id: i64, has_cover: bool, downloads: Option<boo
         "win.playlist-rename",
         playlist_id,
     ));
+    manage_section.append_item(&playlist_item("Duplicate", "win.playlist-duplicate", playlist_id));
     manage_section.append_item(&playlist_item(
         "Edit Cover…",
         "win.playlist-cover-edit",
@@ -2307,14 +2337,110 @@ fn unplayable_playlist_message(ui: &Rc<Ui>, playlist_id: i64) -> String {
     }
 }
 
+/// Takes entries out of a playlist in one commit; the toast's Undo puts each
+/// song back where it stood.
+pub fn remove_entries(ui: &Rc<Ui>, playlist_id: i64, row_ids: &[i64]) {
+    match ui.core.db.remove_playlist_entries(playlist_id, row_ids) {
+        Ok(removed) if !removed.is_empty() => {
+            crate::logger::info("database", &format!("removed {} songs from a playlist", removed.len()));
+            ui.core.hub.emit(&AppEvent::LibraryReloaded);
+            ui.core.hub.emit(&AppEvent::PlaylistSongsRemoved { playlist_id, removed });
+        }
+        Ok(_) => {}
+        Err(err) => {
+            crate::logger::error("database", &format!("playlist remove failed: {err}"));
+            let name = ui.core.db.playlist_name(playlist_id).unwrap_or_default();
+            ui.core.toast(&write_failure_message("change", &name));
+        }
+    }
+}
+
+/// Takes out the songs the playlist names but the library no longer has.
+pub fn remove_missing(ui: &Rc<Ui>, playlist_id: i64) {
+    let missing = missing_entries(ui, playlist_id);
+    remove_entries(ui, playlist_id, &missing);
+}
+
+/// The entries whose song the library no longer has.
+fn missing_entries(ui: &Rc<Ui>, playlist_id: i64) -> Vec<i64> {
+    let library = ui.core.library.borrow();
+    ui.core
+        .db
+        .playlist_tracks(playlist_id)
+        .into_iter()
+        .filter(|row| library.track_by_rel_path(&row.rel_path).is_none())
+        .map(|row| row.row_id)
+        .collect()
+}
+
+/// Appends songs the playlist does not hold yet and says what happened.
+pub fn add_to_playlist(ui: &Rc<Ui>, playlist_id: i64, rel_paths: &[String]) {
+    let name = ui.core.db.playlist_name(playlist_id).unwrap_or_default();
+    match ui.core.db.add_missing_tracks_to_playlist(playlist_id, rel_paths) {
+        Ok(addition) => {
+            let message = match (addition.added.len(), addition.already_in.len()) {
+                (0, _) => format!("Already in “{name}”"),
+                (1, 0) => format!("Added to {name}"),
+                (added, 0) => format!("Added {added} songs to {name}"),
+                (added, skipped) => format!("Added {added} songs to {name} · {skipped} already there"),
+            };
+            ui.core.toast(&message);
+            ui.core.hub.emit(&AppEvent::LibraryReloaded);
+        }
+        Err(err) => {
+            crate::logger::error("database", &format!("playlist add failed: {err}"));
+            ui.core.toast(&write_failure_message("add to", &name));
+        }
+    }
+}
+
+/// Makes a copy called "Name Copy" (or the next free number).
+pub fn duplicate_playlist(ui: &Rc<Ui>, playlist_id: i64) {
+    let name = ui.core.db.playlist_name(playlist_id).unwrap_or_default();
+    let taken: Vec<String> = ui.core.db.fetch_playlists().into_iter().map(|row| row.name).collect();
+    let copy = flaccy_shared::playlist_editing::copy_name(&name, "Copy", &taken);
+    match ui.core.db.duplicate_playlist(playlist_id, &copy) {
+        Ok(_) => {
+            ui.core.toast(&format!("Made “{copy}”"));
+            ui.core.hub.emit(&AppEvent::LibraryReloaded);
+        }
+        Err(err) => {
+            crate::logger::error("database", &format!("playlist copy failed: {err}"));
+            ui.core.toast(&write_failure_message("copy", &name));
+        }
+    }
+}
+
+/// Puts a whole playlist next in line or at the end of the queue.
+pub fn queue_playlist(ui: &Rc<Ui>, playlist_id: i64, next: bool) {
+    let tracks = resolve_playlist_tracks(ui, playlist_id);
+    if tracks.is_empty() {
+        ui.core.toast(&unplayable_playlist_message(ui, playlist_id));
+        return;
+    }
+    if next {
+        for track in tracks.into_iter().rev() {
+            ui.core.player.insert_next(track);
+        }
+        ui.core.toast("Playing next");
+    } else {
+        for track in tracks {
+            ui.core.player.add_to_queue(track);
+        }
+        ui.core.toast("Added to queue");
+    }
+}
+
 pub fn play_playlist(ui: &Rc<Ui>, playlist_id: i64, shuffle: bool) {
     let tracks = resolve_playlist_tracks(ui, playlist_id);
     if tracks.is_empty() {
         ui.core.toast(&unplayable_playlist_message(ui, playlist_id));
         return;
     }
-    if shuffle != ui.core.player.shuffle_enabled() {
-        ui.core.player.toggle_shuffle();
+    let mut tracks = tracks;
+    if shuffle {
+        use rand::seq::SliceRandom;
+        tracks.shuffle(&mut rand::rng());
     }
     let context = playlist_context(ui, playlist_id);
     ui.core.play_tracks_in(tracks, 0, Some(context));

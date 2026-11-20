@@ -69,6 +69,14 @@ pub enum AppEvent {
     LyricsToggled(bool),
     QueueChanged,
     Toast(String),
+    /// Songs were taken out of a playlist; the toast offers Undo, which puts
+    /// each back where it stood.
+    PlaylistSongsRemoved {
+        playlist_id: i64,
+        removed: Vec<crate::db::RemovedPlaylistEntry>,
+    },
+    /// The Suggested Songs shelf was shown or hidden on every playlist.
+    PlaylistSuggestionsToggled,
     QueueToggled(bool),
     SleepTimerChanged {
         remaining_seconds: Option<i64>,

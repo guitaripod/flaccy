@@ -37,6 +37,7 @@ pub mod mosaic;
 pub mod now_playing;
 pub mod playlist_cover;
 pub mod playlist_cover_demo;
+pub mod playlist_suggestions;
 pub mod playlists;
 pub mod prefs;
 pub mod prefs_sound;

@@ -37,6 +37,8 @@ pub struct Config {
     pub home_layout: String,
     pub album_sort: String,
     pub playlist_sort: String,
+    /// Whether playlists hide their Suggested Songs shelf.
+    pub playlist_suggestions_hidden: bool,
     /// The Songs and Albums quick-pivot chips (`LibraryFilter::id`) and the
     /// time range the Songs "Most Played" chip counts over (`Period::api_value`).
     pub songs_filter: String,
@@ -238,6 +240,7 @@ impl Default for Config {
             home_layout: String::new(),
             album_sort: "artist".to_string(),
             playlist_sort: "name".to_string(),
+            playlist_suggestions_hidden: false,
             songs_filter: "all".to_string(),
             songs_range: "1month".to_string(),
             albums_filter: "all".to_string(),

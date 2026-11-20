@@ -468,6 +468,9 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
             if let AppEvent::Toast(message) = event {
                 show_toast(overlay, &live_toast, message);
             }
+            if let AppEvent::PlaylistSongsRemoved { playlist_id, removed } = event {
+                overlay.add_toast(removed_toast(&toast_core, *playlist_id, removed.clone()));
+            }
             if let AppEvent::NewMixPlaying { rel_path, title } = event {
                 overlay.add_toast(new_mix_toast(&toast_core, rel_path, title));
             }
@@ -1291,13 +1294,10 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     {
         let ui = Rc::clone(ui);
         playlist_remove.connect_activate(move |_, parameter| {
-            let Some((_, row_id)) = parameter.and_then(|v| v.get::<(i64, i64)>()) else {
+            let Some((playlist_id, row_id)) = parameter.and_then(|v| v.get::<(i64, i64)>()) else {
                 return;
             };
-            if let Err(err) = ui.core.db.remove_playlist_track(row_id) {
-                crate::logger::error("database", &format!("playlist remove failed: {err}"));
-            }
-            ui.core.hub.emit(&AppEvent::LibraryReloaded);
+            ui::playlists::remove_entries(&ui, playlist_id, &[row_id]);
         });
     }
     ui.window.add_action(&playlist_remove);
@@ -1310,6 +1310,22 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     });
     add_int64_action(ui, "playlist-rename", |ui, id| {
         ui::playlists::prompt_rename_playlist(ui, id);
+    });
+    add_int64_action(ui, "playlist-play-next", |ui, id| {
+        ui::playlists::queue_playlist(ui, id, true);
+    });
+    add_int64_action(ui, "playlist-queue", |ui, id| {
+        ui::playlists::queue_playlist(ui, id, false);
+    });
+    add_int64_action(ui, "playlist-duplicate", |ui, id| {
+        ui::playlists::duplicate_playlist(ui, id);
+    });
+    add_int64_action(ui, "playlist-remove-missing", |ui, id| {
+        ui::playlists::remove_missing(ui, id);
+    });
+    add_int64_action(ui, "playlist-suggestions-toggle", |ui, _| {
+        let shown = ui::playlist_suggestions::is_shown(&ui.core);
+        ui::playlist_suggestions::set_shown(&ui.core, !shown);
     });
     add_int64_action(ui, "playlist-pin", |ui, id| {
         keep_songs(ui, playlist_song_paths(ui, id), true);
@@ -1451,6 +1467,27 @@ fn new_mix_toast(core: &Rc<AppCore>, rel_path: &str, title: &str) -> adw::Toast 
     let core = Rc::clone(core);
     let rel_path = rel_path.to_string();
     toast.connect_button_clicked(move |_| core.reopen_if_playing(&rel_path, true));
+    toast
+}
+
+/// Says how many songs left a playlist and offers to put them back where they
+/// stood.
+fn removed_toast(core: &Rc<AppCore>, playlist_id: i64, removed: Vec<crate::db::RemovedPlaylistEntry>) -> adw::Toast {
+    let message = match removed.len() {
+        1 => "Removed 1 song".to_string(),
+        count => format!("Removed {count} songs"),
+    };
+    let toast = adw::Toast::new(&message);
+    toast.set_button_label(Some("Undo"));
+    toast.set_timeout(10);
+    let core = Rc::clone(core);
+    toast.connect_button_clicked(move |_| {
+        if let Err(err) = core.db.restore_playlist_entries(playlist_id, &removed) {
+            crate::logger::error("database", &format!("playlist restore failed: {err}"));
+            core.toast("Couldn't put the songs back — the library database couldn't be written. Check free disk space and try again.");
+        }
+        core.hub.emit(&AppEvent::LibraryReloaded);
+    });
     toast
 }
 
