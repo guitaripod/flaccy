@@ -206,7 +206,7 @@ extension LibraryViewController {
         let playlistRegistration = UICollectionView.CellRegistration<PlaylistListCell, PlaylistItem> { [weak self] cell, _, playlist in
             var content = UIListContentConfiguration.subtitleCell()
             content.text = playlist.name
-            content.secondaryText = String(localized: "\(playlist.trackCount) tracks")
+            content.secondaryText = PlaylistCopy.summary(songs: playlist.trackCount, seconds: playlist.seconds, missing: 0)
             content.secondaryTextProperties.color = .secondaryLabel
             cell.contentConfiguration = content
             let thumbnail = UICellAccessory.CustomViewConfiguration(

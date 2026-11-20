@@ -1,6 +1,7 @@
 import Combine
 import MidgarCore
 import FlaccyCore
+import GRDB
 import UIKit
 import UniformTypeIdentifiers
 
@@ -15,6 +16,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     )
     var cancellables = Set<AnyCancellable>()
     let playlistAlbumIndex = PlaylistAlbumIndex()
+    var playlistSummariesToken: AnyDatabaseCancellable?
     let impactLight = UIImpactFeedbackGenerator(style: .light)
     let sectionIndexView = SectionIndexView()
     let filterChipsView = FilterChipsView()
@@ -256,6 +258,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         }
 
         observeWantlist()
+        playlistSummariesToken = DatabaseManager.shared.observePlaylistSummaries { [weak self] _ in
+            self?.viewModel.refreshPlaylists()
+        }
     }
 
     /// Runs `action` with the Library on screen. Pickers, sheets and toasts the
@@ -439,25 +444,16 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
     func createPlaylistTapped(presentingFrom presenter: UIViewController? = nil) {
         impactLight.impactOccurred()
-        let alert = UIAlertController(title: String(localized: "New Playlist"), message: nil, preferredStyle: .alert)
-        alert.addTextField { textField in
-            textField.placeholder = String(localized: "Playlist name")
-            textField.autocapitalizationType = .words
-        }
-        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
-        alert.addAction(UIAlertAction(title: String(localized: "Create"), style: .default) { [weak self] _ in
-            guard let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces),
-                  !name.isEmpty else { return }
-            do {
-                try DatabaseManager.shared.createPlaylist(name: name)
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                self?.viewModel.refreshPlaylists()
-            } catch {
-                MidgarLog.error("Failed to create playlist: \(error.localizedDescription)", category: .database)
-                if let self { ToastView.show(String(localized: "Couldn't create \u{201C}\(name)\u{201D} — the library database couldn't be written. Check free disk space and try again."), in: self.view, style: .error) }
+        PlaylistWriter.promptNew(with: [], from: presenter ?? self) { [weak self] playlist in
+            guard let self, let id = playlist.id else { return }
+            self.viewModel.refreshPlaylists()
+            let detail = PlaylistDetailViewController(playlistId: id, playlistName: playlist.name)
+            if let tabs = self.tabBarController as? AppTabBarController {
+                tabs.pushOnSelected(detail)
+            } else {
+                self.navigationController?.pushViewController(detail, animated: true)
             }
-        })
-        (presenter ?? self).present(alert, animated: true)
+        }
     }
 
     func setupFilterChips() {

@@ -107,16 +107,10 @@ extension LibraryViewController {
                       case .playlist(let playlist) = item
                 else { return nil }
                 let deleteAction = UIContextualAction(style: .destructive, title: String(localized: "Delete")) { _, _, completion in
-                    do {
-                        try DatabaseManager.shared.deletePlaylist(id: playlist.id)
-                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    PlaylistCommands.confirmDelete(id: playlist.id, name: playlist.name, from: self) {
                         self.viewModel.refreshPlaylists()
-                        completion(true)
-                    } catch {
-                        MidgarLog.error("Failed to delete playlist: \(error.localizedDescription)", category: .database)
-                        ToastView.show(String(localized: "Couldn't delete \u{201C}\(playlist.name)\u{201D} — the library database couldn't be written. Check free disk space and try again."), in: self.view, style: .error)
-                        completion(false)
                     }
+                    completion(false)
                 }
                 let coverAction = UIContextualAction(style: .normal, title: String(localized: "Cover")) { _, _, completion in
                     self.impactLight.impactOccurred()

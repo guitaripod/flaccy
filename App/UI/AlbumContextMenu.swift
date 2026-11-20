@@ -56,7 +56,9 @@ enum AlbumContextMenu {
                 }
             }
         }
-        var sections: [UIMenuElement] = [playAction, shuffleAction, playNextAction, addToQueueAction]
+        let tracks = album.tracks
+        let addToPlaylist = PlaylistWriter.addMenu(for: { tracks }, in: host)
+        var sections: [UIMenuElement] = [playAction, shuffleAction, playNextAction, addToQueueAction, addToPlaylist]
         if let download = RemoteDownloadActions.action(for: album.tracks, in: host) {
             sections.append(UIMenu(options: .displayInline, children: [download]))
         }

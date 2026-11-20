@@ -335,10 +335,11 @@ extension LibraryViewModel {
         let result: [PlaylistItem]
         do {
             let records = try DatabaseManager.shared.fetchAllPlaylists()
-            let counts = (try? DatabaseManager.shared.fetchPlaylistTrackCounts()) ?? [:]
+            let summaries = (try? DatabaseManager.shared.fetchPlaylistSummaries()) ?? [:]
             result = records.compactMap { record in
                 guard let id = record.id else { return nil }
-                return PlaylistItem(id: id, name: record.name, trackCount: counts[id] ?? 0)
+                let summary = summaries[id]
+                return PlaylistItem(id: id, name: record.name, trackCount: summary?.songCount ?? 0, seconds: summary?.seconds ?? 0)
             }
         } catch {
             MidgarLog.error("Failed to fetch playlists: \(error.localizedDescription)", category: .database)

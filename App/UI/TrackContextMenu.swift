@@ -151,13 +151,7 @@ enum TrackContextMenu {
             Task { await LovedTracksService.shared.toggleLove(track: track) }
         }
 
-        let playlistMenu = UIMenu(
-            title: String(localized: "Add to Playlist"),
-            image: UIImage(systemName: "text.badge.plus"),
-            children: [UIDeferredMenuElement.uncached { [weak host] completion in
-                completion(playlistActions(for: track, in: host))
-            }]
-        )
+        let playlistMenu = PlaylistWriter.addMenu(for: { [track] }, in: host)
         return [love, playlistMenu]
     }
 
@@ -169,30 +163,6 @@ enum TrackContextMenu {
         }
         if level != 0 { action.subtitle = SongVolumeCopy.level(level) }
         return action
-    }
-
-    private static func playlistActions(for track: Track, in host: UIViewController?) -> [UIMenuElement] {
-        let relativeURL = relativePath(for: track)
-        var actions: [UIMenuElement] = []
-        let playlists = (try? DatabaseManager.shared.fetchAllPlaylists()) ?? []
-        for playlist in playlists {
-            guard let playlistId = playlist.id else { continue }
-            actions.append(UIAction(title: playlist.name, image: UIImage(systemName: "music.note.list")) { [weak host] _ in
-                do {
-                    try DatabaseManager.shared.addTrackToPlaylist(playlistId: playlistId, trackFileURL: relativeURL)
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
-                    if let host { ToastView.show(String(localized: "Added to \(playlist.name)"), in: host.view, style: .success) }
-                } catch {
-                    MidgarLog.error("Failed to add track to playlist: \(error.localizedDescription)", category: .database)
-                    if let host { ToastView.show(String(localized: "Couldn't add to \u{201C}\(playlist.name)\u{201D} — the library database couldn't be written. Check free disk space and try again."), in: host.view, style: .error) }
-                }
-            })
-        }
-        actions.append(UIAction(title: String(localized: "New Playlist\u{2026}"), image: UIImage(systemName: "plus")) { [weak host] _ in
-            guard let host else { return }
-            promptNewPlaylist(for: relativeURL, in: host)
-        })
-        return actions
     }
 
     private static func navigationActions(
@@ -262,31 +232,6 @@ enum TrackContextMenu {
             sheet.prefersGrabberVisible = true
         }
         host.present(container, animated: true)
-    }
-
-    private static func promptNewPlaylist(for relativeURL: String, in host: UIViewController) {
-        let alert = UIAlertController(title: String(localized: "New Playlist"), message: nil, preferredStyle: .alert)
-        alert.addTextField { textField in
-            textField.placeholder = String(localized: "Playlist name")
-            textField.autocapitalizationType = .words
-        }
-        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
-        alert.addAction(UIAlertAction(title: String(localized: "Create"), style: .default) { [weak host] _ in
-            guard let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces),
-                  !name.isEmpty else { return }
-            do {
-                let playlist = try DatabaseManager.shared.createPlaylist(name: name)
-                if let playlistId = playlist.id {
-                    try DatabaseManager.shared.addTrackToPlaylist(playlistId: playlistId, trackFileURL: relativeURL)
-                }
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                if let host { ToastView.show(String(localized: "Added to \(name)"), in: host.view, style: .success) }
-            } catch {
-                MidgarLog.error("Failed to create playlist: \(error.localizedDescription)", category: .database)
-                if let host { ToastView.show(String(localized: "Couldn't create \u{201C}\(name)\u{201D} — the library database couldn't be written. Check free disk space and try again."), in: host.view, style: .error) }
-            }
-        })
-        host.present(alert, animated: true)
     }
 
     static func relativePath(for track: Track) -> String {

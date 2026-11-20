@@ -45,14 +45,13 @@ final class PadPlayerUITests: XCTestCase {
         try assertGrabberDragMovesFirstRow(in: app)
     }
 
-    /// A playlist's songs move by their grabbers in Edit, although the
+    /// A playlist's songs move by their grabbers in Select, although the
     /// playlist also takes songs dropped on it from the library.
-    @MainActor func testPlaylistReordersByItsGrabberInEdit() throws {
+    @MainActor func testPlaylistReordersByItsGrabberInSelect() throws {
         let app = try launchPad(route: "playlist")
-        let edits = app.navigationBars.buttons.matching(identifier: "Edit")
-        XCTAssertTrue(edits.firstMatch.waitForExistence(timeout: 25), "The playlist's Edit button never appeared")
-        let playlistEdit = edits.allElementsBoundByIndex.max { $0.frame.minX < $1.frame.minX }
-        try XCTUnwrap(playlistEdit, "The playlist's Edit button never appeared").tap()
+        let select = app.buttons["playlist.select"]
+        XCTAssertTrue(select.waitForExistence(timeout: 25), "The playlist's Select button never appeared")
+        select.tap()
         try assertGrabberDragMovesFirstRow(in: app)
     }
 

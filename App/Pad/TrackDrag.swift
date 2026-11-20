@@ -39,9 +39,6 @@ final class TrackDragPayload: NSObject {
 /// song on a server never leaves Flaccy this way.
 enum TrackDrag {
 
-    static let playlistDidChange = Notification.Name("TrackDragPlaylistDidChange")
-    static let playlistIDKey = "playlistID"
-
     static func items(for tracks: [Track], named name: String) -> [UIDragItem] {
         guard !tracks.isEmpty else { return [] }
         let provider = fileProvider(for: tracks) ?? NSItemProvider()
@@ -81,26 +78,9 @@ enum TrackDrag {
         }
     }
 
-    /// Adds songs to the end of a playlist and says so in `view`.
+    /// Adds songs to the end of a playlist and says so in `view`, leaving
+    /// out any the playlist already holds.
     static func add(_ tracks: [Track], toPlaylist id: Int64, named name: String, in view: UIView?) {
-        guard !tracks.isEmpty else { return }
-        do {
-            try DatabaseManager.shared.addTracksToPlaylist(
-                playlistId: id, trackFileURLs: tracks.map { TrackContextMenu.relativePath(for: $0) }
-            )
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            NotificationCenter.default.post(name: playlistDidChange, object: nil, userInfo: [playlistIDKey: id])
-            if let view { ToastView.show(String(localized: "Added to \(name)"), in: view, style: .success) }
-            MidgarLog.info("Dropped \(tracks.count) songs on a playlist", category: .ui)
-        } catch {
-            MidgarLog.error("Dropping songs on a playlist failed: \(error.localizedDescription)", category: .database)
-            UINotificationFeedbackGenerator().notificationOccurred(.error)
-            if let view {
-                ToastView.show(
-                    String(localized: "Couldn't add to \u{201C}\(name)\u{201D} — the library database couldn't be written. Check free disk space and try again."),
-                    in: view, style: .error
-                )
-            }
-        }
+        PlaylistWriter.add(tracks, toPlaylist: id, named: name, in: view)
     }
 }

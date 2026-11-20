@@ -210,17 +210,18 @@ extension DatabaseManager {
     }
 
     /// Hands `onChange` every playlist with its song count and length on the
-    /// main queue: once now and again after every write to playlists or
-    /// their songs.
+    /// main queue: once now and again after every change to a playlist's
+    /// name, songs or length.
     public func observePlaylistSummaries(
         onChange: @escaping @MainActor @Sendable ([Int64: PlaylistSummary]) -> Void
     ) -> AnyDatabaseCancellable {
         ValueObservation
             .tracking { db in
-                _ = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM playlists")
-                return try Self.summaries(db)
+                let names = try Row.fetchAll(db, sql: "SELECT id, name FROM playlists ORDER BY id").map { "\($0["id"] as Int64)\u{1F}\($0["name"] as String)" }
+                return PlaylistsDigest(names: names, summaries: try Self.summaries(db))
             }
             .removeDuplicates()
+            .map(\.summaries)
             .start(
                 in: dbQueue,
                 scheduling: .async(onQueue: .main),
@@ -443,3 +444,9 @@ extension DatabaseManager {
     }
 }
 
+/// What the playlists list shows of every playlist, so a rename reaches it
+/// although no count or length changed.
+private struct PlaylistsDigest: Equatable {
+    let names: [String]
+    let summaries: [Int64: PlaylistSummary]
+}

@@ -31,7 +31,7 @@ extension LibraryViewController {
     }
 
     func buildPlaylistContextMenu(for playlist: PlaylistItem) -> UIMenu {
-        var actions = [UIAction(
+        var cover = [UIAction(
             title: String(localized: "Edit Cover…"),
             image: UIImage(systemName: "photo")
         ) { [weak self] _ in
@@ -39,18 +39,26 @@ extension LibraryViewController {
         }]
         let subject = ArtworkSubject(playlistId: playlist.id, name: playlist.name, tracks: [])
         if AlbumArtworkEditor.hasCustomCover(subject) {
-            actions.append(UIAction(
+            cover.append(UIAction(
                 title: String(localized: "Use Automatic Cover"),
                 image: UIImage(systemName: "arrow.uturn.backward")
             ) { [weak self] _ in
                 self?.confirmAutomaticCover(for: playlist)
             })
         }
+        var sections: [UIMenuElement] = [
+            UIMenu(options: .displayInline, children: PlaylistCommands.playbackActions(id: playlist.id, name: playlist.name, in: view)),
+        ]
         let paths = ((try? DatabaseManager.shared.fetchPlaylistTracks(playlistId: playlist.id)) ?? []).map(\.trackFileURL)
-        var sections: [UIMenuElement] = actions
         if let download = RemoteDownloadActions.action(forPaths: paths, in: self) {
-            sections.insert(UIMenu(options: .displayInline, children: [download]), at: 0)
+            sections.append(UIMenu(options: .displayInline, children: [download]))
         }
+        sections.append(UIMenu(options: .displayInline, children: cover))
+        sections += PlaylistCommands.manageActions(
+            id: playlist.id, name: playlist.name, from: self,
+            renamed: { [weak self] _ in self?.viewModel.refreshPlaylists() },
+            deleted: { [weak self] in self?.viewModel.refreshPlaylists() }
+        )
         return UIMenu(children: sections)
     }
 
@@ -116,19 +124,11 @@ extension LibraryViewController {
     }
 
     func saveSuggestion(_ suggestion: SuggestedPlaylist) {
-        do {
-            let playlist = try DatabaseManager.shared.createPlaylist(name: suggestion.title)
-            if let id = playlist.id {
-                for track in suggestion.tracks {
-                    try DatabaseManager.shared.addTrackToPlaylist(playlistId: id, trackFileURL: relativePath(for: track))
-                }
-            }
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            viewModel.refreshPlaylists()
-            ToastView.show(String(localized: "Saved \u{201C}\(suggestion.title)\u{201D}"), in: view, style: .success)
-        } catch {
-            MidgarLog.error("Failed to save suggested playlist: \(error.localizedDescription)", category: .database)
-            ToastView.show(String(localized: "Couldn't create \u{201C}\(suggestion.title)\u{201D} — the library database couldn't be written. Check free disk space and try again."), in: view, style: .error)
-        }
+        let taken = ((try? DatabaseManager.shared.fetchAllPlaylists()) ?? []).map(\.name)
+        let name = taken.contains(suggestion.title)
+            ? PlaylistEditing.copyName(of: suggestion.title, copyWord: PlaylistCopy.copyWord, taken: taken)
+            : suggestion.title
+        guard PlaylistWriter.create(named: name, with: suggestion.tracks, in: view) != nil else { return }
+        viewModel.refreshPlaylists()
     }
 }

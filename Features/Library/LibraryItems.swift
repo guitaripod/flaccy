@@ -98,6 +98,7 @@ nonisolated struct PlaylistItem: Hashable, Sendable {
     let id: Int64
     let name: String
     let trackCount: Int
+    var seconds: Double = 0
 
     nonisolated static func == (lhs: PlaylistItem, rhs: PlaylistItem) -> Bool {
         lhs.id == rhs.id

@@ -53,6 +53,7 @@ extension LibraryViewModel {
             let filtered = matchingPlaylists(playlists, folded: query)
             playlistItems.append(contentsOf: filtered.map { .playlist($0) })
             snapshot.appendItems(playlistItems)
+            repaint(filtered.map { .playlist($0) }, in: &snapshot)
         }
         emptyState = computeEmptyState(itemCount: snapshot.numberOfItems)
         return snapshot

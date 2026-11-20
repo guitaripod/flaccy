@@ -163,6 +163,7 @@ targets:
           - UI/NewMixChipView.swift
           - UI/NowPlayingBarsView.swift
           - UI/PointerHover.swift
+          - UI/PlaylistWriter.swift
           - UI/PopoverAnchor.swift
           - UI/QualityBadgeView.swift
           - UI/SectionIndexView.swift
@@ -249,6 +250,14 @@ targets:
           - Library/NewMixShot.swift
           - Library/LibraryWalkExercise.swift
           - Library/PlaylistDetailViewController.swift
+          - Library/PlaylistDetailViewController+Editing.swift
+          - Library/PlaylistDetailViewController+Menus.swift
+          - Library/PlaylistDetailViewController+Suggestions.swift
+          - Library/PlaylistTrackCell.swift
+          - Library/PlaylistAddSongsViewController.swift
+          - Library/PlaylistCommands.swift
+          - Library/PlaylistSelectionBar.swift
+          - Library/PlaylistPageExercise.swift
           - Library/PlaylistListCells.swift
           - ListeningGuide/ListeningGuideViewController.swift
           - LyricShare/LyricShareViewController.swift

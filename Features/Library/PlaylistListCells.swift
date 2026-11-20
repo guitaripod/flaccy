@@ -134,3 +134,134 @@ final class PlaylistListCell: UICollectionViewListCell {
         thumbnail.reset()
     }
 }
+
+/// A stacked-artwork mosaic that lays out up to four distinct covers:
+/// a 2x2 grid for four, a large-plus-column split for three, side-by-side
+/// halves for two, a single full-bleed cover for one, and a music.note
+/// placeholder tile when the playlist has no artwork at all. It serves the
+/// detail page's cover and, smaller and without a shadow, the playlists
+/// list's thumbnails.
+final class StackedArtworkMosaicView: UIView {
+
+    private let contentContainer = UIView()
+    private let cornerRadius: CGFloat
+    private let showsShadow: Bool
+    private let placeholderPointSize: CGFloat
+
+    var artworkLabel: String? {
+        get { contentContainer.accessibilityLabel }
+        set { contentContainer.accessibilityLabel = newValue }
+    }
+
+    var artworkElement: UIView { contentContainer }
+
+    init(cornerRadius: CGFloat = 20, showsShadow: Bool = true, placeholderPointSize: CGFloat = 56) {
+        self.cornerRadius = cornerRadius
+        self.showsShadow = showsShadow
+        self.placeholderPointSize = placeholderPointSize
+        super.init(frame: .zero)
+        if showsShadow {
+            layer.shadowColor = UIColor.black.cgColor
+            layer.shadowOpacity = 0.25
+            layer.shadowOffset = CGSize(width: 0, height: 10)
+            layer.shadowRadius = 24
+        }
+
+        contentContainer.layer.cornerRadius = cornerRadius
+        contentContainer.layer.cornerCurve = .continuous
+        contentContainer.clipsToBounds = true
+        contentContainer.backgroundColor = .secondarySystemBackground
+        contentContainer.isAccessibilityElement = true
+        contentContainer.accessibilityTraits = .image
+        contentContainer.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(contentContainer)
+
+        NSLayoutConstraint.activate([
+            contentContainer.topAnchor.constraint(equalTo: topAnchor),
+            contentContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
+            contentContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
+            contentContainer.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+        setCovers([])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if showsShadow {
+            layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius).cgPath
+        }
+    }
+
+    func setCovers(_ covers: [UIImage]) {
+        contentContainer.subviews.forEach { $0.removeFromSuperview() }
+        let mosaic = buildMosaic(covers: covers)
+        mosaic.translatesAutoresizingMaskIntoConstraints = false
+        contentContainer.addSubview(mosaic)
+        NSLayoutConstraint.activate([
+            mosaic.topAnchor.constraint(equalTo: contentContainer.topAnchor),
+            mosaic.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            mosaic.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            mosaic.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor),
+        ])
+    }
+
+    private func buildMosaic(covers: [UIImage]) -> UIView {
+        switch covers.count {
+        case 0:
+            return placeholderTile()
+        case 1:
+            return coverTile(covers[0])
+        case 2:
+            return rowStack([coverTile(covers[0]), coverTile(covers[1])])
+        case 3:
+            let column = columnStack([coverTile(covers[1]), coverTile(covers[2])])
+            return rowStack([coverTile(covers[0]), column])
+        default:
+            let top = rowStack([coverTile(covers[0]), coverTile(covers[1])])
+            let bottom = rowStack([coverTile(covers[2]), coverTile(covers[3])])
+            return columnStack([top, bottom])
+        }
+    }
+
+    private func rowStack(_ views: [UIView]) -> UIStackView {
+        let stack = UIStackView(arrangedSubviews: views)
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.spacing = 1
+        return stack
+    }
+
+    private func columnStack(_ views: [UIView]) -> UIStackView {
+        let stack = UIStackView(arrangedSubviews: views)
+        stack.axis = .vertical
+        stack.distribution = .fillEqually
+        stack.spacing = 1
+        return stack
+    }
+
+    private func coverTile(_ image: UIImage) -> UIImageView {
+        let imageView = UIImageView(image: image)
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        return imageView
+    }
+
+    private func placeholderTile() -> UIView {
+        let tile = UIView()
+        tile.backgroundColor = .tertiarySystemFill
+        let symbol = UIImageView(image: UIImage(systemName: "music.note"))
+        symbol.tintColor = .secondaryLabel
+        symbol.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: placeholderPointSize, weight: .thin)
+        symbol.contentMode = .scaleAspectFit
+        symbol.translatesAutoresizingMaskIntoConstraints = false
+        tile.addSubview(symbol)
+        NSLayoutConstraint.activate([
+            symbol.centerXAnchor.constraint(equalTo: tile.centerXAnchor),
+            symbol.centerYAnchor.constraint(equalTo: tile.centerYAnchor),
+        ])
+        return tile
+    }
+}

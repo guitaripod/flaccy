@@ -14,8 +14,10 @@ nonisolated final class SimilarArtistService: @unchecked Sendable {
     private init() {}
 
     /// Similar-artist names present in the library, ordered by match strength.
-    func similarArtistsInLibrary(toArtist artist: String) async -> [(name: String, match: Double)] {
-        let similar = await cachedSimilar(artist: artist)
+    /// With `cachedOnly`, only the lists already cached count and nothing is
+    /// fetched.
+    func similarArtistsInLibrary(toArtist artist: String, cachedOnly: Bool = false) async -> [(name: String, match: Double)] {
+        let similar = cachedOnly ? storedSimilar(artist: artist) : await cachedSimilar(artist: artist)
         guard !similar.isEmpty else { return [] }
 
         let libraryArtists = (try? db.fetchLibraryArtists()) ?? []
@@ -56,11 +58,15 @@ nonisolated final class SimilarArtistService: @unchecked Sendable {
         return albums.sorted { $0.match > $1.match }.map(\.album).filter { seen.insert($0.id).inserted }
     }
 
-    private func cachedSimilar(artist: String) async -> [(name: String, match: Double)] {
+    private func storedSimilar(artist: String) -> [(name: String, match: Double)] {
         let fresherThan = Date().addingTimeInterval(-cacheLifetime)
-        if let cached = try? db.fetchCachedSimilarArtists(artist: artist, fresherThan: fresherThan), !cached.isEmpty {
-            return cached.map { (name: $0.similarName, match: $0.match) }
-        }
+        let cached = (try? db.fetchCachedSimilarArtists(artist: artist, fresherThan: fresherThan)) ?? []
+        return cached.map { (name: $0.similarName, match: $0.match) }
+    }
+
+    private func cachedSimilar(artist: String) async -> [(name: String, match: Double)] {
+        let stored = storedSimilar(artist: artist)
+        if !stored.isEmpty { return stored }
 
         let fetched = await lastFM.fetchSimilarArtists(artist: artist, limit: 100)
         if !fetched.isEmpty {
