@@ -10,7 +10,19 @@ enum KeychainStore {
         Bundle.main.bundleIdentifier ?? "flaccy"
     }
 
+    /// True under the DEBUG flags an unsigned capture build is launched with.
+    /// Its signature is on no keychain item's access list, so a read would
+    /// stop the launch on a system prompt nobody is there to answer.
+    nonisolated private static var isSkipped: Bool {
+        #if DEBUG
+        CommandLine.arguments.contains("--memory-audit") || CommandLine.arguments.contains("--skip-keychain")
+        #else
+        false
+        #endif
+    }
+
     nonisolated static func string(for account: String) -> String? {
+        guard !isSkipped else { return nil }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -26,6 +38,7 @@ enum KeychainStore {
     }
 
     nonisolated static func set(_ value: String?, for account: String) {
+        guard !isSkipped else { return }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
