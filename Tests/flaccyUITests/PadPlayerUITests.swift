@@ -38,6 +38,36 @@ final class PadPlayerUITests: XCTestCase {
         XCTAssertEqual(shuffle.frame.height, 44, accuracy: 0.5)
     }
 
+    /// A song in Up Next moves when its grabber is dragged, on the iPad's
+    /// queue page where songs dragged in from the library also land.
+    @MainActor func testUpNextReordersByItsGrabber() throws {
+        let app = try launchPad(route: "queue")
+        try assertGrabberDragMovesFirstRow(in: app)
+    }
+
+    /// A playlist's songs move by their grabbers in Edit, although the
+    /// playlist also takes songs dropped on it from the library.
+    @MainActor func testPlaylistReordersByItsGrabberInEdit() throws {
+        let app = try launchPad(route: "playlist")
+        let edits = app.navigationBars.buttons.matching(identifier: "Edit")
+        XCTAssertTrue(edits.firstMatch.waitForExistence(timeout: 25), "The playlist's Edit button never appeared")
+        let playlistEdit = edits.allElementsBoundByIndex.max { $0.frame.minX < $1.frame.minX }
+        try XCTUnwrap(playlistEdit, "The playlist's Edit button never appeared").tap()
+        try assertGrabberDragMovesFirstRow(in: app)
+    }
+
+    @MainActor private func assertGrabberDragMovesFirstRow(in app: XCUIApplication) throws {
+        let grabbers = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Reorder '"))
+        XCTAssertTrue(grabbers.firstMatch.waitForExistence(timeout: 25), "No row listed a grabber")
+        let first = grabbers.element(boundBy: 0)
+        let movedLabel = first.label
+        first.press(forDuration: 0.3, thenDragTo: grabbers.element(boundBy: 3))
+        sleep(1)
+        let labels = (0..<4).map { grabbers.element(boundBy: $0).label }
+        XCTAssertNotEqual(labels.first, movedLabel, "The dragged song stayed first: \(labels)")
+        XCTAssertTrue(labels.dropFirst().contains(movedLabel), "The dragged song left the top rows: \(labels)")
+    }
+
     @MainActor private func launchPad(route: String) throws -> XCUIApplication {
         let app = launch(route: route)
         XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: 20), "The app's window never appeared")

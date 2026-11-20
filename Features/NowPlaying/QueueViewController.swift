@@ -286,14 +286,20 @@ final class QueueViewController: UIViewController, SonglinkShareable {
 extension QueueViewController: UITableViewDropDelegate {
 
     func tableView(_ tableView: UITableView, canHandle session: UIDropSession) -> Bool {
-        TrackDrag.carriesTracks(session)
+        tableView.hasActiveDrag || TrackDrag.carriesTracks(session)
     }
 
+    /// A song dragged by its grabber is the table's own reorder: proposing a
+    /// move hands it back to `moveRowAt`, where any other proposal would
+    /// cancel it on an iPad, which routes the grabber through drag and drop.
     func tableView(
         _ tableView: UITableView,
         dropSessionDidUpdate session: UIDropSession,
         withDestinationIndexPath destinationIndexPath: IndexPath?
     ) -> UITableViewDropProposal {
+        if tableView.hasActiveDrag {
+            return UITableViewDropProposal(operation: .move, intent: .insertAtDestinationIndexPath)
+        }
         guard TrackDrag.carriesTracks(session) else { return UITableViewDropProposal(operation: .cancel) }
         return UITableViewDropProposal(operation: .copy, intent: .insertAtDestinationIndexPath)
     }
@@ -302,6 +308,7 @@ extension QueueViewController: UITableViewDropDelegate {
     /// first waiting song when dropped on what is playing or already played,
     /// at the end when dropped below the list.
     func tableView(_ tableView: UITableView, performDropWith coordinator: UITableViewDropCoordinator) {
+        guard !tableView.hasActiveDrag else { return }
         let tracks = TrackDrag.tracks(in: coordinator.session)
         guard !tracks.isEmpty else { return }
         let position: Int

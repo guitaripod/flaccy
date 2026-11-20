@@ -723,7 +723,7 @@ extension PlaylistDetailViewController: UITableViewDragDelegate, UITableViewDrop
     /// Songs dragged in from elsewhere join the end of the playlist; a song
     /// dragged within it is left to the Edit button's reordering.
     func tableView(_ tableView: UITableView, canHandle session: UIDropSession) -> Bool {
-        TrackDrag.carriesTracks(session) && !isOwnDrag(session)
+        isReordering(tableView) || (TrackDrag.carriesTracks(session) && !isOwnDrag(session))
     }
 
     func tableView(
@@ -731,12 +731,15 @@ extension PlaylistDetailViewController: UITableViewDragDelegate, UITableViewDrop
         dropSessionDidUpdate session: UIDropSession,
         withDestinationIndexPath destinationIndexPath: IndexPath?
     ) -> UITableViewDropProposal {
+        if isReordering(tableView) {
+            return UITableViewDropProposal(operation: .move, intent: .insertAtDestinationIndexPath)
+        }
         guard TrackDrag.carriesTracks(session), !isOwnDrag(session) else { return UITableViewDropProposal(operation: .cancel) }
         return UITableViewDropProposal(operation: .copy, intent: .unspecified)
     }
 
     func tableView(_ tableView: UITableView, performDropWith coordinator: UITableViewDropCoordinator) {
-        guard !isOwnDrag(coordinator.session) else { return }
+        guard !isReordering(tableView), !isOwnDrag(coordinator.session) else { return }
         TrackDrag.add(TrackDrag.tracks(in: coordinator.session), toPlaylist: playlistId, named: playlistName, in: view)
     }
 
@@ -746,6 +749,12 @@ extension PlaylistDetailViewController: UITableViewDragDelegate, UITableViewDrop
         guard name != playlistName else { return }
         playlistName = name
         title = name
+    }
+
+    /// A song dragged by its grabber in Edit: an iPad routes that through
+    /// drag and drop, and only a move proposal hands it back to `moveRowAt`.
+    private func isReordering(_ tableView: UITableView) -> Bool {
+        isEditing && tableView.hasActiveDrag
     }
 
     private func isOwnDrag(_ session: UIDropSession) -> Bool {
