@@ -63,6 +63,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     weak var morphContainer: PlayerMorphContaining?
     var morphBackdropActive = false
     let grabberControl = UIControl()
+    lazy var columnToggle: UIView = makeColumnToggle()
 
     enum CenterState {
         case artwork
@@ -373,6 +374,25 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             pill.widthAnchor.constraint(equalToConstant: 36),
             pill.heightAnchor.constraint(equalToConstant: 5),
         ])
+    }
+
+    /// The column's own way out, at its top corner where the window keeps its
+    /// toolbar buttons: it hands the width back to the library and the mini
+    /// player takes over, as View > Now Playing Column does from a keyboard.
+    func makeColumnToggle() -> UIView {
+        let toggle = LiquidGlass.iconCapsule(
+            systemImage: "sidebar.trailing", accessibilityLabel: String(localized: "Now Playing Column"), height: 36, width: 36
+        ) {
+            PlayerColumnSetting.setShown(false)
+        }
+        toggle.isHidden = true
+        toggle.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toggle)
+        NSLayoutConstraint.activate([
+            toggle.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            toggle.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
+        ])
+        return toggle
     }
 
     override func accessibilityPerformEscape() -> Bool {

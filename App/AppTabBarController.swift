@@ -55,8 +55,15 @@ final class AppTabBarController: UITabBarController {
         let mini = MiniPlayerView()
         mini.style = .accessory
         mini.onTap = { [weak self] in self?.onMiniPlayerTap?() }
+        if padSidebar != nil { mini.addInteraction(UIContextMenuInteraction(delegate: self)) }
         return mini
     }()
+
+    /// Whether the window could hold Now Playing as a column beside the
+    /// library right now; asked by the mini player's menu.
+    private var canShowPlayerColumn: Bool {
+        (parent as? RootContainerViewController)?.canShowPlayerColumn == true
+    }
 
     init() {
         home = HomeViewController(libraryViewModel: library.viewModel, library: library)
@@ -243,5 +250,24 @@ final class AppTabBarController: UITabBarController {
         }
         guard frame.midY > bounds.midY else { return .zero }
         return UIEdgeInsets(top: 0, left: 0, bottom: max(bounds.maxY - frame.minY - safeArea.bottom, 0), right: 0)
+    }
+}
+
+extension AppTabBarController: UIContextMenuInteractionDelegate {
+
+    /// A touch way back to the Now Playing column after it was hidden: a long
+    /// press on the mini player offers it whenever the window has room.
+    func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        guard canShowPlayerColumn, !PlayerColumnSetting.isShown else { return nil }
+        return UIContextMenuConfiguration(actionProvider: { _ in
+            UIMenu(children: [
+                UIAction(title: String(localized: "Now Playing Column"), image: UIImage(systemName: "sidebar.trailing")) { _ in
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    PlayerColumnSetting.setShown(true)
+                },
+            ])
+        })
     }
 }

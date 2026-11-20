@@ -48,6 +48,8 @@ extension NowPlayingViewController {
         isPaneMode = enabled
         paneStyle = style
         grabberControl.isHidden = enabled
+        columnToggle.isHidden = !(enabled && style == .column)
+        if !columnToggle.isHidden { view.bringSubviewToFront(columnToggle) }
         fitColumnPane()
         view.setNeedsLayout()
         if enabled {
