@@ -268,6 +268,7 @@ final class RootContainerViewController: UIViewController {
     var onSplitChange: ((Bool) -> Void)?
     private var isPlayerFocused = false
     private var isAnimatingColumn = false
+    private var resize: (started: CFTimeInterval, target: CGSize)?
 
     override var childForStatusBarStyle: UIViewController? { statusBarSource }
 
@@ -351,8 +352,30 @@ final class RootContainerViewController: UIViewController {
         view.bringSubviewToFront(debut)
     }
 
+    override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        resize = (CACurrentMediaTime(), size)
+    }
+
+    /// How long a new window size took to be laid out and drawn, from the
+    /// moment the system announced it: while that runs, iPadOS shows the old
+    /// frame stretched or squeezed into the new one, so a slow resize is what
+    /// a person sees as a crushed app.
+    private func reportResizeIfLaidOut() {
+        guard let resize, view.bounds.size == resize.target else { return }
+        self.resize = nil
+        DispatchQueue.main.async {
+            let milliseconds = Int((CACurrentMediaTime() - resize.started) * 1000)
+            MidgarLog.info(
+                "Window resized to \(Int(resize.target.width))x\(Int(resize.target.height)), drawn after \(milliseconds) ms",
+                category: .performance
+            )
+        }
+    }
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        reportResizeIfLaidOut()
         guard !isAnimatingColumn else { return }
         if let geometry = desiredSplitGeometry() {
             guard !isSplit || geometry != appliedGeometry else { return }
