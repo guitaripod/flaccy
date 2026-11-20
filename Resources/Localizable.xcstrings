@@ -40989,6 +40989,106 @@
         }
       }
     },
+    "Another app is using the camera. Close it, and the camera comes back here.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En anden app bruger kameraet. Luk den, så vender kameraet tilbage her."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine andere App verwendet die Kamera. Schließe sie, dann kommt die Kamera hierher zurück."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another app is using the camera. Close it, and the camera comes back here."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otra app está usando la cámara. Ciérrala y la cámara volverá aquí."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toinen appi käyttää kameraa. Sulje se, niin kamera palaa tänne."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une autre app utilise la caméra. Fermez-la et la caméra reviendra ici."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annað app notar myndavélina. Lokaðu því og myndavélin kemur aftur hingað."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un’altra app sta usando la fotocamera. Chiudila e la fotocamera tornerà qui."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかのアプリがカメラを使用しています。そのアプリを閉じると、カメラがここに戻ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 앱이 카메라를 사용하고 있습니다. 그 앱을 닫으면 카메라가 여기로 돌아옵니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En annen app bruker kameraet. Lukk den, så kommer kameraet tilbake hit."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inna aplikacja używa aparatu. Zamknij ją, a aparat wróci tutaj."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outro app está usando a câmera. Feche-o e a câmera volta para cá."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En annan app använder kameran. Stäng den, så kommer kameran tillbaka hit."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "另一个 App 正在使用相机。关闭它后，相机会回到这里。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "另一個 App 正在使用相機。關閉它後，相機會回到這裡。"
+          }
+        }
+      }
+    },
     "Appearance": {
       "localizations": {
         "da": {
@@ -183889,6 +183989,106 @@
           "stringUnit": {
             "state": "translated",
             "value": "「正在播放」下方的按鈕將恢復為原始順序。"
+          }
+        }
+      }
+    },
+    "The camera stops while Flaccy shares the screen with other apps. Make Flaccy full screen to scan, or type the server’s details instead.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kameraet stopper, mens Flaccy deler skærmen med andre apps. Vis Flaccy i fuld skærm for at scanne, eller skriv serverens oplysninger i stedet."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Kamera hält an, solange Flaccy den Bildschirm mit anderen Apps teilt. Zeige Flaccy im Vollbild an, um zu scannen, oder gib stattdessen die Daten des Servers ein."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The camera stops while Flaccy shares the screen with other apps. Make Flaccy full screen to scan, or type the server’s details instead."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La cámara se detiene mientras Flaccy comparte la pantalla con otras apps. Pon Flaccy a pantalla completa para escanear o escribe los datos del servidor."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera pysähtyy, kun Flaccy jakaa näytön muiden appien kanssa. Avaa Flaccy koko näytölle skannataksesi tai kirjoita palvelimen tiedot sen sijaan."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La caméra s’arrête quand Flaccy partage l’écran avec d’autres apps. Mettez Flaccy en plein écran pour scanner, ou saisissez plutôt les informations du serveur."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Myndavélin stöðvast meðan Flaccy deilir skjánum með öðrum öppum. Hafðu Flaccy á öllum skjánum til að skanna, eða sláðu inn upplýsingar þjónsins í staðinn."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fotocamera si ferma mentre Flaccy condivide lo schermo con altre app. Porta Flaccy a schermo intero per scansionare, oppure inserisci i dati del server."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccyがほかのアプリと画面を共有している間はカメラが停止します。スキャンするにはFlaccyをフルスクリーンにするか、代わりにサーバーの情報を入力してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy가 다른 앱과 화면을 함께 쓰는 동안에는 카메라가 멈춥니다. 스캔하려면 Flaccy를 전체 화면으로 보거나 서버 정보를 직접 입력하세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kameraet stopper mens Flaccy deler skjermen med andre apper. Vis Flaccy i fullskjerm for å skanne, eller skriv inn serverens opplysninger i stedet."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aparat zatrzymuje się, gdy Flaccy dzieli ekran z innymi aplikacjami. Włącz Flaccy na pełnym ekranie, aby zeskanować, albo wpisz dane serwera."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A câmera para enquanto o Flaccy divide a tela com outros apps. Deixe o Flaccy em tela cheia para escanear ou digite os dados do servidor."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kameran stannar medan Flaccy delar skärmen med andra appar. Visa Flaccy i helskärm för att skanna, eller skriv in serverns uppgifter i stället."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 与其他 App 共享屏幕时，相机会停止。请将 Flaccy 切换为全屏再扫描，或改为输入服务器信息。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 與其他 App 共用螢幕時，相機會停止。請將 Flaccy 切換為全螢幕再掃描，或改為輸入伺服器資訊。"
           }
         }
       }
