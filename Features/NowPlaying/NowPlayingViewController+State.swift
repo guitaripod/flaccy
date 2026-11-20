@@ -198,6 +198,7 @@ extension NowPlayingViewController {
         }
         playPauseButton.accessibilityLabel = isPlaying ? String(localized: "Pause") : String(localized: "Play")
         animateBreathe(isPlaying: isPlaying)
+        backdropView.setHoldsStill(!isPlaying)
     }
 
     /// Springs the artwork card between full scale while playing and a dimmed,

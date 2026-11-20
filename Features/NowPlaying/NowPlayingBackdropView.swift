@@ -22,6 +22,10 @@ final class NowPlayingBackdropView: UIView {
     private var hasArtistImage = false
     private let startTime = CACurrentMediaTime()
     private var fadeStartTime: CFTimeInterval?
+    private var isOutOfSight = false
+    private var holdsStill = false
+    private var heldSince: CFTimeInterval?
+    private var heldTotal: CFTimeInterval = 0
     private var colorsFrom: [SIMD4<Float>]
     private var colorsTo: [SIMD4<Float>]
 
@@ -57,6 +61,7 @@ final class NowPlayingBackdropView: UIView {
             colorsFrom = currentBlendedColors()
             colorsTo = target
             fadeStartTime = CACurrentMediaTime()
+            applyMotion()
         } else {
             colorsFrom = target
             colorsTo = target
@@ -94,8 +99,31 @@ final class NowPlayingBackdropView: UIView {
     }
 
     func setPaused(_ paused: Bool) {
-        mtkView?.isPaused = paused
-        if paused {
+        isOutOfSight = paused
+        applyMotion()
+    }
+
+    /// Holds the field and the photo still while the music is paused, where they used to flow
+    /// at 28 frames a second for as long as Now Playing was on screen — all day on an iPad that
+    /// keeps the column beside the library. A colour crossfade still plays out, so a cover
+    /// changed while paused settles into its colours before the field stops, and the flow picks
+    /// up where it stopped when the music does.
+    func setHoldsStill(_ still: Bool) {
+        guard still != holdsStill else { return }
+        holdsStill = still
+        let now = CACurrentMediaTime()
+        if still {
+            heldSince = now
+        } else if let heldSince {
+            heldTotal += now - heldSince
+            self.heldSince = nil
+        }
+        applyMotion()
+    }
+
+    private func applyMotion() {
+        mtkView?.isPaused = isOutOfSight || (holdsStill && fadeStartTime == nil)
+        if isOutOfSight || holdsStill {
             if let presented = ambientImageView.layer.presentation() {
                 ambientImageView.layer.transform = presented.transform
             }
@@ -103,6 +131,12 @@ final class NowPlayingBackdropView: UIView {
         } else {
             updateKenBurns()
         }
+    }
+
+    /// Seconds the field has flowed, not counting the time it was held still.
+    private func motionTime(at now: CFTimeInterval) -> Float {
+        let held = heldTotal + (heldSince.map { now - $0 } ?? 0)
+        return Float(now - startTime - held)
     }
 
     override func layoutSubviews() {
@@ -133,6 +167,7 @@ final class NowPlayingBackdropView: UIView {
             ambientImageView.layer.transform = CATransform3DMakeScale(1.1, 1.1, 1)
             return
         }
+        guard !isOutOfSight, !holdsStill else { return }
         guard ambientImageView.layer.animation(forKey: Self.kenBurnsKey) == nil else { return }
 
         let current = ambientImageView.layer.transform
@@ -244,13 +279,14 @@ extension NowPlayingBackdropView: MTKViewDelegate {
         if fade >= 1, fadeStartTime != nil {
             colorsFrom = colorsTo
             fadeStartTime = nil
+            if holdsStill { applyMotion() }
         }
         var uniforms = Uniforms(
             colors: (
                 colorsFrom[0], colorsFrom[1], colorsFrom[2], colorsFrom[3],
                 colorsTo[0], colorsTo[1], colorsTo[2], colorsTo[3]
             ),
-            time: Float(CACurrentMediaTime() - startTime),
+            time: motionTime(at: CACurrentMediaTime()),
             fade: fadeStartTime == nil ? 0 : fade,
             padding: .zero
         )
