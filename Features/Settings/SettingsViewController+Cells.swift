@@ -227,6 +227,14 @@ extension SettingsViewController {
             cell.accessoryView = makeAutoplaySwitch()
             cell.accessibilityTraits = []
 
+        case .interruptionResume(let choice):
+            content.image = RowIcon.image(systemName: "arrow.uturn.forward", tint: .systemGreen)
+            content.text = InterruptionCopy.title
+            cell.selectionStyle = .none
+            cell.accessibilityTraits = []
+            cell.accessoryView = makeInterruptionResumeButton(selected: choice)
+            cell.accessibilityIdentifier = "settings.row.interruptionResume"
+
         case .libraryRadio:
             content.image = RowIcon.image(systemName: "dot.radiowaves.left.and.right", tint: .systemOrange)
             content.text = String(localized: "Library Radio")

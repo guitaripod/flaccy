@@ -31,25 +31,66 @@ extension PlaybackEngine {
             guard let self else { return }
             switch type {
             case .began:
-                self.wasPlayingBeforeInterruption =
-                    self.isPlaying || (self.playingItem != nil && !self.userPausedPlayback)
-                if self.isPlaying {
-                    self.player?.pause()
-                    self.applyPlaybackState(false)
-                }
+                self.interruptionBegan()
             case .ended:
                 let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue ?? 0)
-                if self.wasPlayingBeforeInterruption, options.contains(.shouldResume) {
-                    self.userPausedPlayback = false
-                    self.host?.activateAudioSession()
-                    self.player?.play()
-                    self.applyPlaybackState(true)
-                }
-                self.wasPlayingBeforeInterruption = false
+                self.interruptionEnded(shouldResume: options.contains(.shouldResume))
             @unknown default:
                 break
             }
         }
+    }
+
+    /// Remembers whether music was playing, pauses, and tells the host so it can listen for the other app
+    /// going quiet.
+    func interruptionBegan() {
+        let wasPlaying = isPlaying || (playingItem != nil && !userPausedPlayback)
+        if isPlaying {
+            player?.pause()
+            applyPlaybackState(false)
+        }
+        wasPlayingBeforeInterruption = wasPlaying
+        MidgarLog.info("Interruption began, wasPlaying=\(wasPlaying)", category: .playback)
+        if wasPlaying { host?.interruptionDidBegin() }
+    }
+
+    /// Plays again when the system hands the sound back and the person's choice allows it. Without a hand-back
+    /// the wait goes on only for the choice that listens for quiet.
+    func interruptionEnded(shouldResume: Bool) {
+        let choice = host?.interruptionResume ?? .whenHandedBack
+        MidgarLog.info(
+            "Interruption ended, shouldResume=\(shouldResume) awaiting=\(isAwaitingInterruptionEnd) choice=\(choice.rawValue)",
+            category: .playback
+        )
+        if choice.resumes(onHandBack: shouldResume) {
+            resumeAfterInterruption()
+        }
+        if !choice.watchesForQuiet {
+            wasPlayingBeforeInterruption = false
+        }
+    }
+
+    /// Whether music was cut off by another app and nobody has pressed play or pause since.
+    public var isAwaitingInterruptionEnd: Bool {
+        wasPlayingBeforeInterruption && !isPlaying
+    }
+
+    /// Takes the sound back and plays on from where the interruption cut in. Answers false, and keeps
+    /// waiting, when the system refuses the session (a call still in progress, for one).
+    @discardableResult
+    public func resumeAfterInterruption() -> Bool {
+        guard isAwaitingInterruptionEnd, let player, player.currentItem != nil else { return false }
+        guard host?.activateAudioSession() ?? false else { return false }
+        userPausedPlayback = false
+        player.play()
+        applyPlaybackState(true)
+        MidgarLog.info("Resumed after interruption", category: .playback)
+        return true
+    }
+
+    /// Stops waiting for an interruption to end, leaving the music paused.
+    public func abandonInterruptionWait() {
+        wasPlayingBeforeInterruption = false
     }
 
     @objc nonisolated func handleRouteChange(_ notification: Notification) {

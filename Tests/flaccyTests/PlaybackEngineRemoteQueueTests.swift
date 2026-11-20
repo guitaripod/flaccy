@@ -145,7 +145,9 @@ nonisolated final class PlaybackEngineRemoteQueueTests: XCTestCase {
         func isPlaybackGated() -> Bool { false }
         func attachEqualizer(to item: AVPlayerItem, for track: Track) {}
         func remoteAsset(for track: Track) -> AVURLAsset { AVURLAsset(url: track.fileURL) }
-        func activateAudioSession() {}
+        func activateAudioSession() -> Bool { true }
+        var interruptionResume: InterruptionResume { .standard }
+        func interruptionDidBegin() {}
         func playFeedback(_ kind: PlaybackFeedbackKind) {}
         func playbackStateDidUpdate() {}
         func trackDidStart(_ track: Track) {}

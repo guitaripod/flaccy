@@ -33,11 +33,19 @@ public final class PlaybackEngine {
     var lastKnownPlaybackPosition: TimeInterval = 0
     var isRestoringQueue: Bool = false
     var wasPlayingBeforeInterruption = false
-    var userPausedPlayback = false
+    var userPausedPlayback = false {
+        didSet {
+            if userPausedPlayback { wasPlayingBeforeInterruption = false }
+        }
+    }
 
     public internal(set) var queue: [Track] = []
     public internal(set) var currentIndex: Int = 0
-    public internal(set) var isPlaying: Bool = false
+    public internal(set) var isPlaying: Bool = false {
+        didSet {
+            if isPlaying { wasPlayingBeforeInterruption = false }
+        }
+    }
     public internal(set) var shuffleEnabled: Bool = false
     public internal(set) var repeatMode: RepeatMode = .off
     public internal(set) var playbackContext: PlaybackContext = .anonymousQueue

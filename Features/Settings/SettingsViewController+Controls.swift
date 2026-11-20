@@ -111,6 +111,37 @@ extension SettingsViewController {
         return toggle
     }
 
+    /// A pull-down of what happens after another app took the sound, each with when it plays again.
+    func makeInterruptionResumeButton(selected: InterruptionResume) -> UIView {
+        var configuration = UIButton.Configuration.plain()
+        configuration.title = InterruptionCopy.name(selected)
+        configuration.image = UIImage(systemName: "chevron.up.chevron.down")
+        configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
+        configuration.imagePlacement = .trailing
+        configuration.imagePadding = 4
+        configuration.baseForegroundColor = .secondaryLabel
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0)
+        let button = UIButton(configuration: configuration)
+        button.menu = UIMenu(children: InterruptionResume.allCases.map { choice in
+            UIAction(
+                title: InterruptionCopy.name(choice),
+                subtitle: InterruptionCopy.detail(choice),
+                state: choice == selected ? .on : .off
+            ) { [weak self] _ in
+                guard let self else { return }
+                self.selectionFeedback.selectionChanged()
+                AudioPlayer.shared.interruptionResume = choice
+                self.applySnapshot(animated: false)
+            }
+        })
+        button.showsMenuAsPrimaryAction = true
+        button.accessibilityLabel = InterruptionCopy.title
+        button.accessibilityValue = InterruptionCopy.name(selected)
+        button.accessibilityIdentifier = "settings.interruptionResume"
+        button.sizeToFit()
+        return button
+    }
+
     func makeVersionFooter() -> UIView {
         let info = Bundle.main.infoDictionary
         let name = info?["CFBundleDisplayName"] as? String

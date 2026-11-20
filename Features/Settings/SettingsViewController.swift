@@ -284,6 +284,7 @@ final class SettingsViewController: UITableViewController {
         case .sound: soundSections()
         case .playback: [
             (.playback, [.gaplessPlayback, .autoplaySimilar]),
+            (.interruptions, [.interruptionResume(AudioPlayer.shared.interruptionResume)]),
             (.stations, [.libraryRadio, .crateDig]),
             (.playerButtons, [.playerButtons(isCustom: PlayerActionOrderStore.shared.order != .standard)]),
         ]
@@ -424,6 +425,7 @@ final class SettingsViewController: UITableViewController {
             Entry(Page.playback.title, in: .playback),
             Entry(String(localized: "Gapless Playback"), in: .playback),
             Entry(String(localized: "Autoplay Similar"), in: .playback),
+            Entry(InterruptionCopy.title, in: .playback),
             Entry(String(localized: "Library Radio"), in: .playback),
             Entry(String(localized: "Crate Dig"), in: .playback),
             Entry(String(localized: "Year in Music"), symbolName: "sparkles", tint: .systemIndigo, row: .yearInMusic),
@@ -541,7 +543,7 @@ final class SettingsViewController: UITableViewController {
 
     func isSelectable(_ row: Row) -> Bool {
         switch row {
-        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .cleanLibrary,
+        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .interruptionResume, .cleanLibrary,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
              .downloadQuality, .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
             return false
@@ -584,7 +586,7 @@ final class SettingsViewController: UITableViewController {
         case .addServer: handleAddServerTap()
         case .server(let server): handleServerTap(server)
         case .clearCache: handleClearCacheTap()
-        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .cleanLibrary,
+        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .interruptionResume, .cleanLibrary,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
              .downloadQuality, .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
             break

@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import FlaccyCore
 
 public enum PlaybackFeedbackKind: Sendable {
     case light
@@ -36,7 +37,13 @@ public protocol PlaybackEngineHost: AnyObject {
     func isPlaybackGated() -> Bool
     func attachEqualizer(to item: AVPlayerItem, for track: Track)
     func remoteAsset(for track: Track) -> AVURLAsset
-    func activateAudioSession()
+    /// Makes the app's audio session the active one. False when the system refuses it.
+    @discardableResult
+    func activateAudioSession() -> Bool
+    /// The person's choice of what happens after another app took the sound.
+    var interruptionResume: InterruptionResume { get }
+    /// Another app took the sound while music was playing.
+    func interruptionDidBegin()
     func playFeedback(_ kind: PlaybackFeedbackKind)
     func playbackStateDidUpdate()
     func trackDidStart(_ track: Track)

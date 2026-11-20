@@ -32665,6 +32665,100 @@
         }
       }
     },
+    "A video, a game or a call pauses your music. With Resume, Flaccy plays again once the other app goes quiet. In the background iOS lets Flaccy listen for about half a minute; after that your music picks up when you come back to Flaccy.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En video, et spil eller et opkald sætter din musik på pause. Med Genoptag spiller Flaccy igen, når den anden app bliver stille. I baggrunden lader iOS Flaccy lytte i cirka et halvt minut; derefter fortsætter musikken, når du vender tilbage til Flaccy."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Video, ein Spiel oder ein Anruf pausiert deine Musik. Mit „Fortsetzen“ spielt Flaccy weiter, sobald die andere App verstummt. Im Hintergrund lässt iOS Flaccy etwa eine halbe Minute lauschen; danach geht die Musik weiter, wenn du zu Flaccy zurückkehrst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un vídeo, un juego o una llamada ponen tu música en pausa. Con Reanudar, Flaccy vuelve a sonar cuando la otra app se queda en silencio. En segundo plano, iOS deja que Flaccy escuche durante medio minuto aproximadamente; después, la música sigue cuando vuelves a Flaccy."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video, peli tai puhelu keskeyttää musiikkisi. Kun valittuna on Jatka, Flaccy soittaa taas, kun toinen appi hiljenee. Taustalla iOS antaa Flaccyn kuunnella noin puoli minuuttia; sen jälkeen musiikki jatkuu, kun palaat Flaccyyn."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une vidéo, un jeu ou un appel met votre musique en pause. Avec Reprendre, Flaccy rejoue dès que l’autre app se tait. En arrière-plan, iOS laisse Flaccy écouter pendant environ une demi-minute ; ensuite, la musique reprend quand vous revenez dans Flaccy."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Myndband, leikur eða símtal setur tónlistina í bið. Með Halda áfram spilar Flaccy aftur þegar hitt forritið þagnar. Í bakgrunni leyfir iOS Flaccy að hlusta í um hálfa mínútu; eftir það heldur tónlistin áfram þegar þú kemur aftur í Flaccy."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un video, un gioco o una chiamata mettono in pausa la musica. Con Riprendi, Flaccy torna a suonare quando l’altra app tace. In background iOS lascia Flaccy in ascolto per circa mezzo minuto; dopo, la musica riparte quando torni a Flaccy."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビデオ、ゲーム、通話が始まると音楽は一時停止します。「再開」を選ぶと、ほかのアプリが静かになった時点でFlaccyが再生を続けます。バックグラウンドでFlaccyが待てるのは約30秒です。それを過ぎた場合は、Flaccyに戻ると音楽が再開します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비디오, 게임 또는 전화가 음악을 일시 정지합니다. ‘재개’를 선택하면 다른 앱이 조용해질 때 Flaccy가 다시 재생합니다. 백그라운드에서는 iOS가 Flaccy에 약 30초 동안만 기다리도록 허용하며, 그 이후에는 Flaccy로 돌아오면 음악이 이어집니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En video, et spill eller et anrop setter musikken på pause. Med Fortsett spiller Flaccy igjen når den andre appen blir stille. I bakgrunnen lar iOS Flaccy lytte i omtrent et halvt minutt; etter det fortsetter musikken når du kommer tilbake til Flaccy."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Film, gra lub połączenie wstrzymują muzykę. Z opcją Wznów Flaccy gra dalej, gdy druga aplikacja ucichnie. W tle iOS pozwala Flaccy nasłuchiwać przez około pół minuty; potem muzyka wraca, gdy wrócisz do Flaccy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um vídeo, um jogo ou uma ligação pausam sua música. Com Retomar, o Flaccy volta a tocar quando o outro app silencia. Em segundo plano, o iOS deixa o Flaccy escutar por cerca de meio minuto; depois disso, a música continua quando você volta ao Flaccy."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En video, ett spel eller ett samtal pausar din musik. Med Fortsätt spelar Flaccy igen när den andra appen tystnar. I bakgrunden låter iOS Flaccy lyssna i ungefär en halv minut; därefter fortsätter musiken när du kommer tillbaka till Flaccy."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频、游戏或来电会暂停你的音乐。选择“继续”后，其他 App 一安静，Flaccy 就会接着播放。在后台，iOS 只允许 Flaccy 等待约半分钟；超过之后，回到 Flaccy 时音乐会继续。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片、遊戲或來電會暫停你的音樂。選擇「繼續」後，其他 App 一安靜，Flaccy 就會接著播放。在背景中，iOS 只允許 Flaccy 等待約半分鐘；超過之後，回到 Flaccy 時音樂會繼續。"
+          }
+        }
+      }
+    },
     "A welcome-back price on Lifetime is available until %@.": {
       "localizations": {
         "da": {
@@ -41473,6 +41567,100 @@
         }
       }
     },
+    "After Another App Plays": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Når en anden app har spillet"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Ton aus anderer App"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tras el sonido de otra app"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toisen apin äänen jälkeen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Après le son d’une autre app"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eftir hljóð úr öðru forriti"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo l’audio di un’altra app"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかのアプリの再生後"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 앱 재생 후"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etter lyd fra en annen app"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Po dźwięku z innej aplikacji"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Após o som de outro app"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Efter ljud från en annan app"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他 App 播放之后"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他 App 播放之後"
+          }
+        }
+      }
+    },
     "AirDrop": {
       "localizations": {
         "da": {
@@ -46565,6 +46753,100 @@
         }
       }
     },
+    "As soon as the other app goes quiet": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Så snart den anden app bliver stille"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sobald die andere App verstummt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En cuanto la otra app se queda en silencio"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heti kun toinen appi hiljenee"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dès que l’autre app se tait"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um leið og hitt forritið þagnar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appena l’altra app tace"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかのアプリが静かになり次第"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 앱이 조용해지는 즉시"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Så snart den andre appen blir stille"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gdy tylko druga aplikacja ucichnie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assim que o outro app silenciar"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Så snart den andra appen tystnar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他 App 一安静就继续"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他 App 一安靜就繼續"
+          }
+        }
+      }
+    },
     "Audio Quality": {
       "localizations": {
         "da": {
@@ -50057,6 +50339,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在計算…"
+          }
+        }
+      }
+    },
+    "Calls and Siri Only": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kun opkald og Siri"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Anrufe und Siri"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo llamadas y Siri"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vain puhelut ja Siri"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appels et Siri uniquement"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aðeins símtöl og Siri"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo chiamate e Siri"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通話とSiriのみ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전화 및 Siri만"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kun anrop og Siri"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tylko połączenia i Siri"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Só ligações e Siri"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endast samtal och Siri"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅限通话和 Siri"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅限通話和 Siri"
           }
         }
       }
@@ -132324,6 +132700,100 @@
         }
       }
     },
+    "Only when iOS hands the sound back": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kun når iOS giver lyden tilbage"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur wenn iOS den Ton zurückgibt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo cuando iOS devuelve el sonido"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vain kun iOS palauttaa äänen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uniquement quand iOS rend le son"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aðeins þegar iOS skilar hljóðinu"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo quando iOS restituisce l’audio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOSが音声を戻したときのみ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS가 사운드를 돌려줄 때만"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kun når iOS gir lyden tilbake"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tylko gdy iOS odda dźwięk"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Só quando o iOS devolve o som"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endast när iOS lämnar tillbaka ljudet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅在 iOS 交还声音时"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅在 iOS 交還聲音時"
+          }
+        }
+      }
+    },
     "Open": {
       "localizations": {
         "da": {
@@ -184429,6 +184899,100 @@
         }
       }
     },
+    "Stay Paused": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forbliv på pause"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausiert bleiben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seguir en pausa"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pysy tauolla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rester en pause"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vera áfram í bið"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resta in pausa"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時停止のまま"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일시 정지 유지"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forbli på pause"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pozostań w pauzie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuar pausado"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Förbli pausad"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持暂停"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持暫停"
+          }
+        }
+      }
+    },
     "Step %lld: %@": {
       "localizations": {
         "da": {
@@ -207441,6 +208005,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消靜音"
+          }
+        }
+      }
+    },
+    "Until you press play": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indtil du trykker på afspil"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bis du auf Wiedergabe tippst"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hasta que pulses reproducir"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunnes painat toistoa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jusqu’à ce que vous appuyiez sur lecture"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Þar til þú ýtir á spila"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finché non premi play"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生を押すまで"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생을 누를 때까지"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Til du trykker på spill av"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopóki nie naciśniesz odtwarzania"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Até você tocar em reproduzir"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tills du trycker på spela"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直到你按下播放"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直到你按下播放"
           }
         }
       }

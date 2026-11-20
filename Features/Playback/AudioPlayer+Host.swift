@@ -33,9 +33,35 @@ extension AudioPlayer: PlaybackEngineHost {
         }
     }
 
-    func activateAudioSession() {
+    @discardableResult
+    func activateAudioSession() -> Bool {
         #if os(iOS)
-        try? AVAudioSession.sharedInstance().setActive(true)
+        do {
+            try AVAudioSession.sharedInstance().setActive(true)
+            return true
+        } catch {
+            MidgarLog.notice("Audio session refused: \(error.localizedDescription)", category: .playback)
+            return false
+        }
+        #else
+        return true
+        #endif
+    }
+
+    var interruptionResume: InterruptionResume {
+        get { InterruptionResume.stored }
+        set {
+            InterruptionResume.stored = newValue
+            MidgarLog.info("Resume after another app set to \(newValue.rawValue)", category: .playback)
+            #if os(iOS)
+            InterruptionResumeWatcher.shared.choiceChanged()
+            #endif
+        }
+    }
+
+    func interruptionDidBegin() {
+        #if os(iOS)
+        InterruptionResumeWatcher.shared.interruptionBegan(in: engine)
         #endif
     }
 

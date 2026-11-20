@@ -83,6 +83,7 @@ extension SettingsViewController {
         case soundControls
         case listeningGuide
         case playback
+        case interruptions
         case stations
         case playerButtons
         case lastFM
@@ -102,7 +103,7 @@ extension SettingsViewController {
             case .appearance: .appearance
             case .trial, .recap: .notifications
             case .signalPath, .thisOutput, .soundControls, .listeningGuide: .sound
-            case .playback, .stations, .playerButtons: .playback
+            case .playback, .interruptions, .stations, .playerButtons: .playback
             case .lastFM: .lastFM
             case .servers, .serverCache: .servers
             case .libraryHeadline, .libraryAdd, .libraryOrganize, .libraryDetails, .libraryOverview: .library
@@ -134,6 +135,7 @@ extension SettingsViewController {
             case .playerButtons: String(localized: "Touch and hold the buttons under Now Playing to rearrange them.")
             case .aboutLegal: String(localized: "Built with GRDB (SQLite), lyrics from lrclib.net, universal links by Songlink/Odesli, and scrobbling via the Last.fm API.")
             case .playback: String(localized: "Gapless is exact on lossless files. MP3 and AAC files can keep tiny encoder gaps.")
+            case .interruptions: InterruptionCopy.footer
             case .servers: String(localized: "Stream from Flaccy Server, Navidrome or another Subsonic server.")
             case .serverCache: RemoteCopy.cacheFooter + " " + RemoteCopy.downloadQualityFooter
             case .libraryOrganize: LibraryOrganizeCopy.cleanLibraryFooter
@@ -170,6 +172,7 @@ extension SettingsViewController {
         case equalizer(summary: String)
         case gaplessPlayback
         case autoplaySimilar
+        case interruptionResume(InterruptionResume)
         case libraryRadio
         case crateDig
         case watchSync(syncedCount: Int, profile: WatchAudioProfile)

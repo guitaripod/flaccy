@@ -28,6 +28,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         UNUserNotificationCenter.current().delegate = self
         AppCommands.configureMainMenu()
         EqualizerEngine.shared.start()
+        InterruptionResumeWatcher.shared.start()
         if !Self.isScanBench {
             WatchSyncService.shared.activate()
         }

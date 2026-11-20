@@ -20,6 +20,7 @@ protocol AudioPlaying: AnyObject {
     var shuffleEnabled: Bool { get }
     var repeatMode: RepeatMode { get }
     var autoplaySimilarWhenQueueEnds: Bool { get set }
+    var interruptionResume: InterruptionResume { get set }
     func startStation(seedArtist: String)
     func startStation(seedTrack: Track)
     func playLibraryRadio()
