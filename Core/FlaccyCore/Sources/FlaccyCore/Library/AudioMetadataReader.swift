@@ -220,20 +220,38 @@ public enum AudioMetadataReader {
         return nil
     }
 
+    /// The song's place on its release from the first tag that names one: a
+    /// Vorbis `TRACKNUMBER` or ID3 `TRCK` as text (`7/12`), an MP4 `trkn` as
+    /// its binary pair, and whatever number AVFoundation offers last.
     private static func trackNumberValue(from metadata: [AVMetadataItem]) async -> Int {
         for item in metadata {
             if let key = item.key as? String, key.uppercased() == "TRACKNUMBER",
                let value = try? await item.load(.stringValue),
-               let number = Int(value.components(separatedBy: "/").first ?? value) {
+               case let number = TrackNumberTag.number(fromText: value), number > 0 {
+                return number
+            }
+        }
+
+        for item in AVMetadataItem.metadataItems(from: metadata, filteredByIdentifier: .id3MetadataTrackNumber) {
+            if let value = try? await item.load(.stringValue),
+               case let number = TrackNumberTag.number(fromText: value), number > 0 {
+                return number
+            }
+        }
+
+        for item in AVMetadataItem.metadataItems(from: metadata, filteredByIdentifier: .iTunesMetadataTrackNumber) {
+            if let data = try? await item.load(.dataValue),
+               case let number = TrackNumberTag.number(fromMP4Pair: data), number > 0 {
                 return number
             }
         }
 
         let identifiers: [AVMetadataIdentifier] = [.id3MetadataTrackNumber, .iTunesMetadataTrackNumber]
         for identifier in identifiers {
-            let items = AVMetadataItem.metadataItems(from: metadata, filteredByIdentifier: identifier)
-            if let item = items.first, let value = try? await item.load(.numberValue) {
-                return value.intValue
+            for item in AVMetadataItem.metadataItems(from: metadata, filteredByIdentifier: identifier) {
+                if let value = try? await item.load(.numberValue), value.intValue > 0 {
+                    return value.intValue
+                }
             }
         }
         return 0

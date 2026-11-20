@@ -335,6 +335,7 @@ final class Library: LibraryProviding {
         LyricsPrecache.shared.refresh()
         if firstLoad {
             Task.detached(priority: .utility) { PreviousVersions.purgeExpired(now: Date()) }
+            repairMissingTrackNumbersOnce()
         }
         scheduleRevisionPass(for: sync.indexedOnDisk)
     }

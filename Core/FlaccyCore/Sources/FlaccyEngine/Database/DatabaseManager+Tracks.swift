@@ -97,6 +97,34 @@ extension DatabaseManager {
         }
     }
 
+    /// The library-folder songs filed with no place on their release.
+    public func fetchLocalPathsWithoutTrackNumber() throws -> [String] {
+        try dbQueue.read { db in
+            try String.fetchAll(
+                db, sql: "SELECT fileURL FROM tracks WHERE remoteServer IS NULL AND trackNumber <= 0 ORDER BY fileURL"
+            )
+        }
+    }
+
+    /// Writes the places a fresh read of the tags found into the rows that
+    /// still have none, so a number set meanwhile by hand or by a re-tag is
+    /// never overwritten. Returns how many rows changed.
+    @discardableResult
+    public func fillMissingTrackNumbers(_ numbers: [String: Int]) throws -> Int {
+        guard !numbers.isEmpty else { return 0 }
+        return try dbQueue.write { db in
+            var changed = 0
+            for (path, number) in numbers where number > 0 {
+                try db.execute(
+                    sql: "UPDATE tracks SET trackNumber = ? WHERE fileURL = ? AND trackNumber <= 0",
+                    arguments: [number, path]
+                )
+                changed += db.changesCount
+            }
+            return changed
+        }
+    }
+
     /// When each song that has been played was last played, by its row id.
     public func lastPlayedByTrackID() throws -> [Int64: Date] {
         try dbQueue.read { db in
