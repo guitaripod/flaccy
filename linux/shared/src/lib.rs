@@ -28,6 +28,8 @@ pub mod lyrics;
 pub mod lyric_share;
 pub mod meaning;
 pub mod playlist_cover;
+pub mod playlist_editing;
+pub mod playlist_suggestions;
 pub mod precache;
 pub mod remote;
 pub mod signal_path;

@@ -5,6 +5,7 @@ mod flows;
 mod local;
 mod merge;
 mod performance;
+mod playlist_edits;
 mod real_server;
 mod reseed;
 mod rig;

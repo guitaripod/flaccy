@@ -175,6 +175,14 @@ pub struct PlaylistTrackRow {
     pub rel_path: String,
 }
 
+/// An entry taken out of a playlist: the song and the index it held, all that
+/// Undo needs to put it back.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RemovedPlaylistEntry {
+    pub rel_path: String,
+    pub index: i64,
+}
+
 #[derive(Clone, Debug)]
 pub struct ScrobbleRow {
     pub title: String,
@@ -1678,7 +1686,7 @@ impl Db {
     /// so the playlists grid can resolve all of them with one query.
     pub fn all_playlist_tracks(&self) -> Vec<(i64, String)> {
         let Ok(mut stmt) = self.conn.prepare(
-            "SELECT playlistId, trackFileURL FROM playlistTracks ORDER BY playlistId, position",
+            "SELECT playlistId, trackFileURL FROM playlistTracks ORDER BY playlistId, position, id",
         ) else {
             return Vec::new();
         };
@@ -1745,7 +1753,7 @@ impl Db {
     pub fn playlist_tracks(&self, playlist_id: i64) -> Vec<PlaylistTrackRow> {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT id, trackFileURL FROM playlistTracks
-             WHERE playlistId = ?1 ORDER BY position",
+             WHERE playlistId = ?1 ORDER BY position, id",
         ) else {
             return Vec::new();
         };
@@ -1785,6 +1793,193 @@ impl Db {
             }
             Ok(())
         })
+    }
+
+    /// Creates a playlist holding `rel_paths`, each once and in the order
+    /// given, in one transaction, so a failure never leaves an empty playlist.
+    pub fn create_playlist_with_tracks(
+        &self,
+        name: &str,
+        rel_paths: &[String],
+    ) -> Result<i64, rusqlite::Error> {
+        server_sync::record(&self.conn, |recorder| {
+            self.conn.execute(
+                "INSERT INTO playlists (name, createdAt) VALUES (?1, ?2)",
+                params![name, now_string()],
+            )?;
+            let id = self.conn.last_insert_rowid();
+            recorder.playlist_created(id, name)?;
+            let files = flaccy_shared::playlist_editing::addition(&[], rel_paths).added;
+            self.append_entries(recorder, id, &files)?;
+            Ok(id)
+        })
+    }
+
+    /// Appends the songs the playlist does not hold yet, in the order given,
+    /// in one transaction, and answers which were added and which it held.
+    pub fn add_missing_tracks_to_playlist(
+        &self,
+        playlist_id: i64,
+        rel_paths: &[String],
+    ) -> Result<flaccy_shared::playlist_editing::Addition, rusqlite::Error> {
+        server_sync::record(&self.conn, |recorder| {
+            let existing: Vec<String> = self
+                .playlist_tracks(playlist_id)
+                .into_iter()
+                .map(|row| row.rel_path)
+                .collect();
+            let addition = flaccy_shared::playlist_editing::addition(&existing, rel_paths);
+            self.append_entries(recorder, playlist_id, &addition.added)?;
+            Ok(addition)
+        })
+    }
+
+    /// Takes entries out of a playlist in one transaction and answers what
+    /// Undo needs to put them back where they stood.
+    pub fn remove_playlist_entries(
+        &self,
+        playlist_id: i64,
+        row_ids: &[i64],
+    ) -> Result<Vec<RemovedPlaylistEntry>, rusqlite::Error> {
+        if row_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        server_sync::record(&self.conn, |recorder| {
+            let wanted: std::collections::HashSet<i64> = row_ids.iter().copied().collect();
+            let mut removed = Vec::new();
+            for (index, row) in self.playlist_tracks(playlist_id).into_iter().enumerate() {
+                if !wanted.contains(&row.row_id) {
+                    continue;
+                }
+                recorder.track_removed(row.row_id)?;
+                self.conn.execute(
+                    "DELETE FROM playlistTracks WHERE id = ?1",
+                    params![row.row_id],
+                )?;
+                removed.push(RemovedPlaylistEntry {
+                    rel_path: row.rel_path,
+                    index: index as i64,
+                });
+            }
+            self.renumber_playlist(playlist_id)?;
+            Ok(removed)
+        })
+    }
+
+    /// Puts entries that `remove_playlist_entries` took out back where they
+    /// stood, in one transaction.
+    pub fn restore_playlist_entries(
+        &self,
+        playlist_id: i64,
+        entries: &[RemovedPlaylistEntry],
+    ) -> Result<(), rusqlite::Error> {
+        if entries.is_empty() {
+            return Ok(());
+        }
+        server_sync::record(&self.conn, |recorder| {
+            let kept: Vec<i64> = self
+                .playlist_tracks(playlist_id)
+                .into_iter()
+                .map(|row| row.row_id)
+                .collect();
+            let mut sorted: Vec<&RemovedPlaylistEntry> = entries.iter().collect();
+            sorted.sort_by_key(|entry| entry.index);
+            let files: Vec<String> = sorted.iter().map(|entry| entry.rel_path.clone()).collect();
+            let added = self.append_entries(recorder, playlist_id, &files)?;
+            let removed: Vec<(i64, i64)> = added
+                .into_iter()
+                .zip(sorted.iter().map(|entry| entry.index))
+                .collect();
+            let order = flaccy_shared::playlist_editing::restored(&kept, &removed);
+            recorder.playlist_reordered(playlist_id, &order)?;
+            for (position, row_id) in order.iter().enumerate() {
+                self.conn.execute(
+                    "UPDATE playlistTracks SET position = ?1 WHERE id = ?2 AND playlistId = ?3",
+                    params![position as i64, row_id, playlist_id],
+                )?;
+            }
+            Ok(())
+        })
+    }
+
+    /// Makes a new playlist called `name` with the same songs in the same order
+    /// and the same chosen cover, in one transaction.
+    pub fn duplicate_playlist(&self, id: i64, name: &str) -> Result<i64, rusqlite::Error> {
+        server_sync::record(&self.conn, |recorder| {
+            let files: Vec<String> = self
+                .playlist_tracks(id)
+                .into_iter()
+                .map(|row| row.rel_path)
+                .collect();
+            self.conn.execute(
+                "INSERT INTO playlists (name, createdAt) VALUES (?1, ?2)",
+                params![name, now_string()],
+            )?;
+            let copy = self.conn.last_insert_rowid();
+            recorder.playlist_created(copy, name)?;
+            self.append_entries(recorder, copy, &files)?;
+            self.conn.execute(
+                "UPDATE playlists SET customCoverData = (SELECT customCoverData FROM playlists WHERE id = ?1) WHERE id = ?2",
+                params![id, copy],
+            )?;
+            Ok(copy)
+        })
+    }
+
+    /// The playlists that hold the song at `rel_path`.
+    pub fn playlists_containing(&self, rel_path: &str) -> std::collections::HashSet<i64> {
+        let Ok(mut stmt) = self
+            .conn
+            .prepare("SELECT DISTINCT playlistId FROM playlistTracks WHERE trackFileURL = ?1")
+        else {
+            return std::collections::HashSet::new();
+        };
+        let rows = stmt.query_map(params![rel_path], |row| row.get(0));
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => std::collections::HashSet::new(),
+        }
+    }
+
+    fn append_entries(
+        &self,
+        recorder: &server_sync::Recorder,
+        playlist_id: i64,
+        rel_paths: &[String],
+    ) -> server_sync::Result<Vec<i64>> {
+        if rel_paths.is_empty() {
+            return Ok(Vec::new());
+        }
+        let next: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(MAX(position), -1) + 1 FROM playlistTracks WHERE playlistId = ?1",
+                params![playlist_id],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+        let mut added = Vec::with_capacity(rel_paths.len());
+        {
+            let mut stmt = self.conn.prepare(
+                "INSERT INTO playlistTracks (playlistId, trackFileURL, position) VALUES (?1, ?2, ?3)",
+            )?;
+            for (offset, rel_path) in rel_paths.iter().enumerate() {
+                stmt.execute(params![playlist_id, rel_path, next + offset as i64])?;
+                added.push((self.conn.last_insert_rowid(), rel_path.clone()));
+            }
+        }
+        recorder.tracks_added(playlist_id, &added)?;
+        Ok(added.into_iter().map(|(row_id, _)| row_id).collect())
+    }
+
+    fn renumber_playlist(&self, playlist_id: i64) -> server_sync::Result<()> {
+        for (position, row) in self.playlist_tracks(playlist_id).into_iter().enumerate() {
+            self.conn.execute(
+                "UPDATE playlistTracks SET position = ?1 WHERE id = ?2",
+                params![position as i64, row.row_id],
+            )?;
+        }
+        Ok(())
     }
 
     pub fn playlist_name(&self, playlist_id: i64) -> Option<String> {

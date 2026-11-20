@@ -95,6 +95,60 @@ final class ServerSyncRecorder {
         try queue("entry.remove", ["id": .string(entry)], touches: [SyncPending.playlistKey(playlist)])
     }
 
+    /// The playlist is about to take the order `orderedRowIds`: queues the fewest moves that turn the order the
+    /// server knows into it. Call it before the positions change. Mirrors `playlist_reordered` in the Rust client.
+    func playlistReordered(localId: Int64, orderedRowIds: [Int64]) throws {
+        guard let playlist = try playlistSyncID(localId) else { return }
+        let rows = try Row.fetchAll(
+            db,
+            sql: "SELECT id, syncId FROM playlistTracks WHERE playlistId = ? AND syncId IS NOT NULL ORDER BY position, id",
+            arguments: [localId]
+        )
+        let current: [String] = rows.map { $0["syncId"] }
+        let byRow = Dictionary(rows.map { ($0["id"] as Int64, $0["syncId"] as String) }, uniquingKeysWith: { first, _ in first })
+        let wanted = orderedRowIds.compactMap { byRow[$0] }
+        for (entry, place) in Self.moves(from: current, to: wanted) {
+            try queue("entry.move", ["id": .string(entry), "place": place], touches: [SyncPending.playlistKey(playlist)])
+        }
+    }
+
+    /// The moves that turn `current` into `wanted`: entries on a longest increasing run stay, each other entry
+    /// goes right after its predecessor.
+    static func moves(from current: [String], to wanted: [String]) -> [(entry: String, place: ServerJSON)] {
+        let index = Dictionary(current.enumerated().map { ($0.element, $0.offset) }, uniquingKeysWith: { first, _ in first })
+        let positions = wanted.map { index[$0] }
+        let stay = longestIncreasingRun(positions)
+        var moves: [(entry: String, place: ServerJSON)] = []
+        for (at, entry) in wanted.enumerated() where !stay.contains(at) && positions[at] != nil {
+            let place: ServerJSON = at > 0 ? ["kind": "after", "id": .string(wanted[at - 1])] : ["kind": "first"]
+            moves.append((entry, place))
+        }
+        return moves
+    }
+
+    private static func longestIncreasingRun(_ positions: [Int?]) -> Set<Int> {
+        var tails: [(value: Int, at: Int)] = []
+        var previous = [Int?](repeating: nil, count: positions.count)
+        for (at, position) in positions.enumerated() {
+            guard let value = position else { continue }
+            var low = 0
+            var high = tails.count
+            while low < high {
+                let middle = (low + high) / 2
+                if tails[middle].value < value { low = middle + 1 } else { high = middle }
+            }
+            previous[at] = low > 0 ? tails[low - 1].at : nil
+            if low == tails.count { tails.append((value, at)) } else { tails[low] = (value, at) }
+        }
+        var stay = Set<Int>()
+        var cursor = tails.last?.at
+        while let at = cursor {
+            stay.insert(at)
+            cursor = previous[at]
+        }
+        return stay
+    }
+
     /// What a playlist row had before it moved, so the move can be told from a write that left it where it was.
     struct MoveWitness {
         fileprivate var rowId: Int64

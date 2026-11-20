@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-public struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
+public struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable, Equatable {
 
     public static let databaseTableName = "tracks"
 
