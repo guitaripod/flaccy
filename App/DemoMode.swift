@@ -545,13 +545,22 @@ enum DemoRouter {
                 )
             }
             perform(route, window: window, tabs: tabs, player: player)
-            if DemoMode.environment["FLACCY_SIDEBAR"] == "1" {
+            switch DemoMode.environment["FLACCY_SIDEBAR"] {
+            case "1":
                 try? await Task.sleep(for: .seconds(0.4))
                 tabs.sidebar.isHidden = false
+            case "0":
+                try? await Task.sleep(for: .seconds(0.4))
+                tabs.sidebar.isHidden = true
+            default: break
             }
             if DemoMode.environment["FLACCY_COLUMN"] == "1" {
                 try? await Task.sleep(for: .seconds(1.2))
                 (tabs.parent as? RootContainerViewController)?.giveColumnTheTurn()
+            }
+            if DemoMode.environment["FLACCY_SPREAD"] == "1" {
+                try? await Task.sleep(for: .seconds(1.6))
+                player.toggleFullPlayer()
             }
             if DemoMode.environment["FLACCY_SIDEBAR_LATER"] == "1" {
                 try? await Task.sleep(for: .seconds(2.5))

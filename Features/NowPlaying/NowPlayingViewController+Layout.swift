@@ -11,7 +11,7 @@ extension NowPlayingViewController {
     func updateLayoutModeIfNeeded() {
         let size = view.bounds.size
         guard size.width > 1, size.height > 1 else { return }
-        let focus = isFocused
+        let focus = AdaptiveLayout.usesFocusArrangement(isSpread: isFocused, showsArtwork: centerState == .artwork)
             ? AdaptiveLayout.splitGeometry(width: size.width, division: view.divisionRegionFrame)
             : nil
         let desired = AdaptiveLayout.playerLayout(
@@ -146,7 +146,7 @@ extension NowPlayingViewController {
                 queueTop,
             ]
         case .focus(let geometry):
-            let focusMediaTop = centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: Self.portraitMediaInset)
+            let focusMediaTop = centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: mediaInset)
             portraitMediaTop = focusMediaTop
             let columnGap = geometry.secondaryLeading - geometry.primaryWidth + 12
             artworkGroupTrailing.isActive = false
@@ -181,6 +181,15 @@ extension NowPlayingViewController {
     }
 
     static let portraitMediaInset: CGFloat = 24
+    /// A column spread over the window keeps its way back in the top corner, so
+    /// the cover and the lyrics' own buttons start below it.
+    static let spreadColumnMediaInset: CGFloat = 60
+
+    /// Where the cover's group starts below the safe area in the portrait and
+    /// focus arrangements.
+    var mediaInset: CGFloat {
+        isPaneMode && paneStyle == .column && isFocusLayout ? Self.spreadColumnMediaInset : Self.portraitMediaInset
+    }
 
     /// Puts the controls against the side of the window the person's thumb
     /// reaches (the screen edge a shared window lies against, the trailing side
@@ -232,7 +241,7 @@ extension NowPlayingViewController {
     /// change it at any time, so this is read again on every pass.
     func applyMediaClearance() {
         let clearance = currentMediaClearance()
-        let top = Self.portraitMediaInset - clearance.rise
+        let top = mediaInset - clearance.rise
         var changed = false
         if let mediaTop = portraitMediaTop, mediaTop.constant != top {
             mediaTop.constant = top
@@ -377,9 +386,9 @@ extension NowPlayingViewController {
 
     /// True while this player is an iPad's Now Playing column: a narrow, tall
     /// pane that tightens its controls and lists what plays next under the
-    /// title.
+    /// title. A column spread over the window is a whole-window player.
     var isColumnPane: Bool {
-        isPaneMode && paneStyle == .column
+        isPaneMode && paneStyle == .column && !isFocused
     }
 
     var isLaptopLayout: Bool {

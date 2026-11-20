@@ -44,6 +44,8 @@ final class AppCommandTarget {
             return hasTrack && !isPresenting
         case #selector(AppDelegate.flaccyTogglePlayerColumn(_:)):
             return root?.canShowPlayerColumn == true && !isPresenting
+        case #selector(AppDelegate.flaccyReturnToColumn(_:)):
+            return root?.showsPlayerColumn == true && player?.isSpread == true && !isPresenting
         case #selector(AppDelegate.flaccyFind(_:)), #selector(AppDelegate.flaccyShowHome(_:)),
              #selector(AppDelegate.flaccyShowRecap(_:)), #selector(AppDelegate.flaccyShowAlbums(_:)),
              #selector(AppDelegate.flaccyShowSongs(_:)), #selector(AppDelegate.flaccyShowArtists(_:)),
@@ -120,6 +122,12 @@ final class AppCommandTarget {
 
     func toggleNowPlaying() {
         player?.toggleFullPlayer()
+    }
+
+    /// Brings a Now Playing column spread over the window back beside the
+    /// library: Escape, while there is nothing else for it to close.
+    func returnToColumn() {
+        player?.collapseIfExpanded()
     }
 
     /// Puts the Now Playing column away when it is on screen, and otherwise

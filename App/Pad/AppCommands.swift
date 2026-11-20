@@ -50,6 +50,7 @@ enum AppCommands {
         Item(String(localized: "Toggle Lyrics"), #selector(AppDelegate.flaccyToggleLyrics(_:)), input: "l", modifiers: [.command, .shift]),
         Item(String(localized: "Now Playing"), #selector(AppDelegate.flaccyToggleNowPlaying(_:)), input: "f", modifiers: [.command, .shift]),
         Item(String(localized: "Now Playing Column"), #selector(AppDelegate.flaccyTogglePlayerColumn(_:)), input: "0", modifiers: [.command, .alternate]),
+        Item(String(localized: "Back to the Column"), #selector(AppDelegate.flaccyReturnToColumn(_:)), input: UIKeyCommand.inputEscape, modifiers: []),
     ]
 
     static let transport = [
@@ -162,6 +163,7 @@ extension AppDelegate {
     @objc func flaccyToggleLyrics(_ sender: Any?) { AppCommandTarget.current?.toggleLyrics() }
     @objc func flaccyToggleNowPlaying(_ sender: Any?) { AppCommandTarget.current?.toggleNowPlaying() }
     @objc func flaccyTogglePlayerColumn(_ sender: Any?) { AppCommandTarget.current?.togglePlayerColumn() }
+    @objc func flaccyReturnToColumn(_ sender: Any?) { AppCommandTarget.current?.returnToColumn() }
     @objc func flaccyTogglePlayPause(_ sender: Any?) { AppCommandTarget.current?.togglePlayPause() }
     @objc func flaccyNextTrack(_ sender: Any?) { AppCommandTarget.current?.nextTrack() }
     @objc func flaccyPreviousTrack(_ sender: Any?) { AppCommandTarget.current?.previousTrack() }

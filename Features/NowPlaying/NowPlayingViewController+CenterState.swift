@@ -23,7 +23,10 @@ extension NowPlayingViewController {
         animateCenterTransition(from: previous, to: target)
         if layoutMode == .landscape { activateLayoutMode(.landscape, foldTop: nil, foldBottom: nil) }
         syncLaptopCompanions()
-        if isPaneMode { onFocusRequest?(target != .artwork) }
+        if isPaneMode, AdaptiveLayout.centerStateSpreadsPane(style: paneStyle) {
+            onFocusRequest?(target != .artwork)
+        }
+        if isFocused { view.setNeedsLayout() }
         setupAccessibilityOrder()
         UIAccessibility.post(notification: .layoutChanged, argument: target == .artwork ? artworkContainer : compactHeader)
         MidgarLog.info("Now Playing center state -> \(target)", category: .ui)
@@ -129,6 +132,7 @@ extension NowPlayingViewController {
     }
 
     func dismissAndPush(_ viewController: UIViewController) {
+        if isPaneMode, paneStyle == .column, isFocused { requestColumnSpread(false) }
         if let morphContainer {
             morphContainer.collapseAndPush(viewController)
             return

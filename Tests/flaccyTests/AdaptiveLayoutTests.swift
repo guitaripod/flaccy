@@ -309,4 +309,38 @@ nonisolated final class AdaptiveLayoutTests: XCTestCase {
         XCTAssertEqual(AdaptiveLayout.portraitArtworkShare(size: CGSize(width: 669, height: 951), isColumnPane: false, hasFold: true), 0.42)
         XCTAssertEqual(AdaptiveLayout.portraitArtworkShare(size: CGSize(width: 360, height: 756), isColumnPane: true), 0.34)
     }
+    @MainActor func testAnIPadColumnKeepsLyricsAndTheQueueInsideItLikeAPhone() {
+        XCTAssertFalse(AdaptiveLayout.centerStateSpreadsPane(style: .column))
+        XCTAssertTrue(AdaptiveLayout.centerStateSpreadsPane(style: .halves))
+    }
+
+    @MainActor func testASpreadPlayerUsesFocusPagesOnlyWhileLyricsOrTheQueueShow() {
+        XCTAssertTrue(AdaptiveLayout.usesFocusArrangement(isSpread: true, showsArtwork: false))
+        XCTAssertFalse(AdaptiveLayout.usesFocusArrangement(isSpread: true, showsArtwork: true))
+        XCTAssertFalse(AdaptiveLayout.usesFocusArrangement(isSpread: false, showsArtwork: false))
+        let window = CGSize(width: 1194, height: 834)
+        let geometry = AdaptiveLayout.splitGeometry(width: window.width, division: nil)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: window, horizontalFold: nil, focus: geometry), .focus(geometry))
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: window, horizontalFold: nil, focus: nil), .landscape)
+    }
+
+    @MainActor func testAPaneThatEndsStaysOpenOnlyWhileSpreadWithASong() {
+        XCTAssertTrue(AdaptiveLayout.compactKeepsPlayerExpanded(wasSpread: true, hasTrack: true))
+        XCTAssertFalse(AdaptiveLayout.compactKeepsPlayerExpanded(wasSpread: true, hasTrack: false))
+        XCTAssertFalse(AdaptiveLayout.compactKeepsPlayerExpanded(wasSpread: false, hasTrack: true))
+    }
+
+    @MainActor func testTheColumnOnlyExistsWhereItsControlsAreWithinTheRightThumb() {
+        XCTAssertTrue(AdaptiveLayout.usesSplit(size: CGSize(width: 1194, height: 834), style: .column))
+        XCTAssertTrue(AdaptiveLayout.usesSplit(size: CGSize(width: 1158, height: 756), style: .column))
+        XCTAssertFalse(AdaptiveLayout.usesSplit(size: CGSize(width: 834, height: 1194), style: .column))
+        XCTAssertFalse(AdaptiveLayout.usesSplit(size: CGSize(width: 834, height: 834), style: .column))
+        let narrowestColumnWindow: CGFloat = 1120
+        XCTAssertTrue(AdaptiveLayout.usesSplit(size: CGSize(width: narrowestColumnWindow, height: 834), style: .column))
+        XCTAssertFalse(AdaptiveLayout.usesSplit(size: CGSize(width: narrowestColumnWindow - 1, height: 834), style: .column))
+        let elevenInchScreen: CGFloat = 1194
+        let transportFromRightEdge = elevenInchScreen - narrowestColumnWindow
+            + AdaptiveLayout.playerColumnWidth(forWidth: narrowestColumnWindow) / 2
+        XCTAssertLessThanOrEqual(transportFromRightEdge, 300)
+    }
 }

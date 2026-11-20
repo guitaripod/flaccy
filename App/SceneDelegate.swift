@@ -515,6 +515,7 @@ final class RootContainerViewController: UIViewController {
         let target = desiredSplitGeometry()
         guard (target != nil) != isSplit else { return }
         guard animated, !UIAccessibility.isReduceMotionEnabled else {
+            if target == nil { leaveSpread() }
             view.setNeedsLayout()
             view.layoutIfNeeded()
             if !isSplit { returnSidebarIfSteppedBack() }
@@ -536,6 +537,7 @@ final class RootContainerViewController: UIViewController {
                 self?.view.setNeedsLayout()
             }
         } else {
+            leaveSpread()
             playerLeading.constant = width
             navigation.additionalSafeAreaInsets.right = 0
             navigationWidth.constant = width
@@ -547,6 +549,17 @@ final class RootContainerViewController: UIViewController {
                 self.view.setNeedsLayout()
             }
         }
+    }
+
+    /// A pane that goes while it is spread over the window (the person put the
+    /// column away, or the queue ran out) leaves from beside the library, so
+    /// the library comes back under it and the player ends as the mini player
+    /// rather than a full-screen one.
+    private func leaveSpread() {
+        guard isPlayerFocused else { return }
+        isPlayerFocused = false
+        navigation.view.isHidden = false
+        player.setFocused(false)
     }
 
     private func animateColumn(completion: @escaping () -> Void) {
@@ -634,7 +647,7 @@ final class RootContainerViewController: UIViewController {
         navigationTrailing.isActive = true
         navigation.additionalSafeAreaInsets.right = 0
         playerLeading.constant = 0
-        let keepsExpanded = isPlayerFocused
+        let keepsExpanded = AdaptiveLayout.compactKeepsPlayerExpanded(wasSpread: isPlayerFocused, hasTrack: hasCurrentTrack)
         isPlayerFocused = false
         navigation.view.isHidden = false
         player.setFocused(false)

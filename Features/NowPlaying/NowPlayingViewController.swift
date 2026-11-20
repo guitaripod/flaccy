@@ -64,6 +64,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     var morphBackdropActive = false
     let grabberControl = UIControl()
     lazy var columnToggle: UIView = makeColumnToggle()
+    lazy var columnSpreadToggle: UIView = makeColumnSpreadToggle(spreads: true)
+    lazy var columnReturnToggle: UIView = makeColumnSpreadToggle(spreads: false)
 
     enum CenterState {
         case artwork
@@ -398,7 +400,34 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         return toggle
     }
 
+    /// Spreads the column over the window beside its own hide button, or, once
+    /// spread, takes it back to the column from the same corner.
+    func makeColumnSpreadToggle(spreads: Bool) -> UIView {
+        let toggle = LiquidGlass.iconCapsule(
+            systemImage: spreads ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left",
+            accessibilityLabel: spreads ? String(localized: "Expand Now Playing") : String(localized: "Back to the Column"),
+            height: 36, width: 36
+        ) { [weak self] in
+            self?.requestColumnSpread(spreads)
+        }
+        toggle.isHidden = true
+        toggle.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toggle)
+        let trailing = spreads
+            ? toggle.trailingAnchor.constraint(equalTo: columnToggle.leadingAnchor, constant: -8)
+            : toggle.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12)
+        NSLayoutConstraint.activate([
+            toggle.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            trailing,
+        ])
+        return toggle
+    }
+
     override func accessibilityPerformEscape() -> Bool {
+        if isPaneMode, paneStyle == .column, isFocused {
+            requestColumnSpread(false)
+            return true
+        }
         guard isMorphEmbedded else { return false }
         morphContainer?.requestCollapse()
         return true

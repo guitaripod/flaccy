@@ -323,7 +323,14 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         expand()
     }
 
+    /// Puts Now Playing out of the way of a place the person asked for: a
+    /// player over the library collapses to the mini player, and an iPad's
+    /// column spread over the window goes back beside the library.
     func collapseIfExpanded() {
+        if isPaneMode, paneStyle == .column {
+            npc.requestColumnSpread(false)
+            return
+        }
         guard state == .full, !isPaneMode else { return }
         collapse()
     }
@@ -338,10 +345,13 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         npc.setCenterState(npc.centerState == target ? .artwork : target)
     }
 
-    /// Opens or closes Now Playing over the library; as a pane it spreads
-    /// across the window with the lyrics, or returns to its column.
+    /// Opens or closes Now Playing over the library. An iPad's column spreads
+    /// over the window or returns beside the library; halves that end at a fold
+    /// spread with the lyrics, or return to their half.
     func toggleFullPlayer() {
-        if isPaneMode {
+        if isPaneMode, paneStyle == .column {
+            npc.requestColumnSpread(!npc.isFocused)
+        } else if isPaneMode {
             npc.setCenterState(npc.centerState == .artwork ? .lyrics : .artwork)
         } else if state == .dock {
             expand()

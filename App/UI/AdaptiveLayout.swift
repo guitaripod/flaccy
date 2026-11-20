@@ -133,6 +133,34 @@ enum AdaptiveLayout {
         }
     }
 
+    /// Whether opening lyrics or the queue spreads a player pane over the whole
+    /// window. Halves that end at a fold do: the cover keeps one page and the
+    /// words take the facing one (the iPhone Duo's focus). An iPad's column
+    /// does not: it is the iPhone's player at the iPhone's width, so lyrics and
+    /// the queue open inside it, as they do on a phone, and the library stays
+    /// beside them to browse while they play. Spreading a column is the
+    /// person's own choice (its expand button, ⇧⌘F).
+    static func centerStateSpreadsPane(style: SplitStyle) -> Bool {
+        style == .halves
+    }
+
+    /// Whether a player pane that stops being a pane stays open over the window:
+    /// only when it was spread and there is still a song, so a window narrowed
+    /// under a spread player keeps it open, and a queue that ran out never
+    /// leaves an empty player over the library.
+    static func compactKeepsPlayerExpanded(wasSpread: Bool, hasTrack: Bool) -> Bool {
+        wasSpread && hasTrack
+    }
+
+    /// Whether a player that has the whole window arranges the cover on one
+    /// side and lyrics or the queue on the other: only while one of them is
+    /// showing. A spread player showing its cover uses the whole-window layout
+    /// of its size instead (the cover beside the controls on a wide window),
+    /// never a focus page with nothing on it.
+    static func usesFocusArrangement(isSpread: Bool, showsArtwork: Bool) -> Bool {
+        isSpread && !showsArtwork
+    }
+
     /// Whether Now Playing has a pane of its own right now: the window has
     /// room for one, something is playing, and the person has not hidden it.
     /// With nothing to play the library keeps the whole window instead of

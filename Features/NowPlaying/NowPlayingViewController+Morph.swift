@@ -48,12 +48,11 @@ extension NowPlayingViewController {
         isPaneMode = enabled
         paneStyle = style
         grabberControl.isHidden = enabled
-        columnToggle.isHidden = !(enabled && style == .column)
-        if !columnToggle.isHidden { view.bringSubviewToFront(columnToggle) }
+        updateColumnControls()
         fitColumnPane()
         view.setNeedsLayout()
         if enabled {
-            onFocusRequest?(centerState != .artwork)
+            if AdaptiveLayout.centerStateSpreadsPane(style: style) { onFocusRequest?(centerState != .artwork) }
         } else {
             setFocused(false)
         }
@@ -64,7 +63,31 @@ extension NowPlayingViewController {
     func setFocused(_ focused: Bool) {
         guard focused != isFocused else { return }
         isFocused = focused
+        updateColumnControls()
+        fitColumnPane()
         view.setNeedsLayout()
+    }
+
+    /// The column's own controls: put the column away and spread it over the
+    /// window while it stands beside the library, and only the way back while
+    /// it is spread.
+    func updateColumnControls() {
+        let column = isPaneMode && paneStyle == .column
+        columnToggle.isHidden = !column || isFocused
+        columnSpreadToggle.isHidden = !column || isFocused
+        columnReturnToggle.isHidden = !column || !isFocused
+        for control in [columnToggle, columnSpreadToggle, columnReturnToggle] where !control.isHidden {
+            view.bringSubviewToFront(control)
+        }
+    }
+
+    /// Spreads the column over the whole window, or brings it back beside the
+    /// library: the person's choice, from the column's buttons, ⇧⌘F or Escape
+    /// (a menu command, so it never takes the keyboard from a text field).
+    func requestColumnSpread(_ spread: Bool) {
+        guard isPaneMode, paneStyle == .column, spread != isFocused else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        onFocusRequest?(spread)
     }
 
     func showQueueCenterState() {
