@@ -350,6 +350,12 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         }
     }
 
+    /// What Now Playing shows in its centre: the cover, lyrics or the queue.
+    var centerState: NowPlayingViewController.CenterState { npc.centerState }
+
+    /// Whether the player has the whole window while it is a pane.
+    var isSpread: Bool { npc.isFocused }
+
     func toggleLoveForPlayingSong() {
         npc.toggleLove()
     }

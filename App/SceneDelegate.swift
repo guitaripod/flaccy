@@ -70,6 +70,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         WatchSyncExercise.runIfRequested()
         LibraryWalkExercise.runIfRequested(window: window, tabs: tabs, player: playerContainer)
         RecapOpenExercise.runIfRequested(tabs: tabs)
+        ColumnExercise.runIfRequested(tabs: tabs, player: playerContainer)
         WatchRemoteExercise.runIfRequested()
         EqualizerExercise.runIfRequested()
         SongVolumeExercise.runIfRequested()
