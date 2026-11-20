@@ -163,6 +163,11 @@ final class GroqService: MetadataClassifying {
         return order.compactMap { byKey[$0] }
     }
 
+    /// The opening sentence of the instructions is how flaccy-api tells a
+    /// library cleanup from something a person asked for, and so which daily
+    /// allowance the call spends (`services/flaccy/README.md`, "Allowances"):
+    /// reword it and every cleanup call is counted against the small allowance
+    /// kept for playlists, equalizer curves and lyric meanings.
     nonisolated private static func makeAnalysisRequest(tracks: [TrackContext]) -> ChatRequest {
         let trackDescriptions = tracks.enumerated().map { index, track in
             var parts = ["\(index + 1). Path: \(track.relativePath)"]

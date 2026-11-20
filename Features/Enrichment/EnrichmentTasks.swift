@@ -253,6 +253,13 @@ nonisolated enum ArtistEnrichmentTask {
 /// durable entity: a folder the AI has been through is never sent again, and a
 /// folder it could not read backs off on the shared ladder. A folder the pass was
 /// interrupted in keeps whatever was identified and stays queued for the rest.
+///
+/// A folder whose files all carry their own title, artist, album and track
+/// number is settled from those tags and never sent: the model is for scrambled
+/// file names, and on a library tagged with care it would spend the day's
+/// allowance to rewrite what was already right. That check comes before the
+/// entitlement, so a library that needs no cleanup is never told cleanup needs
+/// a purchase.
 nonisolated enum AIIdentificationTask {
 
     /// A batch that matched anything has retitled albums, and a retitle is a new
@@ -275,6 +282,13 @@ nonisolated enum AIIdentificationTask {
         }
         guard force || EnrichmentPolicy.isDue(record, scope: .aiBatch, now: now) else {
             return EnrichmentTasks.outcome(entity, record: record, attempted: false)
+        }
+
+        if !force, await isFiledFromItsTags(tracks) {
+            record.fields.insert(.identified)
+            EnrichmentTasks.settle(&record, scope: .aiBatch)
+            MidgarLog.info("AI batch \(directory): \(tracks.count) tracks already tagged, not sent", category: .content)
+            return EnrichmentTasks.outcome(entity, record: record, resolved: [.identified], attempted: true)
         }
 
         guard await hasActiveEntitlement() else {
@@ -377,6 +391,25 @@ nonisolated enum AIIdentificationTask {
         }
 
         return matched
+    }
+
+    /// Whether every file of the folder carries its own title, artist, album and
+    /// track number. The tags are read from the files, because a library row no
+    /// longer says which of its values came from a tag and which from the file's
+    /// name or its folder. The first file that falls short ends the reading, so
+    /// a folder of scrambled names costs one read before it goes to the model,
+    /// and a file that cannot be read counts as untagged.
+    private static func isFiledFromItsTags(_ tracks: [TrackRecord]) async -> Bool {
+        for track in tracks {
+            let tags = await AudioMetadataReader.read(
+                from: Track.fileURL(forStoredPath: track.fileURL), wantsArtwork: { _, _ in false }
+            )
+            let complete = TagCompleteness.isComplete(
+                title: tags.title, artist: tags.artist, albumTitle: tags.albumTitle, trackNumber: tags.trackNumber
+            )
+            guard complete else { return false }
+        }
+        return true
     }
 
     private static func hasActiveEntitlement() async -> Bool {
