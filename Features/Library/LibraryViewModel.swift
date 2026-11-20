@@ -380,6 +380,9 @@ final class LibraryViewModel {
         NotificationCenter.default.addObserver(
             self, selector: #selector(tracksRevised(_:)), name: Library.tracksRevised, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(remoteAvailabilityChanged), name: RemoteAvailability.didChange, object: nil
+        )
 
         bindLibrarySurface()
     }
@@ -458,6 +461,12 @@ final class LibraryViewModel {
         publishSnapshot()
     }
 
+    /// Back to All when the Offline chip is lit but no longer offered, because the last server was removed.
+    func dropUnofferedFilter() {
+        guard filter == .offline, !availableFilters().contains(.offline) else { return }
+        setFilter(.all)
+    }
+
     /// Narrows the songs and albums to one source, or to all of them for nil.
     func setSource(_ source: LibrarySource?) {
         guard self.source != source else { return }
@@ -515,8 +524,11 @@ final class LibraryViewModel {
         }
     }
 
+    /// The chips for the segment; Offline only once a server's songs are in the library, since before that everything
+    /// plays offline.
     func availableFilters() -> [LibraryFilter] {
-        LibraryFilter.allCases.filter { $0.isAvailable(in: currentSegment) }
+        let hasServers = !sourceChoices().isEmpty
+        return LibraryFilter.allCases.filter { $0.isAvailable(in: currentSegment) && ($0 != .offline || hasServers) }
     }
 
     var rediscoverAlbums: [Album] {

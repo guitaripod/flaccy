@@ -19,26 +19,29 @@ pub enum LibraryFilter {
     MostPlayed,
     Favorites,
     Lossless,
+    Offline,
     RecentlyAdded,
     RecentlyPlayed,
     Rediscover,
 }
 
 impl LibraryFilter {
-    pub const SONGS: [LibraryFilter; 7] = [
+    pub const SONGS: [LibraryFilter; 8] = [
         LibraryFilter::All,
         LibraryFilter::MostPlayed,
         LibraryFilter::Favorites,
         LibraryFilter::Lossless,
+        LibraryFilter::Offline,
         LibraryFilter::RecentlyAdded,
         LibraryFilter::RecentlyPlayed,
         LibraryFilter::Rediscover,
     ];
 
-    pub const ALBUMS: [LibraryFilter; 6] = [
+    pub const ALBUMS: [LibraryFilter; 7] = [
         LibraryFilter::All,
         LibraryFilter::Favorites,
         LibraryFilter::Lossless,
+        LibraryFilter::Offline,
         LibraryFilter::RecentlyAdded,
         LibraryFilter::RecentlyPlayed,
         LibraryFilter::Rediscover,
@@ -50,6 +53,7 @@ impl LibraryFilter {
             LibraryFilter::MostPlayed => "most_played",
             LibraryFilter::Favorites => "favorites",
             LibraryFilter::Lossless => "lossless",
+            LibraryFilter::Offline => "offline",
             LibraryFilter::RecentlyAdded => "recently_added",
             LibraryFilter::RecentlyPlayed => "recently_played",
             LibraryFilter::Rediscover => "rediscover",
@@ -62,6 +66,7 @@ impl LibraryFilter {
             LibraryFilter::MostPlayed => "Most Played",
             LibraryFilter::Favorites => "Favorites",
             LibraryFilter::Lossless => "Lossless",
+            LibraryFilter::Offline => "Offline",
             LibraryFilter::RecentlyAdded => "Recently Added",
             LibraryFilter::RecentlyPlayed => "Recently Played",
             LibraryFilter::Rediscover => "Rediscover",
@@ -348,6 +353,13 @@ pub fn songs_allowed(
                 .map(|track| track.rel_path.clone())
                 .collect(),
         ),
+        LibraryFilter::Offline => Some(
+            tracks
+                .iter()
+                .filter(|track| crate::remote::plays_offline(&track.rel_path))
+                .map(|track| track.rel_path.clone())
+                .collect(),
+        ),
         LibraryFilter::RecentlyAdded => {
             let entries: Vec<AddedEntry> = tracks
                 .iter()
@@ -440,6 +452,13 @@ pub fn albums_allowed(
             )
         }
         LibraryFilter::Rediscover => Some(rediscover_albums(albums, now).into_iter().collect()),
+        LibraryFilter::Offline => Some(
+            albums
+                .iter()
+                .filter(|album| album.tracks.iter().any(|track| crate::remote::plays_offline(&track.rel_path)))
+                .map(Album::key)
+                .collect(),
+        ),
     }
 }
 
@@ -702,6 +721,23 @@ mod tests {
         );
         let albums_set = albums_allowed(LibraryFilter::Rediscover, &albums, NOW).expect("set");
         assert_eq!(albums_set, HashSet::from(["Old|X".to_string()]));
+    }
+
+    #[test]
+    fn offline_keeps_the_music_folder_and_the_albums_with_a_song_in_it() {
+        let file = track("night/1.flac", "Low Tide", "X", "Night");
+        let streamed = track("remote://home/s2", "Harbor", "X", "Night");
+        let only_streamed = track("remote://home/s9", "Roost", "Y", "Roost");
+        let albums = vec![
+            album("Night", "X", vec![file.clone(), streamed.clone()]),
+            album("Roost", "Y", vec![only_streamed.clone()]),
+        ];
+        let tracks = vec![file, streamed, only_streamed];
+        let songs = songs_allowed(LibraryFilter::Offline, &tracks, &albums, NOW).expect("set");
+        assert_eq!(songs, HashSet::from(["night/1.flac".to_string()]));
+        let albums_set = albums_allowed(LibraryFilter::Offline, &albums, NOW).expect("set");
+        assert_eq!(albums_set, HashSet::from(["Night|X".to_string()]));
+        assert_eq!(LibraryFilter::from_id("offline"), LibraryFilter::Offline);
     }
 
     #[test]

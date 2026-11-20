@@ -127,6 +127,9 @@ final class AlbumGridViewController: NSViewController {
             self, selector: #selector(searchQueryChanged(_:)), name: .flaccySearchQueryChanged, object: nil
         )
         NotificationCenter.default.addObserver(
+            self, selector: #selector(remoteServersChanged), name: RemoteServers.didChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
             self, selector: #selector(lovedDidChange), name: LovedTracksService.didChange, object: nil
         )
 
@@ -138,6 +141,12 @@ final class AlbumGridViewController: NSViewController {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    /// Offers or withdraws the Offline chip as the first server arrives or the last one goes.
+    @objc private func remoteServersChanged() {
+        viewModel.dropUnofferedFilter()
+        chipsBar.configure(filters: viewModel.availableFilters(), selected: viewModel.filter)
     }
 
     private func buildControlsBar() -> NSView {

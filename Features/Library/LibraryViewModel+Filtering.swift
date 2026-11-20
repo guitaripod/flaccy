@@ -14,12 +14,14 @@ extension LibraryViewModel {
     /// shared `LibraryFilterRules` over the warmed album signals, so a click is
     /// a pass over dictionaries — never a scrobble aggregate or a file lookup.
     func filteredAlbums(_ unsourced: [Album]) -> [Album] {
-        let albums = source.map { source in unsourced.filter { $0.tracks.contains(where: source.admits) } } ?? unsourced
+        let albums = source.map { source in Self.narrowing(unsourced, to: source.admits) } ?? unsourced
         switch filter {
         case .all:
             return albums
         case .lossless:
             return albums.filter { representativeTrack(for: $0)?.isLossless == true }
+        case .offline:
+            return Self.narrowing(albums, to: Self.playsOffline)
         case .favorites:
             return albums.filter { isLovedAlbum($0) }
         case .recentlyAdded:
@@ -54,6 +56,8 @@ extension LibraryViewModel {
             return songs
         case .lossless:
             return songs.filter { $0.isLossless }
+        case .offline:
+            return songs.filter(Self.playsOffline)
         case .favorites:
             return songs.filter { LovedTracksService.shared.isLoved(track: $0) }
         case .recentlyAdded:
@@ -70,6 +74,23 @@ extension LibraryViewModel {
             let keys = filterSignals().rediscover.keys
             return songs.filter { keys.contains("\($0.albumTitle)|\($0.artist)") }
         }
+    }
+
+    /// Each album with only the songs `admits` lets through, and without the albums left empty, so a source or the
+    /// Offline chip shows an album as the part of it that answers to the chip. The album keeps its identity.
+    nonisolated static func narrowing(_ albums: [Album], to admits: (Track) -> Bool) -> [Album] {
+        albums.compactMap { album in
+            let tracks = album.tracks.filter(admits)
+            guard !tracks.isEmpty else { return nil }
+            guard tracks.count < album.tracks.count else { return album }
+            return Album(title: album.title, artist: album.artist, artwork: album.artwork, tracks: tracks, year: album.year, genre: album.genre)
+        }
+    }
+
+    /// Whether a song plays with no server in reach: a file on this device, or a server song kept whole here.
+    nonisolated static func playsOffline(_ track: Track) -> Bool {
+        guard let song = track.remoteSong else { return true }
+        return RemoteAvailability.shared.isComplete(path: song.path)
     }
 
     /// The alphabet scrubber only makes sense when the visible order is

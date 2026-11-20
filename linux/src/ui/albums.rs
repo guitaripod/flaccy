@@ -424,7 +424,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             let library = ui.core.library.borrow().clone();
             let now = chrono::Utc::now().timestamp();
             let chip = chip_filter.get();
-            if !admission.is_current(&library, chip, now) {
+            if chip == LibraryFilter::Offline || !admission.is_current(&library, chip, now) {
                 let admitted = filters::albums_allowed(chip, &library.albums, now);
                 if *allowed.borrow() != admitted {
                     *allowed.borrow_mut() = admitted;
@@ -510,6 +510,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             .child(&chips.widget)
             .build();
         header_row.prepend(&scroller);
+        chips.set_offered(LibraryFilter::Offline, crate::remote::has_servers());
+        ui.core.hub.subscribe_widget(&scroller, move |_, event| {
+            if matches!(event, AppEvent::RemoteChanged) {
+                chips.set_offered(LibraryFilter::Offline, crate::remote::has_servers());
+            }
+        });
     }
 
     {
@@ -546,6 +552,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 .hub
                 .subscribe_widget(&stack, move |stack, event| match event {
                     AppEvent::LibraryReloaded if stack.is_mapped() => rebuild(),
+                    AppEvent::RemoteChanged if stack.is_mapped() => rebuild(),
+                    AppEvent::RemoteChanged => library_dirty.set(true),
                     AppEvent::LibraryReloaded => library_dirty.set(true),
                     AppEvent::SearchChanged(_) if stack.is_mapped() => {
                         filter.changed(gtk::FilterChange::Different)

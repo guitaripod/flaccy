@@ -7,6 +7,7 @@ import Foundation
 nonisolated enum LibraryFilter: String, CaseIterable, Sendable {
     case all
     case lossless
+    case offline
     case recentlyAdded
     case recentlyPlayed
     case favorites
@@ -26,6 +27,7 @@ nonisolated enum LibraryFilter: String, CaseIterable, Sendable {
         switch self {
         case .all: String(localized: "All")
         case .lossless: String(localized: "Lossless")
+        case .offline: String(localized: "Offline")
         case .recentlyAdded: String(localized: "Recently Added")
         case .recentlyPlayed: String(localized: "Recently Played")
         case .favorites: String(localized: "Favorites")
@@ -37,6 +39,7 @@ nonisolated enum LibraryFilter: String, CaseIterable, Sendable {
         switch self {
         case .all: "square.stack"
         case .lossless: "waveform.badge.magnifyingglass"
+        case .offline: "arrow.down.circle"
         case .recentlyAdded: "clock.badge.plus"
         case .recentlyPlayed: "clock.arrow.circlepath"
         case .favorites: "heart.fill"

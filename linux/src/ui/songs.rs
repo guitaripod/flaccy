@@ -90,6 +90,7 @@ impl Mode {
             LibraryFilter::MostPlayed => self.range_plays.borrow().contains_key(&track.rel_path),
             LibraryFilter::Favorites => track.loved,
             LibraryFilter::Lossless => filters::is_lossless(track),
+            LibraryFilter::Offline => crate::remote::plays_offline(&track.rel_path),
             LibraryFilter::RecentlyAdded
             | LibraryFilter::RecentlyPlayed
             | LibraryFilter::Rediscover => self
@@ -499,7 +500,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 AppEvent::LibraryReloaded => view.on_library_changed(true),
                 AppEvent::LovedChanged { .. } => view.on_library_changed(false),
                 AppEvent::NaturalEnd(_) => view.on_play_ended(),
-                AppEvent::RemoteChanged => view.refresh_sources(),
+                AppEvent::RemoteChanged => view.on_remote_changed(),
                 AppEvent::SearchChanged(_) => view.on_search_changed(),
                 AppEvent::CleanLibraryChanged => view.on_hide_duplicates_changed(),
                 AppEvent::LocateCurrent => view.locate_current(),
@@ -560,6 +561,7 @@ impl View {
                 }
             }
         });
+        chips.set_offered(LibraryFilter::Offline, crate::remote::has_servers());
         *self.chips.borrow_mut() = Some(chips);
         *self.sources.borrow_mut() = Some(sources);
         self.refresh_sources();
@@ -744,6 +746,20 @@ impl View {
         );
     }
 
+    /// A server came or went, or a song finished downloading or stopped being
+    /// kept: the source chips and the Offline chip follow the servers, and the
+    /// Offline list takes in or lets go of the songs that changed.
+    fn on_remote_changed(self: &Rc<Self>) {
+        self.refresh_sources();
+        let chips = self.chips.borrow().clone();
+        if let Some(chips) = chips {
+            chips.set_offered(LibraryFilter::Offline, crate::remote::has_servers());
+        }
+        if self.mode.filter.get() == LibraryFilter::Offline {
+            self.refilter();
+        }
+    }
+
     /// Rebuilds the source chips from the saved servers, and widens the list
     /// to every source when the one it was narrowed to is gone.
     fn refresh_sources(self: &Rc<Self>) {
@@ -892,7 +908,7 @@ impl View {
             LibraryFilter::RecentlyPlayed => {
                 Some((&self.columns.last_played, gtk::SortType::Descending))
             }
-            LibraryFilter::All | LibraryFilter::Favorites | LibraryFilter::Lossless => None,
+            LibraryFilter::All | LibraryFilter::Favorites | LibraryFilter::Lossless | LibraryFilter::Offline => None,
         }
     }
 
@@ -965,7 +981,10 @@ impl View {
         match self.mode.filter.get() {
             LibraryFilter::MostPlayed => self.fetch_most_played(false),
             LibraryFilter::All if change == RowChange::Patched && !self.hides_duplicates() => {}
-            LibraryFilter::All | LibraryFilter::Favorites | LibraryFilter::Lossless => {
+            LibraryFilter::All
+            | LibraryFilter::Favorites
+            | LibraryFilter::Lossless
+            | LibraryFilter::Offline => {
                 self.refilter();
             }
             filter => {

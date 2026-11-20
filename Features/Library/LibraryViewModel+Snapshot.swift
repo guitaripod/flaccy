@@ -119,6 +119,12 @@ extension LibraryViewModel {
             .map { .song($0) }
     }
 
+    /// A song finished downloading or a download was removed, which moves it in or out of the Offline chip.
+    @objc func remoteAvailabilityChanged() {
+        guard filter == .offline else { return }
+        publishSnapshot(intent: .refreshLibrary)
+    }
+
     @objc func tracksRevised(_ notification: Notification) {
         let paths = notification.userInfo?[Library.RevisionKey.paths] as? [String] ?? []
         revisedSongPaths.formUnion(paths)

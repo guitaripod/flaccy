@@ -2,7 +2,8 @@ import XCTest
 import FlaccyCore
 @testable import flaccy
 
-/// Clean Library's one switch and how it shows an album's page.
+/// Clean Library's one switch, how it shows an album's page, and the chips that narrow albums to the songs that answer
+/// to them.
 nonisolated final class CleanLibraryTests: XCTestCase {
 
     private static let keys = [CleanLibrarySetting.key, "hideDuplicateSongs", "groupAlbumEditions"]
@@ -67,5 +68,21 @@ nonisolated final class CleanLibraryTests: XCTestCase {
         UserDefaults.standard.set(false, forKey: CleanLibrarySetting.key)
         let tracks = [track("Harbor Lights", number: 3, id: 2), serverTrack("Harbor Lights", number: 3, id: 3, song: "s3")]
         XCTAssertEqual(CleanLibrarySetting.eachSongOnce(in: album(tracks)).tracks, tracks)
+    }
+
+    func testNarrowingShowsTheAlbumsPartThatAnswersAndDropsTheRest() {
+        let file = track("Low Tide", number: 2, id: 1)
+        let streamed = serverTrack("Harbor Lights", number: 3, id: 2, song: "s3")
+        let onlyStreamed = serverTrack("Roost", number: 1, id: 3, song: "s9")
+        let albums = [album([file, streamed]), album([onlyStreamed], title: "Roost")]
+        let narrowed = LibraryViewModel.narrowing(albums) { $0.remoteSong == nil }
+        XCTAssertEqual(narrowed.map(\.id), ["Night Ferry|Corvid & Crane"])
+        XCTAssertEqual(narrowed.first?.tracks, [file])
+        XCTAssertEqual(LibraryViewModel.narrowing(albums) { _ in true }.map(\.tracks), albums.map(\.tracks))
+    }
+
+    func testOfflineAdmitsFilesAndLeavesOutServerSongsNotKeptWhole() {
+        XCTAssertTrue(LibraryViewModel.playsOffline(track("Low Tide", number: 2, id: 1)))
+        XCTAssertFalse(LibraryViewModel.playsOffline(serverTrack("Never Cached", number: 4, id: 2, song: "never-cached")))
     }
 }

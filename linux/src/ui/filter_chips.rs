@@ -120,6 +120,18 @@ impl ChipBar {
         bar
     }
 
+    /// Shows or hides one chip. A hidden chip that was lit gives way to All,
+    /// which reports the change like a click.
+    pub fn set_offered(&self, filter: LibraryFilter, offered: bool) {
+        let Some(chip) = self.chips.iter().find(|chip| chip.filter == filter) else {
+            return;
+        };
+        chip.button.set_visible(offered);
+        if !offered && self.selected.get() == filter {
+            self.clear_to_all();
+        }
+    }
+
     pub fn set_selected(&self, filter: LibraryFilter) {
         self.silent.set(true);
         for chip in &self.chips {

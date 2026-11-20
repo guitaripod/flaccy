@@ -519,7 +519,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
 
     @objc func remoteServersDidChange() {
-        updateSourceChips(for: viewModel.currentSegment)
+        viewModel.dropUnofferedFilter()
+        updateChips(for: viewModel.currentSegment)
     }
 
     /// Shows the source row on Albums and Songs while a server is added, and widens the list to

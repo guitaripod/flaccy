@@ -72,6 +72,20 @@ pub fn is_dimmed(rel_path: &str) -> bool {
         && handle().is_some_and(|remote| remote.availability(rel_path) == Availability::Offline)
 }
 
+/// Whether a song plays with no server in reach: a file in the music folder,
+/// or a server's song whose every byte is on this computer.
+pub fn plays_offline(rel_path: &str) -> bool {
+    !is_remote(rel_path)
+        || handle().is_some_and(|remote| {
+            matches!(remote.availability(rel_path), Availability::Kept | Availability::Cached)
+        })
+}
+
+/// Whether a server is added, which is when the Offline chip means something.
+pub fn has_servers() -> bool {
+    handle().is_some_and(|remote| !remote.servers().is_empty())
+}
+
 /// Whether a remote song is kept on this computer.
 pub fn is_downloaded(rel_path: &str) -> bool {
     is_remote(rel_path) && handle().is_some_and(|remote| remote.is_downloaded(rel_path))

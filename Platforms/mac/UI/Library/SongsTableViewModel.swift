@@ -21,7 +21,7 @@ final class SongsTableViewModel {
     /// The quick pivots above the table. `mostPlayed` is the only one that
     /// carries a setting: the time range its counts are taken over.
     enum Filter: String, CaseIterable {
-        case all, mostPlayed, favorites, lossless, recentlyAdded, recentlyPlayed, rediscover
+        case all, mostPlayed, favorites, lossless, offline, recentlyAdded, recentlyPlayed, rediscover
 
         var title: String {
             switch self {
@@ -29,6 +29,7 @@ final class SongsTableViewModel {
             case .mostPlayed: String(localized: "Most Played")
             case .favorites: String(localized: "Favorites")
             case .lossless: String(localized: "Lossless")
+            case .offline: String(localized: "Offline")
             case .recentlyAdded: String(localized: "Recently Added")
             case .recentlyPlayed: String(localized: "Recently Played")
             case .rediscover: String(localized: "Rediscover")
@@ -41,6 +42,7 @@ final class SongsTableViewModel {
             case .mostPlayed: "chart.bar.fill"
             case .favorites: "heart.fill"
             case .lossless: "waveform.badge.magnifyingglass"
+            case .offline: "arrow.down.circle"
             case .recentlyAdded: "clock.badge.plus"
             case .recentlyPlayed: "clock.arrow.circlepath"
             case .rediscover: "sparkle.magnifyingglass"
@@ -51,7 +53,7 @@ final class SongsTableViewModel {
         /// should leave whatever the person last sorted by alone.
         var naturalSort: [SortTier]? {
             switch self {
-            case .all, .favorites, .lossless: nil
+            case .all, .favorites, .lossless, .offline: nil
             case .mostPlayed: [SortTier(column: .plays, ascending: false), SortTier(column: .lastPlayed, ascending: false)]
             case .recentlyAdded: [SortTier(column: .dateAdded, ascending: false)]
             case .recentlyPlayed: [SortTier(column: .lastPlayed, ascending: false)]
@@ -166,8 +168,11 @@ final class SongsTableViewModel {
 
     var hasLibrary: Bool { !allRows.isEmpty }
 
+    /// The pivot chips; Offline only once a server's songs are in the library, since before that everything plays
+    /// offline.
     var chips: [FilterChip] {
-        Filter.allCases.map { chip in
+        let hasServers = !sourceChoices().isEmpty
+        return Filter.allCases.filter { $0 != .offline || hasServers }.map { chip in
             FilterChip(
                 id: chip.rawValue,
                 title: chip == .mostPlayed ? mostPlayedTitle : chip.title,
@@ -192,6 +197,18 @@ final class SongsTableViewModel {
             storeSortTiers(natural)
         }
         MidgarLog.info("Songs filter: \(newFilter.rawValue)", category: .ui)
+        publish()
+    }
+
+    /// Back to All when the Offline chip is lit but no longer offered, because the last server was removed.
+    func dropUnofferedFilter() {
+        guard filter == .offline, sourceChoices().isEmpty else { return }
+        select(.all)
+    }
+
+    /// A song finished downloading or a download was removed, which moves it in or out of the Offline chip.
+    func availabilityChanged() {
+        guard filter == .offline else { return }
         publish()
     }
 
@@ -382,6 +399,8 @@ final class SongsTableViewModel {
             return rows.filter { $0.track.loved }
         case .lossless:
             return rows.filter { $0.track.isLossless }
+        case .offline:
+            return rows.filter { LibraryViewModel.playsOffline($0.track) }
         case .recentlyAdded:
             let ids = LibraryFilterRules.recentlyAdded(
                 rows.map { (id: $0.id, dateAdded: $0.dateAdded) }, now: now, thresholds: .songs

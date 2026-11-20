@@ -169,9 +169,12 @@ final class SongsTableViewController: NSViewController {
 
     @objc private func remoteServersChanged() {
         refreshSourceBar()
+        viewModel.dropUnofferedFilter()
+        chipsBar.configure(chips: viewModel.chips, selected: viewModel.filter.rawValue)
     }
 
     @objc private func remoteAvailabilityChanged() {
+        viewModel.availabilityChanged()
         let visible = tableView.rows(in: tableView.visibleRect)
         guard visible.length > 0 else { return }
         tableView.reloadData(
