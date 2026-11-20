@@ -1,0 +1,121 @@
+{
+  "referenceName": "Flaccy 2.0",
+  "badge": "MAJOR_UPDATE",
+  "purpose": "BRING_BACK_LAPSED_USERS",
+  "priority": "HIGH",
+  "primaryLocale": "en-US",
+  "deepLink": "flaccy://home",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "schedule": {
+    "publishStart": "2026-12-08T09:00:00Z",
+    "eventStart": "2026-12-15T09:00:00Z",
+    "eventEnd": "2027-01-14T09:00:00Z"
+  },
+  "localizations": {
+    "ar-SA": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. من جديد. موسيقاك بأعلى جودة.",
+      "longDescription": "معادل صوت، كلمات متزامنة للمشاركة، وخادمك الخاص. انتهت تجربتك قبل أكثر من شهر؟ شغّل موسيقاك: 7 أيام مجانية أخرى."
+    },
+    "da": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Igen. Din musik i fuld kvalitet.",
+      "longDescription": "Equalizer, sangtekster du kan dele, din egen server. Sluttede prøveperioden for over en måned siden? 7 gratis dage mere."
+    },
+    "de-DE": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Noch einmal. Musik in voller Qualität.",
+      "longDescription": "Equalizer, teilbare Songtexte, dein eigener Server. Testphase seit über einem Monat vorbei? 7 weitere Tage gratis."
+    },
+    "en-US": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Again. Your music at full quality.",
+      "longDescription": "Equalizer, shareable synced lyrics, your own server. Trial ended over a month ago? Play your music for 7 more free days."
+    },
+    "es-ES": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Otra vez. Tu música a máxima calidad.",
+      "longDescription": "Ecualizador, letras para compartir y tu propio servidor. ¿Tu prueba acabó hace más de un mes? 7 días gratis más."
+    },
+    "fi": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Uudestaan. Musiikkisi täydellä laadulla.",
+      "longDescription": "Equalizer, jaettavat sanoitukset, oma palvelin. Päättyikö kokeilusi yli kuukausi sitten? Saat 7 ilmaista päivää lisää."
+    },
+    "fr-FR": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Encore. Votre musique en pleine qualité.",
+      "longDescription": "Égaliseur, paroles à partager, votre propre serveur. Essai terminé depuis plus d'un mois ? 7 jours gratuits de plus."
+    },
+    "id": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Lagi. Musik Anda dalam kualitas penuh.",
+      "longDescription": "Equalizer, lirik yang bisa dibagikan, server sendiri. Uji coba berakhir lebih dari sebulan lalu? 7 hari gratis lagi."
+    },
+    "it": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Di nuovo. La tua musica, qualità piena.",
+      "longDescription": "Equalizzatore, testi da condividere, il tuo server. Prova finita da più di un mese? Altri 7 giorni gratis."
+    },
+    "ja": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy。もう一度。あなたの音楽を最高音質で。",
+      "longDescription": "イコライザ、シェアできる同期歌詞、自分のサーバー。トライアル終了から1か月以上経った方は、音楽を再生するとさらに7日間無料。"
+    },
+    "ko": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. 다시. 내 음악을 최고 음질로.",
+      "longDescription": "이퀄라이저, 공유할 수 있는 동기화 가사, 내 서버. 체험이 끝난 지 한 달이 넘었다면 음악을 재생하고 7일 더 무료로 이용하세요."
+    },
+    "no": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Igjen. Musikken din i full kvalitet.",
+      "longDescription": "Equalizer, sangtekster du kan dele, din egen server. Sluttet prøveperioden for over en måned siden? 7 gratis dager til."
+    },
+    "pl": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Jeszcze raz. Muzyka w pełnej jakości.",
+      "longDescription": "Korektor, teksty do udostępniania, własny serwer. Okres próbny skończył się ponad miesiąc temu? Kolejne 7 dni za darmo."
+    },
+    "pt-BR": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. De novo. Sua música em qualidade máxima.",
+      "longDescription": "Equalizador, letras para compartilhar, seu próprio servidor. Seu teste acabou há mais de um mês? Mais 7 dias grátis."
+    },
+    "ru": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Снова. Ваша музыка в полном качестве.",
+      "longDescription": "Эквалайзер, тексты для публикации, свой сервер. Пробный период закончился больше месяца назад? Ещё 7 дней бесплатно."
+    },
+    "sv": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Igen. Din musik i full kvalitet.",
+      "longDescription": "Equalizer, låttexter att dela, din egen server. Tog provperioden slut för över en månad sedan? 7 gratisdagar till."
+    },
+    "th": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy อีกครั้ง เพลงของคุณในคุณภาพเต็ม",
+      "longDescription": "อีควอไลเซอร์ เนื้อเพลงที่แชร์ได้ เซิร์ฟเวอร์ของคุณเอง ช่วงทดลองหมดเกินหนึ่งเดือนแล้วใช่ไหม เล่นเพลงแล้วรับฟรีอีก 7 วัน"
+    },
+    "tr": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Yeniden. Müziğin tam kalitede.",
+      "longDescription": "Ekolayzer, paylaşılabilir sözler, kendi sunucun. Denemen bir aydan uzun süre önce mi bitti? 7 ücretsiz gün daha."
+    },
+    "vi": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy. Lần nữa. Nhạc của bạn, trọn chất lượng.",
+      "longDescription": "Equalizer, lời bài hát để chia sẻ, máy chủ riêng. Bản dùng thử hết hạn hơn một tháng trước? Thêm 7 ngày miễn phí."
+    },
+    "zh-Hans": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy。再来一次。以完整音质聆听你的音乐。",
+      "longDescription": "均衡器、可分享的同步歌词、你自己的服务器。试用已结束一个多月？播放你的音乐，再享 7 天免费。"
+    },
+    "zh-Hant": {
+      "name": "Flaccy 2.0",
+      "shortDescription": "Flaccy。再來一次。以完整音質聆聽你的音樂。",
+      "longDescription": "等化器、可分享的同步歌詞、你自己的伺服器。試用已結束一個多月？播放你的音樂，再享 7 天免費。"
+    }
+  }
+}
