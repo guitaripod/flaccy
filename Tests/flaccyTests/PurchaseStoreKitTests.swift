@@ -22,15 +22,14 @@ struct PurchaseStoreKitTests {
         let session: SKTestSession
     }
 
-    private static let configurationURL = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent()
-        .deletingLastPathComponent()
-        .appendingPathComponent("flaccyUITests/Flaccy.storekit")
+    private static let configurationURL = Bundle(for: SecondLookTests.self).url(forResource: "Flaccy", withExtension: "storekit")
+        ?? URL(fileURLWithPath: "Flaccy.storekit")
 
-    private func makeHarness(configuration: URL = Self.configurationURL) throws -> Harness {
+    private func makeHarness(configuration: URL = Self.configurationURL) async throws -> Harness {
         let session = try SKTestSession(contentsOf: configuration)
         session.resetToDefaultState()
         session.clearTransactions()
+        try await Self.requireInControl(session)
         session.disableDialogs = true
         session.askToBuyEnabled = false
         LedgerStub.reset()
@@ -44,6 +43,34 @@ struct PurchaseStoreKitTests {
         return Harness(store: store, manager: PurchaseManager(store: store), session: session)
     }
 
+    /// Thrown before any test buys anything, on a device whose StoreKit does not follow the test session.
+    private struct TestSessionNotInControl: Error, CustomStringConvertible {
+        let storefrontSeen: String?
+
+        var description: String {
+            "StoreKit on this device does not follow the test session (it reports the storefront \(storefrontSeen ?? "none")), "
+                + "so a purchase here would reach the sandbox store and put a real purchase sheet on screen. Nothing was bought."
+        }
+    }
+
+    private static let probeStorefront = "BTN"
+
+    /// A test session only stands in for the App Store when the device's StoreKit follows it. Where it does not, as on
+    /// the iPad and iPhone running iOS 27 on 2026-11-20, the very same calls reach the sandbox store: real purchase
+    /// sheets come up and the Apple Account's sandbox purchases change. So before a test may buy, the session is moved
+    /// to a storefront nobody here shops in and StoreKit is asked which one it sees; reading it shows nothing on screen.
+    private static func requireInControl(_ session: SKTestSession) async throws {
+        session.storefront = probeStorefront
+        var seen: String?
+        for _ in 0..<30 {
+            seen = await Storefront.current?.countryCode
+            if seen == probeStorefront { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        session.resetToDefaultState()
+        guard seen == probeStorefront else { throw TestSessionNotInControl(storefrontSeen: seen) }
+    }
+
     @Test func theConfigurationFileSellsExactlyTheThreeProducts() throws {
         let file = try JSONDecoder().decode(StoreKitFile.self, from: Data(contentsOf: Self.configurationURL))
         let sold = file.products.map(\.productID) + file.subscriptionGroups.flatMap(\.subscriptions).map(\.productID)
@@ -52,7 +79,7 @@ struct PurchaseStoreKitTests {
     }
 
     @Test func theOffersAreTheYearlyAndLifetimePlansWithTheWelcomeBackProductKept() async throws {
-        let harness = try makeHarness()
+        let harness = try await makeHarness()
 
         let offers = await harness.manager.loadOffersIfNeeded()
 
@@ -70,7 +97,7 @@ struct PurchaseStoreKitTests {
     @Test func aWelcomeBackProductPricedLikeLifetimeIsNoOfferAndForgetsTheReminder() async throws {
         let configuration = try Self.configurationWithWelcomeBackAtLifetimePrice()
         defer { try? FileManager.default.removeItem(at: configuration) }
-        let harness = try makeHarness(configuration: configuration)
+        let harness = try await makeHarness(configuration: configuration)
 
         let offers = await harness.manager.loadOffersIfNeeded()
 
@@ -82,7 +109,7 @@ struct PurchaseStoreKitTests {
 
     @Test(arguments: [PurchasePlan.yearly, .lifetime])
     func eachPlanUnlocksAsItselfAndCarriesTheMidgarID(_ plan: PurchasePlan) async throws {
-        let harness = try makeHarness()
+        let harness = try await makeHarness()
         await harness.manager.refresh()
         #expect(!harness.manager.state.isPurchased)
         #expect(harness.manager.hasLoadedEntitlements)
@@ -102,16 +129,16 @@ struct PurchaseStoreKitTests {
     }
 
     @Test func lifetimeWinsOverARunningYearlySubscription() async throws {
-        let harness = try makeHarness()
+        let harness = try await makeHarness()
         _ = try await buy(.yearly, with: harness.manager)
         _ = try await buy(.lifetime, with: harness.manager)
 
-        #expect(harness.manager.state == .purchased(.lifetime))
+        #expect(await eventually { await Self.lifetimeHasWon(for: harness.manager) })
         await harness.store.stop()
     }
 
     @Test func aPurchaseMadeBeforeTheStoreIsFoundAtLaunchAndByRestore() async throws {
-        let harness = try makeHarness()
+        let harness = try await makeHarness()
         try harness.session.buyProduct(productIdentifier: FlaccyProducts.lifetime)
         #expect(await eventually { await Self.isEntitled(to: FlaccyProducts.lifetime) })
         let relaunched = PurchaseManager(store: harness.store)
@@ -123,7 +150,7 @@ struct PurchaseStoreKitTests {
     }
 
     @Test func aRefundedLifetimeTakesPlaybackAway() async throws {
-        let harness = try makeHarness()
+        let harness = try await makeHarness()
         _ = try await buy(.lifetime, with: harness.manager)
         let transaction = try #require(harness.session.allTransactions().first)
 
@@ -137,7 +164,7 @@ struct PurchaseStoreKitTests {
     }
 
     @Test func aRestoreWithNothingBoughtSaysSo() async throws {
-        let harness = try makeHarness()
+        let harness = try await makeHarness()
 
         #expect(await harness.manager.restore() == .nothingToRestore)
         await harness.store.stop()
@@ -191,6 +218,14 @@ struct PurchaseStoreKitTests {
             return true
         }
         return false
+    }
+
+    /// On an iPad running iOS 27 the entitlements read right after the second purchase returned still named Yearly, and
+    /// the Lifetime one followed a moment later, as it reaches the running app through the store's events. So the
+    /// store is read again until it has it.
+    private static func lifetimeHasWon(for manager: PurchaseManager) async -> Bool {
+        await manager.refresh()
+        return manager.state == .purchased(.lifetime)
     }
 
     private func eventually(timeout: Duration = .seconds(10), _ condition: () async -> Bool) async -> Bool {

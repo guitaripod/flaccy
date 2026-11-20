@@ -484,6 +484,8 @@ targets:
       platform: iOS
     sources:
       - path: Tests/flaccyTests
+      - path: Tests/flaccyUITests/Flaccy.storekit
+        buildPhase: resources
     dependencies:
       - target: flaccy
     settings:
