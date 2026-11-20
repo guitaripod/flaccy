@@ -39,7 +39,8 @@ public struct ServerSyncServer: Sendable, Equatable {
     }
 }
 
-/// What the device held when it connected, kept until the first sync has been read back.
+/// What the device held when it connected, kept until the first sync has been read back. Loves are kept by song key, so a song
+/// this device holds twice, as its own file and as the server's song, counts once.
 struct ServerMergeProbe: Sendable {
     var playlists: [Int64: String]
     var loved: Set<String>
@@ -54,7 +55,7 @@ extension ServerSyncStore {
         for record in try database.fetchAllPlaylists() {
             if let id = record.id { playlists[id] = record.name }
         }
-        return ServerMergeProbe(playlists: playlists, loved: try database.fetchLovedFileURLs())
+        return ServerMergeProbe(playlists: playlists, loved: try lovedSongKeys())
     }
 
     /// The names of the playlists that were on this device before connecting and that the server has too, read from the base the
@@ -70,8 +71,17 @@ extension ServerSyncStore {
         return names.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
-    func lovedPaths() throws -> Set<String> {
-        try database.fetchLovedFileURLs()
+    /// The song key of every loved song in the library.
+    func lovedSongKeys() throws -> Set<String> {
+        let rows = try database.dbQueue.read { db in
+            try Row.fetchAll(db, sql: "SELECT title, artist FROM tracks WHERE loved = 1")
+        }
+        var memo = ListenKeyMemo()
+        let pairs = rows.map { row -> (artistKey: String, titleKey: String) in
+            let keys = memo.keys(title: row["title"], artist: row["artist"], album: "")
+            return (keys.artist, keys.title)
+        }
+        return Set(try ServerCoreBridge.songKeys(pairs))
     }
 }
 
@@ -84,7 +94,7 @@ extension ServerSyncEngine {
         mergeProbe = nil
         var report = ServerMergeReport()
         report.playlistNames = probe.combinedNames ?? []
-        let loved = (try? store.lovedPaths()) ?? probe.loved
+        let loved = (try? store.lovedSongKeys()) ?? probe.loved
         report.lovesAdded = loved.subtracting(probe.loved).count
         report.listensMerged = probe.listens
         return report

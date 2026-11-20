@@ -65,6 +65,21 @@ final class ServerSyncMergeTests: XCTestCase {
         XCTAssertEqual(second, ServerMergeReport())
     }
 
+    func testASongHeldTwiceCountsAsOneNewLove() async throws {
+        let (phone, laptop, _) = try await makePhoneAndLaptop()
+        try phone.addTrack("One", path: "Copies/One.m4a", codec: "AAC")
+        try laptop.database.setLoved(fileURL: "Artist/Album/One.flac", loved: true, pendingOp: nil)
+        _ = try await laptop.connect()
+        assertUpToDate(await laptop.settle())
+        _ = try await phone.connect(code: "PHONE")
+        assertUpToDate(await phone.settle())
+
+        let report = await phone.engine.firstConnectMerge()
+
+        XCTAssertEqual(try phone.database.fetchLovedFileURLs(), ["Artist/Album/One.flac", "Copies/One.m4a"])
+        XCTAssertEqual(report.lovesAdded, 1)
+    }
+
     func testNothingMergedMeansAnEmptyReport() async throws {
         let (phone, laptop, _) = try await makePhoneAndLaptop()
         _ = try laptop.database.createPlaylist(name: "Laptop Only")
