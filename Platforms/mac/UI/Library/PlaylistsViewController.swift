@@ -249,11 +249,18 @@ final class PlaylistsViewController: NSViewController {
         alert.addButton(withTitle: String(localized: "Cancel"))
         alert.beginSheetModal(for: window) { response in
             guard response == .alertFirstButtonReturn else { return }
+            var failed: [String] = []
             for record in records {
                 guard let id = record.id else { continue }
-                try? DatabaseManager.shared.deletePlaylist(id: id)
+                do {
+                    try DatabaseManager.shared.deletePlaylist(id: id)
+                } catch {
+                    MidgarLog.error("Playlist delete failed: \(error.localizedDescription)", category: .database)
+                    failed.append(record.name)
+                }
             }
-            MidgarLog.info("Deleted \(records.count) playlists", category: .database)
+            MidgarLog.info("Deleted \(records.count - failed.count) playlists", category: .database)
+            if let first = failed.first { MacToast.show(PlaylistCopy.writeFailed(first), style: .error, in: window) }
             NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
         }
     }
@@ -275,6 +282,16 @@ final class PlaylistsViewController: NSViewController {
             guard !entry.tracks.isEmpty else { return }
             AudioPlayer.shared.play(entry.tracks.shuffled(), startingAt: 0, context: entry.record.playbackContext)
         })
+        menu.addItem(ClosureMenuItem(title: String(localized: "Play Next"), systemImage: "text.line.first.and.arrowtriangle.forward") { [weak self] in
+            guard !entry.tracks.isEmpty else { return }
+            for track in entry.tracks.reversed() { AudioPlayer.shared.insertNext(track) }
+            MacToast.show(String(localized: "Playing next"), style: .success, in: self?.view.window)
+        })
+        menu.addItem(ClosureMenuItem(title: String(localized: "Add to Queue"), systemImage: "text.append") { [weak self] in
+            guard !entry.tracks.isEmpty else { return }
+            for track in entry.tracks { AudioPlayer.shared.addToQueue(track) }
+            MacToast.show(String(localized: "Added to queue"), style: .success, in: self?.view.window)
+        })
         if let download = MacRemoteDownloadActions.menuItem(for: entry.tracks, window: view.window) {
             menu.addItem(.separator())
             menu.addItem(download)
@@ -284,6 +301,9 @@ final class PlaylistsViewController: NSViewController {
             .forEach(menu.addItem)
         menu.addItem(ClosureMenuItem(title: String(localized: "Rename…"), systemImage: "pencil") { [weak self] in
             self?.promptRename(entry.record)
+        })
+        menu.addItem(ClosureMenuItem(title: PlaylistCopy.duplicate, systemImage: "plus.square.on.square") { [weak self] in
+            PlaylistActions.duplicate(entry.record, in: self?.view.window)
         })
         menu.addItem(ClosureMenuItem(title: String(localized: "Delete…"), systemImage: "trash") { [weak self] in
             self?.confirmDelete(entry.record)

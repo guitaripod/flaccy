@@ -78,9 +78,6 @@ enum PlaybackFormat {
     }
 
     static func songsAndMinutes(count: Int, totalSeconds: TimeInterval) -> String {
-        let minutes = Int((totalSeconds / 60).rounded())
-        let songs = count == 1 ? "1 song" : "\(count) songs"
-        let time = minutes == 1 ? "1 minute" : "\(minutes) minutes"
-        return "\(songs) · \(time)"
+        "\(HomeCopy.songCount(count)) · \(HomeCopy.duration(totalSeconds))"
     }
 }

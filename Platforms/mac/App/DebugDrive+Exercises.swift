@@ -41,10 +41,9 @@ extension DebugDrive {
             let playlist = try DatabaseManager.shared.createPlaylist(name: "DebugDrive Mix")
             guard let playlistId = playlist.id else { return }
             PlaylistActions.add(Array(first.tracks.prefix(3)), toPlaylist: playlistId, named: playlist.name, in: window)
-            var records = try DatabaseManager.shared.fetchPlaylistTracks(playlistId: playlistId)
+            let records = try DatabaseManager.shared.fetchPlaylistTracks(playlistId: playlistId)
             MidgarLog.info("DebugDrive: playlist has \(records.count) rows", category: .general)
-            records.reverse()
-            PlaylistActions.persistOrder(records)
+            try DatabaseManager.shared.reorderPlaylist(playlistId: playlistId, orderedEntryIDs: records.compactMap(\.id).reversed())
             let reordered = try DatabaseManager.shared.fetchPlaylistTracks(playlistId: playlistId)
             MidgarLog.info(
                 "DebugDrive: reorder check — first row now \(reordered.first?.trackFileURL ?? "none")",

@@ -5,7 +5,10 @@ import FlaccyCore
 /// One playlist: a mosaic hero with play/shuffle capsules over its songs in
 /// the layout the listener chose. The list layout reorders by drag, the table
 /// is a sortable view of the same songs, and in a wide window the hero moves
-/// into a rail beside the scrolling songs.
+/// into a rail beside the scrolling songs. Every removal and move is one
+/// commit Edit > Undo takes back, songs the library lost can be taken out in
+/// one go, and the Suggested Songs shelf under the list offers songs from the
+/// person's own library.
 final class PlaylistDetailViewController: NSViewController {
 
     private struct Row {
@@ -23,6 +26,13 @@ final class PlaylistDetailViewController: NSViewController {
     private var pageFrame: TrackPageFrameView?
     private var songs: TrackPageSongs?
     private var rows: [Row] = []
+    private var missingIds: [Int64] = []
+    private let missingBar = NSStackView()
+    private let missingLabel = NSTextField(labelWithString: "")
+    private let suggestionsView = MacPlaylistSuggestionsView()
+    private var suggestionsBasis: Set<String> = []
+    private var suggestionsPage = 0
+    private var suggestionsTask: Task<Void, Never>?
 
     init(playlist: PlaylistRecord) {
         self.playlist = playlist
@@ -97,7 +107,9 @@ final class PlaylistDetailViewController: NSViewController {
                 ? String(localized: "A table is a view of the playlist: switch to List to reorder · right-click to remove")
                 : String(localized: "Drag rows to reorder · right-click to remove")
         }
-        pageFrame.setBody([songs.view, emptyLabel])
+        configureMissingBar()
+        configureSuggestions()
+        pageFrame.setBody([songs.view, emptyLabel, missingBar, suggestionsView])
         view.addSubview(pageFrame)
         self.pageFrame = pageFrame
         self.songs = songs
@@ -117,6 +129,9 @@ final class PlaylistDetailViewController: NSViewController {
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(reload), name: .flaccyPlaylistsDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(suggestionsSettingChanged), name: PlaylistSuggestionsSetting.didChange, object: nil
         )
         reload()
     }
@@ -174,11 +189,15 @@ final class PlaylistDetailViewController: NSViewController {
                 guard let track = tracksByPath[canonicalSyncPath(record.trackFileURL)] else { return nil }
                 return Row(record: record, track: track)
             }
+            let kept = Set(rows.compactMap(\.record.id))
+            missingIds = records.compactMap(\.id).filter { !kept.contains($0) }
         } catch {
             MidgarLog.error("Playlist tracks fetch failed: \(error.localizedDescription)", category: .database)
             rows = []
+            missingIds = []
         }
         render()
+        reloadSuggestionsIfPlaylistChanged()
         MidgarLog.debug("Playlist detail \(playlist.name): \(rows.count) rows", category: .ui)
     }
 
@@ -186,13 +205,17 @@ final class PlaylistDetailViewController: NSViewController {
     /// reader scrolled it.
     private func render() {
         let totalSeconds = rows.reduce(0.0) { $0 + $1.track.duration }
-        summaryLabel.stringValue = PlaybackFormat.songsAndMinutes(count: rows.count, totalSeconds: totalSeconds)
+        summaryLabel.stringValue = PlaylistCopy.summary(
+            songs: rows.count + missingIds.count, seconds: totalSeconds, missing: missingIds.count
+        )
+        missingLabel.stringValue = String(localized: "\(missingIds.count) songs in this playlist are no longer in your library.")
+        missingBar.isHidden = missingIds.isEmpty
         if let id = playlist.id {
             mosaic.configure(playlistId: id, tracks: rows.map(\.track), fallbackSeed: playlist.name)
         } else {
             mosaic.configure(with: rows.map(\.track), fallbackSeed: playlist.name)
         }
-        emptyLabel.isHidden = !rows.isEmpty
+        emptyLabel.isHidden = !rows.isEmpty || !missingIds.isEmpty
         let entries = rows.enumerated().map { index, row in
             TrackPageEntry(track: row.track, number: index + 1, rowID: row.record.id)
         }
@@ -233,35 +256,151 @@ final class PlaylistDetailViewController: NSViewController {
     }
 
     private func removeEntries(_ entries: [TrackPageEntry]) {
-        let ids = entries.compactMap(\.rowID)
-        guard !ids.isEmpty else { return }
-        for id in ids {
-            do {
-                try DatabaseManager.shared.removeTrackFromPlaylist(id: id)
-            } catch {
-                MidgarLog.error("Playlist row removal failed: \(error.localizedDescription)", category: .database)
+        remove(ids: entries.compactMap(\.rowID))
+    }
+
+    /// Takes entries out in one commit; Edit > Undo and the toast's Undo put
+    /// each song back where it stood.
+    private func remove(ids: [Int64]) {
+        guard let playlistId = playlist.id, !ids.isEmpty else { return }
+        do {
+            let removed = try DatabaseManager.shared.removePlaylistEntries(ids: ids, fromPlaylist: playlistId)
+            MidgarLog.info("Removed \(removed.count) songs from a playlist", category: .database)
+            NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
+            let pending = PendingRestore(removed)
+            registerUndo(name: PlaylistCopy.removeFromPlaylist) { controller in controller.restore(pending) }
+            MacToast.showAction(PlaylistCopy.removed(removed.count), actionTitle: PlaylistCopy.undo, style: .success, in: view.window) { [weak self] in
+                self?.restore(pending)
             }
+        } catch {
+            MidgarLog.error("Playlist row removal failed: \(error.localizedDescription)", category: .database)
+            MacToast.show(PlaylistCopy.writeFailed(playlist.name), style: .error, in: view.window)
         }
-        MidgarLog.info("Removed \(ids.count) row(s) from playlist \(playlist.name)", category: .database)
-        NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
+    }
+
+    /// Puts a removal back once, whichever of the toast's Undo and Edit >
+    /// Undo asks first.
+    private func restore(_ pending: PendingRestore) {
+        guard let playlistId = playlist.id, !pending.isDone else { return }
+        pending.isDone = true
+        do {
+            try DatabaseManager.shared.restorePlaylistEntries(pending.removed, toPlaylist: playlistId)
+            NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
+        } catch {
+            MidgarLog.error("Playlist restore failed: \(error.localizedDescription)", category: .database)
+            MacToast.show(PlaylistCopy.writeFailed(playlist.name), style: .error, in: view.window)
+        }
     }
 
     /// Moves the dragged rows to just above `row`, shows the new order at once
-    /// and writes only the positions that changed.
+    /// and writes it in one commit Edit > Undo takes back.
     private func moveRows(_ sources: IndexSet, to row: Int) {
-        let sourceRows = sources.filter { rows.indices.contains($0) }.sorted()
+        guard let playlistId = playlist.id else { return }
+        let sourceRows = sources.filter { rows.indices.contains($0) }
         guard !sourceRows.isEmpty else { return }
-        var reordered = rows
-        let moved = sourceRows.map { rows[$0] }
-        for source in sourceRows.reversed() {
-            reordered.remove(at: source)
-        }
-        let insertionIndex = row - sourceRows.filter { $0 < row }.count
-        reordered.insert(contentsOf: moved, at: insertionIndex)
-        rows = reordered
+        let before = (try? DatabaseManager.shared.fetchPlaylistTracks(playlistId: playlistId))?.compactMap(\.id) ?? []
+        let moving = Set(sourceRows.compactMap { rows[$0].record.id })
+        let shown = rows.compactMap(\.record.id)
+        let landing = row < shown.count ? before.firstIndex(of: shown[row]) ?? before.count : (shown.last.flatMap { before.firstIndex(of: $0) }.map { $0 + 1 } ?? before.count)
+        let order = PlaylistEditing.moved(before, moving: moving, to: landing)
+        let byId = Dictionary(rows.compactMap { row in row.record.id.map { ($0, row) } }, uniquingKeysWith: { first, _ in first })
+        rows = order.compactMap { byId[$0] }
         render()
-        PlaylistActions.persistOrder(rows.map(\.record))
+        do {
+            try DatabaseManager.shared.reorderPlaylist(playlistId: playlistId, orderedEntryIDs: order)
+            registerUndo(name: String(localized: "Move Song")) { controller in
+                try? DatabaseManager.shared.reorderPlaylist(playlistId: playlistId, orderedEntryIDs: before)
+                NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
+                controller.view.window?.undoManager?.setActionName(String(localized: "Move Song"))
+            }
+        } catch {
+            MidgarLog.error("Playlist reorder failed: \(error.localizedDescription)", category: .database)
+            MacToast.show(PlaylistCopy.writeFailed(playlist.name), style: .error, in: view.window)
+        }
         NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
+    }
+
+    private func registerUndo(name: String, _ handler: @escaping (PlaylistDetailViewController) -> Void) {
+        guard let undo = view.window?.undoManager else { return }
+        undo.registerUndo(withTarget: self, handler: handler)
+        undo.setActionName(name)
+    }
+
+    /// The line under the songs that names how many the library lost, with a
+    /// button that takes them out.
+    private func configureMissingBar() {
+        missingLabel.font = .systemFont(ofSize: 12)
+        missingLabel.textColor = MacColors.secondaryLabel
+        let button = NSButton(title: String(localized: "Remove Missing Songs"), target: self, action: #selector(removeMissing))
+        button.bezelStyle = .push
+        button.controlSize = .small
+        missingBar.setViews([missingLabel, button], in: .leading)
+        missingBar.orientation = .horizontal
+        missingBar.spacing = 10
+        missingBar.edgeInsets = NSEdgeInsets(top: 12, left: 8, bottom: 0, right: 8)
+        missingBar.isHidden = true
+    }
+
+    @objc private func removeMissing() {
+        remove(ids: missingIds)
+    }
+
+    private func configureSuggestions() {
+        suggestionsView.isHidden = true
+        suggestionsView.onAdd = { [weak self] track in
+            guard let self, let id = self.playlist.id else { return }
+            PlaylistActions.add([track], toPlaylist: id, named: self.playlist.name, in: self.view.window)
+        }
+        suggestionsView.onRefresh = { [weak self] in
+            guard let self else { return }
+            self.suggestionsPage += 1
+            self.loadSuggestions()
+        }
+        suggestionsView.onHide = { [weak self] in
+            PlaylistSuggestionsSetting.setShown(false)
+            MacToast.showAction(PlaylistCopy.hideSuggestions, actionTitle: PlaylistCopy.undo, in: self?.view.window) {
+                PlaylistSuggestionsSetting.setShown(true)
+            }
+        }
+    }
+
+    @objc private func suggestionsSettingChanged() {
+        suggestionsBasis = []
+        reloadSuggestionsIfPlaylistChanged()
+    }
+
+    /// Builds the shelf again when the playlist's songs changed, so an added
+    /// suggestion makes room for the next one.
+    private func reloadSuggestionsIfPlaylistChanged() {
+        guard PlaylistSuggestionsSetting.isShown, !rows.isEmpty else {
+            suggestionsTask?.cancel()
+            suggestionsBasis = []
+            suggestionsView.show([])
+            return
+        }
+        let basis = Set(rows.map(\.record.trackFileURL))
+        guard basis != suggestionsBasis else { return }
+        suggestionsBasis = basis
+        loadSuggestions()
+    }
+
+    private func loadSuggestions() {
+        suggestionsTask?.cancel()
+        let playlist = rows.map(\.track)
+        let library = Library.shared.allTracks
+        let page = suggestionsPage
+        suggestionsTask = Task { [weak self] in
+            var shown: [URL]?
+            for cachedOnly in [true, false] {
+                let found = await Task.detached(priority: .utility) {
+                    await PlaylistSuggestionLoader.suggestions(for: playlist, library: library, page: page, cachedOnly: cachedOnly)
+                }.value
+                guard !Task.isCancelled, let self, PlaylistSuggestionsSetting.isShown else { return }
+                guard found.map(\.fileURL) != shown else { continue }
+                shown = found.map(\.fileURL)
+                self.pageFrame?.preservingScroll { self.suggestionsView.show(found) }
+            }
+        }
     }
 
     #if DEBUG
