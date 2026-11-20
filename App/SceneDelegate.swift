@@ -382,12 +382,28 @@ final class RootContainerViewController: UIViewController {
         super.viewDidLayoutSubviews()
         reportResizeIfLaidOut()
         guard !isAnimatingColumn else { return }
+        keepColumnTurnFitting()
         if let geometry = desiredSplitGeometry() {
             guard !isSplit || geometry != appliedGeometry else { return }
             applySplitLayout(geometry)
         } else if isSplit {
             applyCompactLayout()
+            returnSidebarIfSteppedBack()
         }
+    }
+
+    /// The column's turn holds through a resize: a window that narrows until a
+    /// docked sidebar would leave the library too narrow beside the column has
+    /// the sidebar step back, as it did when the column took the turn, instead
+    /// of three crowded panes.
+    private func keepColumnTurnFitting() {
+        guard sideTurn == .column, splitStyle == .column, PlayerColumnSetting.isShown, hasCurrentTrack else { return }
+        let size = view.bounds.size
+        let sidebar = dockedSidebarWidth
+        guard sidebar > 0, AdaptiveLayout.usesSplit(size: size, style: .column),
+              !AdaptiveLayout.columnFitsBesideSidebar(width: size.width, sidebarWidth: sidebar) else { return }
+        setSidebarHidden(true)
+        sidebarSteppedBack = true
     }
 
     private var splitStyle: AdaptiveLayout.SplitStyle {

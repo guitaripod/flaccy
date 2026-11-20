@@ -557,8 +557,8 @@ enum DemoRouter {
                 try? await Task.sleep(for: .seconds(2.5))
                 tabs.sidebar.isHidden = false
             }
-            if DemoMode.environment["FLACCY_HIDE_COLUMN_LATER"] == "1" {
-                try? await Task.sleep(for: .seconds(2.5))
+            if let later = DemoMode.environment["FLACCY_HIDE_COLUMN_LATER"] {
+                try? await Task.sleep(for: .seconds(later == "1" ? 2.5 : Double(later) ?? 2.5))
                 PlayerColumnSetting.setShown(false)
             }
             if let scroll = Double(DemoMode.environment["FLACCY_HOME_SCROLL"] ?? "") {
