@@ -24,6 +24,10 @@ actor RemoteCatalogSync {
     static let coverSize = 600
 
     private var running: [String: Task<RemoteSyncReport, Error>] = [:]
+    /// Per running sync, the songs the library already lists: those it held when the sync began and those a page has shown since.
+    private var listed: [String: Set<String>] = [:]
+    /// Per running sync, how many songs a page showed before the sync's own diff ran.
+    private var shownEarly: [String: Int] = [:]
 
     /// Syncs every server whose last sync is older than six hours, or that never synced, and sends the stars that did not reach their server.
     func syncStaleServers(now: Date = Date()) async {
@@ -104,7 +108,13 @@ actor RemoteCatalogSync {
         let database = DatabaseManager.shared
         let started = Date()
         Task { if let total = await client.songTotal() { RemoteSyncStatus.shared.update(serverID: serverID, songTotal: total) } }
-        let songs = try await fetchAllSongs(client)
+        listed[serverID] = Set(try database.fetchRemoteCatalogItems(serverID: serverID).map(\.id))
+        shownEarly[serverID] = 0
+        defer {
+            listed[serverID] = nil
+            shownEarly[serverID] = nil
+        }
+        let songs = try await fetchAllSongs(client, serverID: serverID, now: started)
         try Task.checkCancellation()
         let server = songs.map(Self.item(from:))
         let local = try database.fetchRemoteCatalogItems(serverID: serverID)
@@ -138,7 +148,7 @@ actor RemoteCatalogSync {
         }
         let report = RemoteSyncReport(
             songs: songs.count,
-            inserted: diff.inserted.count,
+            inserted: diff.inserted.count + (shownEarly[serverID] ?? 0),
             updated: diff.updated.count,
             newVersions: diff.newVersions.count,
             removed: diff.removed.count
@@ -148,7 +158,9 @@ actor RemoteCatalogSync {
     }
 
     /// Every song of the server through `search3` pages; a server that answers an empty query with nothing is read album by album.
-    private func fetchAllSongs(_ client: SubsonicClient) async throws -> [SubsonicResponse.Child] {
+    /// The songs of each page that the library does not list yet are shown before the next page is asked for, so a first sync of a
+    /// large library fills the screens as it reads instead of leaving them empty until the last page.
+    private func fetchAllSongs(_ client: SubsonicClient, serverID: String, now: Date) async throws -> [SubsonicResponse.Child] {
         var songs: [SubsonicResponse.Child] = []
         var seen = Set<String>()
         var offset = 0
@@ -158,15 +170,17 @@ actor RemoteCatalogSync {
             let page = try await client.songsPage(offset: offset, size: Self.pageSize)
             guard let first = page.first, first.id != previousFirst else { break }
             previousFirst = first.id
-            for song in page where seen.insert(song.id).inserted { songs.append(song) }
+            let fresh = page.filter { seen.insert($0.id).inserted }
+            songs.append(contentsOf: fresh)
             offset += page.count
             RemoteSyncStatus.shared.update(serverID: client.serverID, songsRead: songs.count)
+            try await show(fresh, serverID: serverID, now: now)
         }
-        if songs.isEmpty { return try await fetchSongsAlbumByAlbum(client) }
+        if songs.isEmpty { return try await fetchSongsAlbumByAlbum(client, serverID: serverID, now: now) }
         return songs
     }
 
-    private func fetchSongsAlbumByAlbum(_ client: SubsonicClient) async throws -> [SubsonicResponse.Child] {
+    private func fetchSongsAlbumByAlbum(_ client: SubsonicClient, serverID: String, now: Date) async throws -> [SubsonicResponse.Child] {
         var albumIDs: [String] = []
         var offset = 0
         var previousFirst: String?
@@ -189,12 +203,35 @@ actor RemoteCatalogSync {
             }
             for _ in 0..<Self.albumParallelism { _ = addNext(&group) }
             for try await batch in group {
-                for song in batch where seen.insert(song.id).inserted { songs.append(song) }
+                let fresh = batch.filter { seen.insert($0.id).inserted }
+                songs.append(contentsOf: fresh)
                 RemoteSyncStatus.shared.update(serverID: client.serverID, songsRead: songs.count)
+                try await show(fresh, serverID: serverID, now: now)
                 _ = addNext(&group)
             }
         }
         return songs
+    }
+
+    /// Adds a page's songs that the library does not list yet and reloads the screens. Songs it already lists wait for the sync's
+    /// own diff, which also applies every change and removal once the whole catalog is read.
+    private func show(_ songs: [SubsonicResponse.Child], serverID: String, now: Date) async throws {
+        guard var known = listed[serverID] else { return }
+        let unseen = songs.filter { known.insert($0.id).inserted }
+        listed[serverID] = known
+        guard !unseen.isEmpty else { return }
+        let change = RemoteCatalogChange(
+            serverID: serverID,
+            inserts: unseen.map { (songID: $0.id, facts: Self.facts(from: $0)) },
+            updates: [],
+            newVersions: [],
+            removedSongIDs: [],
+            playStates: unseen.map(Self.playState(of:)),
+            now: now
+        )
+        try DatabaseManager.shared.applyRemoteCatalog(change)
+        shownEarly[serverID, default: 0] += unseen.count
+        await publishLibraryChange()
     }
 
     /// Fetches the cover of every album the library has no cover for, once per album, a few at a time.
