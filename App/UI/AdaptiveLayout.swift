@@ -39,13 +39,25 @@ enum AdaptiveLayout {
 
     static let homeWideMinimumWidth: CGFloat = 760
     static let homeWideJumpColumns = 3
+    static let homeThreeJumpColumnsMinimumWidth: CGFloat = 700
 
     static let columnLibraryBesideSidebarMinimum: CGFloat = 540
+
+    static let playerTallPortraitMinimumWidth: CGFloat = 600
+    static let playerTallPortraitMinimumHeight: CGFloat = 900
 
     /// Whether Home has room for its iPad-class arrangement, judged from the
     /// width its own content area was given, never from the device.
     static func homeIsWide(contentWidth: CGFloat) -> Bool {
         contentWidth >= homeWideMinimumWidth
+    }
+
+    /// How many tiles Jump Back In lays side by side: three beside the hero on
+    /// a wide Home, three under it once the page is as wide as an upright iPad
+    /// mini, where two tiles each half the page wide were mostly empty grey,
+    /// and two on a phone, where three would break the titles.
+    static func homeJumpColumns(contentWidth: CGFloat) -> Int {
+        contentWidth >= homeThreeJumpColumnsMinimumWidth ? homeWideJumpColumns : 2
     }
 
     /// Whether the library keeps `columnLibraryBesideSidebarMinimum` between a
@@ -71,6 +83,20 @@ enum AdaptiveLayout {
     /// player carries playback meanwhile.
     static func columnWaits(width: CGFloat, sidebarWidth: CGFloat, turn: SideTurn) -> Bool {
         turn == .sidebar && !columnFitsBesideSidebar(width: width, sidebarWidth: sidebarWidth)
+    }
+
+    /// How much of the view's height the cover may take in the single column:
+    /// the Now Playing column keeps room for its title and Up Next, a phone
+    /// keeps room for its controls, and an iPad held upright, a mini included,
+    /// has height to spare above the controls and gives it to the cover. A
+    /// display a fold runs across keeps the phone's share, so the cover never
+    /// grows over the hinge of a Duo opened flat.
+    static func portraitArtworkShare(size: CGSize, isColumnPane: Bool, hasFold: Bool = false) -> CGFloat {
+        if isColumnPane { return 0.34 }
+        if !hasFold, size.width >= playerTallPortraitMinimumWidth, size.height >= playerTallPortraitMinimumHeight {
+            return 0.58
+        }
+        return 0.42
     }
 
     /// How a window that holds the library beside Now Playing divides. A

@@ -254,4 +254,20 @@ nonisolated final class AdaptiveLayoutTests: XCTestCase {
         XCTAssertTrue(AdaptiveLayout.columnFitsBesideSidebar(width: 1376, sidebarWidth: 300))
         XCTAssertFalse(AdaptiveLayout.columnWaits(width: 1210, sidebarWidth: 280, turn: .sidebar))
     }
+
+    @MainActor func testJumpBackInTakesThreeTilesOnAnUprightMini() {
+        XCTAssertEqual(AdaptiveLayout.homeJumpColumns(contentWidth: 393), 2)
+        XCTAssertEqual(AdaptiveLayout.homeJumpColumns(contentWidth: 669), 2)
+        XCTAssertEqual(AdaptiveLayout.homeJumpColumns(contentWidth: 724), 3)
+        XCTAssertEqual(AdaptiveLayout.homeJumpColumns(contentWidth: 756), 3)
+    }
+
+    @MainActor func testUprightIPadGivesTheCoverMoreOfTheHeight() {
+        XCTAssertEqual(AdaptiveLayout.portraitArtworkShare(size: CGSize(width: 756, height: 1158), isColumnPane: false), 0.58)
+        XCTAssertEqual(AdaptiveLayout.portraitArtworkShare(size: CGSize(width: 756, height: 1000), isColumnPane: false), 0.58)
+        XCTAssertEqual(AdaptiveLayout.portraitArtworkShare(size: CGSize(width: 834, height: 1210), isColumnPane: false), 0.58)
+        XCTAssertEqual(AdaptiveLayout.portraitArtworkShare(size: CGSize(width: 402, height: 874), isColumnPane: false), 0.42)
+        XCTAssertEqual(AdaptiveLayout.portraitArtworkShare(size: CGSize(width: 669, height: 951), isColumnPane: false, hasFold: true), 0.42)
+        XCTAssertEqual(AdaptiveLayout.portraitArtworkShare(size: CGSize(width: 360, height: 756), isColumnPane: true), 0.34)
+    }
 }

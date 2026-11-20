@@ -18,7 +18,12 @@ extension NowPlayingViewController {
             size: size, horizontalFold: view.activeHorizontalFold, focus: focus, hasFold: view.divisionRegionFrame != nil
         )
         let controlsSide = view.reachableControlsSide(otherwise: .trailing)
-        if desired != layoutMode || (desired == .landscape && controlsSide != landscapeControlsSide) {
+        let artworkShare = AdaptiveLayout.portraitArtworkShare(
+            size: size, isColumnPane: isColumnPane, hasFold: view.divisionRegionFrame != nil
+        )
+        if desired != layoutMode || (desired == .landscape && controlsSide != landscapeControlsSide)
+            || (desired == .portrait && artworkShare != appliedArtworkShare) {
+            appliedArtworkShare = artworkShare
             MidgarLog.debug("Now Playing layout \(desired) for \(size), fold \(String(describing: view.activeHorizontalFold)), controls \(controlsSide)", category: .ui)
             layoutMode = desired
             landscapeControlsSide = controlsSide
@@ -64,7 +69,12 @@ extension NowPlayingViewController {
                 bottomControls.leadingAnchor.constraint(equalTo: portraitColumn.leadingAnchor),
                 bottomControls.trailingAnchor.constraint(equalTo: portraitColumn.trailingAnchor),
                 bottomControls.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -16),
-                artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: isColumnPane ? 0.34 : 0.42),
+                artworkContainer.heightAnchor.constraint(
+                    lessThanOrEqualTo: view.heightAnchor,
+                    multiplier: AdaptiveLayout.portraitArtworkShare(
+                        size: view.bounds.size, isColumnPane: isColumnPane, hasFold: view.divisionRegionFrame != nil
+                    )
+                ),
                 stateContentContainer.leadingAnchor.constraint(equalTo: portraitColumn.leadingAnchor, constant: -columnMargin),
                 stateContentContainer.trailingAnchor.constraint(equalTo: portraitColumn.trailingAnchor, constant: columnMargin),
                 stateContentContainer.topAnchor.constraint(equalTo: compactHeader.bottomAnchor, constant: 10),

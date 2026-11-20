@@ -80,6 +80,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     var volumeRowView = UIView()
     var layoutMode: AdaptiveLayout.PlayerLayout = .portrait
     var landscapeControlsSide: AdaptiveLayout.Side = .trailing
+    var appliedArtworkShare: CGFloat = 0
     var modeConstraints: [NSLayoutConstraint] = []
     var laptopFoldTopConstraint: NSLayoutConstraint?
     var laptopFoldBottomConstraint: NSLayoutConstraint?

@@ -40,7 +40,9 @@ extension HomeViewController {
         case .heroWithJump:
             let count = dataSource.snapshot().numberOfItems(inSection: id)
             return heroWithJumpSection(itemCount: count, pageInset: pageInset)
-        case .jumpBackIn: return jumpSection(columns: wide ? AdaptiveLayout.homeWideJumpColumns : 2, pageInset: pageInset)
+        case .jumpBackIn:
+            let columns = wide ? AdaptiveLayout.homeWideJumpColumns : AdaptiveLayout.homeJumpColumns(contentWidth: width)
+            return jumpSection(columns: columns, pageInset: pageInset)
         case .madeForYou:
             return shelfSection(width: HomeMixCardCell.artSide, height: HomeMixCardCell.artSide + 66, pageInset: pageInset)
         case .recentlyAdded:
