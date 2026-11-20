@@ -137,11 +137,50 @@ nonisolated final class AdaptiveLayoutTests: XCTestCase {
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 951, height: 669), horizontalFold: nil, hasFold: true), .portrait)
     }
 
+    @MainActor func testAPhoneOnItsSideKeepsThePhonesProportions() {
+        XCTAssertEqual(AdaptiveLayout.landscapeSplit(size: CGSize(width: 932, height: 430)), .proportional)
+        XCTAssertEqual(AdaptiveLayout.landscapeSplit(size: CGSize(width: 874, height: 402)), .proportional)
+        XCTAssertEqual(AdaptiveLayout.landscapeSplit(size: CGSize(width: 667, height: 375)), .proportional)
+        XCTAssertEqual(AdaptiveLayout.landscapeSplit(size: CGSize(width: 1000, height: 560)), .proportional)
+    }
+
+    @MainActor func testAnIPadOnItsSideGivesTheControlsAColumnTheCoverCanSpare() {
+        XCTAssertEqual(AdaptiveLayout.landscapeSplit(size: CGSize(width: 1194, height: 834)), .sideColumn(controlsWidth: 440))
+        XCTAssertEqual(AdaptiveLayout.landscapeSplit(size: CGSize(width: 1376, height: 1032)), .sideColumn(controlsWidth: 440))
+        XCTAssertEqual(AdaptiveLayout.landscapeSplit(size: CGSize(width: 1158, height: 756)), .sideColumn(controlsWidth: 440))
+        XCTAssertEqual(AdaptiveLayout.landscapeSplit(size: CGSize(width: 773, height: 756)), .sideColumn(controlsWidth: 340))
+        XCTAssertEqual(AdaptiveLayout.landscapeSplit(size: CGSize(width: 800, height: 834)), .sideColumn(controlsWidth: 340))
+        guard case .sideColumn(let narrowing) = AdaptiveLayout.landscapeSplit(size: CGSize(width: 951, height: 669)) else {
+            return XCTFail("a 951 x 669 window has room for the side column")
+        }
+        XCTAssertEqual(narrowing, 951 - 84 - 669 * 0.72, accuracy: 0.5)
+    }
+
+    @MainActor func testTheCoverBesideTheControlsIsNeverSmallerThanAboveThem() {
+        let sizes = [
+            CGSize(width: 800, height: 834), CGSize(width: 773, height: 756), CGSize(width: 834, height: 600),
+            CGSize(width: 1158, height: 756), CGSize(width: 1194, height: 834), CGSize(width: 951, height: 669),
+            CGSize(width: 720, height: 800), CGSize(width: 760, height: 834), CGSize(width: 900, height: 1000),
+        ]
+        for size in sizes where size.height > AdaptiveLayout.playerLandscapeMaximumHeight {
+            guard AdaptiveLayout.playerLayout(size: size, horizontalFold: nil) == .landscape else { continue }
+            XCTAssertGreaterThanOrEqual(
+                AdaptiveLayout.sideBySideCover(size: size), AdaptiveLayout.portraitCover(size: size, hasFold: false),
+                "\(size)"
+            )
+        }
+        XCTAssertEqual(AdaptiveLayout.sideBySideCover(size: CGSize(width: 800, height: 834)), 376)
+        XCTAssertEqual(AdaptiveLayout.portraitCover(size: CGSize(width: 800, height: 834), hasFold: false), 834 * 0.42, accuracy: 0.01)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 756, height: 1158), horizontalFold: nil), .portrait)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 834, height: 1194), horizontalFold: nil), .portrait)
+    }
+
     @MainActor func testASquarishIPadWindowPutsTheCoverBesideTheControls() {
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 800, height: 834), horizontalFold: nil), .landscape)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 834, height: 600), horizontalFold: nil), .landscape)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 951, height: 669), horizontalFold: nil), .landscape)
-        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 720, height: 800), horizontalFold: nil), .landscape)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 773, height: 756), horizontalFold: nil), .landscape)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 720, height: 800), horizontalFold: nil), .portrait)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 834, height: 1210), horizontalFold: nil), .portrait)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 744, height: 1133), horizontalFold: nil), .portrait)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 592, height: 834), horizontalFold: nil), .portrait)

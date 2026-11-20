@@ -21,7 +21,10 @@ extension NowPlayingViewController {
         let artworkShare = AdaptiveLayout.portraitArtworkShare(
             size: size, isColumnPane: isColumnPane, hasFold: view.divisionRegionFrame != nil
         )
-        if desired != layoutMode || (desired == .landscape && controlsSide != landscapeControlsSide)
+        let split = desired == .landscape ? AdaptiveLayout.landscapeSplit(size: size) : nil
+        let splitKindChanged = split?.isSideColumn != appliedLandscapeSplit?.isSideColumn
+        if desired != layoutMode
+            || (desired == .landscape && (controlsSide != landscapeControlsSide || splitKindChanged))
             || (desired == .portrait && artworkShare != appliedArtworkShare) {
             appliedArtworkShare = artworkShare
             MidgarLog.debug("Now Playing layout \(desired) for \(size), fold \(String(describing: view.activeHorizontalFold)), controls \(controlsSide)", category: .ui)
@@ -31,6 +34,10 @@ extension NowPlayingViewController {
             case .laptop(let top, let bottom): activateLayoutMode(desired, foldTop: top, foldBottom: bottom)
             default: activateLayoutMode(desired, foldTop: nil, foldBottom: nil)
             }
+            view.setNeedsLayout()
+        } else if case .sideColumn(let width) = split, let column = landscapeControlsWidth, column.constant != width {
+            column.constant = width
+            appliedLandscapeSplit = split
             view.setNeedsLayout()
         } else if usesCompactControls(in: layoutMode) != compactControlsApplied {
             applyControlFit(for: layoutMode)
@@ -175,21 +182,35 @@ extension NowPlayingViewController {
 
     static let portraitMediaInset: CGFloat = 24
 
-    /// Puts the controls column against the side of the window the person's
-    /// thumb reaches (the screen edge a shared window lies against, the
-    /// trailing side otherwise), no wider than the controls read well, so on
-    /// a whole landscape iPad play and skip sit within a thumb's reach of the
-    /// edge rather than in the middle of the screen; the cover, the lyrics or
-    /// the queue take the rest of the width.
+    /// Puts the controls against the side of the window the person's thumb
+    /// reaches (the screen edge a shared window lies against, the trailing side
+    /// otherwise). A short window keeps the phone's proportions; a taller one
+    /// gives the controls a column no wider than they read well and the cover
+    /// can spare (`AdaptiveLayout.landscapeSplit`), so on a whole landscape
+    /// iPad play and skip sit within a thumb's reach of the edge rather than in
+    /// the middle of the screen. The cover, the lyrics or the queue take the
+    /// rest of the width.
     private func landscapeSides(in safe: UILayoutGuide) -> [NSLayoutConstraint] {
-        let preferredWidth = landscapeControlsRegion.widthAnchor.constraint(
-            equalToConstant: AdaptiveLayout.playerSideControlsWidth
-        )
-        preferredWidth.priority = .defaultHigh
-        let width = [
-            preferredWidth,
-            landscapeControlsRegion.widthAnchor.constraint(lessThanOrEqualTo: safe.widthAnchor, multiplier: 0.6),
-        ]
+        let split = AdaptiveLayout.landscapeSplit(size: view.bounds.size)
+        appliedLandscapeSplit = split
+        landscapeControlsWidth = nil
+        let width: [NSLayoutConstraint]
+        switch split {
+        case .proportional:
+            width = [
+                centerContainer.widthAnchor.constraint(
+                    equalTo: safe.widthAnchor, multiplier: centerState == .artwork ? 0.36 : 0.5
+                ),
+            ]
+        case .sideColumn(let controlsWidth):
+            let preferredWidth = landscapeControlsRegion.widthAnchor.constraint(equalToConstant: controlsWidth)
+            preferredWidth.priority = .defaultHigh
+            landscapeControlsWidth = preferredWidth
+            width = [
+                preferredWidth,
+                landscapeControlsRegion.widthAnchor.constraint(lessThanOrEqualTo: safe.widthAnchor, multiplier: 0.6),
+            ]
+        }
         guard landscapeControlsSide == .leading else {
             return width + [
                 centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),

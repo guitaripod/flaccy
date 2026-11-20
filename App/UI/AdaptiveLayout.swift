@@ -31,7 +31,11 @@ enum AdaptiveLayout {
     static let playerSideBySideMinimumAspect: CGFloat = 0.9
     static let playerContentMaximumWidth: CGFloat = 640
     static let playerControlsMaximumWidth: CGFloat = 560
-    static let playerSideControlsWidth: CGFloat = 440
+    static let playerSideControlsMaximumWidth: CGFloat = 440
+    static let playerSideControlsMinimumWidth: CGFloat = 340
+    static let playerSideMargins: CGFloat = 84
+    static let playerLandscapeArtworkShare: CGFloat = 0.72
+    static let playerPortraitColumnMargins: CGFloat = 56
     static let playerRoomyPortraitMinimumHeight: CGFloat = 700
     static let playerRoomyLandscapeMinimumHeight: CGFloat = 500
     static let paneQueueMinimumHeight: CGFloat = 150
@@ -327,11 +331,12 @@ enum AdaptiveLayout {
     /// single column.
     ///
     /// A window with no fold (an iPad's) also puts the cover beside the
-    /// controls once it is about as wide as it is tall and has room for both,
-    /// such as two thirds of a landscape iPad or the top half of a portrait
-    /// one: there the single column shrank the cover to a thumbnail above
-    /// controls stretched across the window. A foldable's inner display keeps
-    /// the rules its fold decides.
+    /// controls once it is about as wide as it is tall and the cover beside
+    /// the controls comes out at least as large as above them, such as two
+    /// thirds of a landscape iPad or the top half of a portrait one: there the
+    /// single column shrank the cover to a thumbnail above controls stretched
+    /// across the window. A foldable's inner display keeps the rules its fold
+    /// decides.
     static func playerLayout(
         size: CGSize, horizontalFold: ClosedRange<CGFloat>?, focus: SplitGeometry? = nil, hasFold: Bool = false
     ) -> PlayerLayout {
@@ -346,10 +351,54 @@ enum AdaptiveLayout {
             return .landscape
         }
         if !hasFold, size.width >= playerSideBySideMinimumWidth,
-           size.width >= size.height * playerSideBySideMinimumAspect {
+           size.width >= size.height * playerSideBySideMinimumAspect,
+           sideBySideCover(size: size) >= portraitCover(size: size, hasFold: hasFold) {
             return .landscape
         }
         return .portrait
+    }
+
+    /// How the landscape player shares its width between the centre (the
+    /// cover, the lyrics or the queue) and the controls. A short window (a
+    /// phone on its side) keeps the phone's proportions, the cover a little
+    /// over a third of the width and lyrics or the queue half; anything taller
+    /// gives the controls a column against the edge the thumb reaches, wide
+    /// enough to read and no wider than the cover can spare.
+    enum LandscapeSplit: Equatable {
+        case proportional
+        case sideColumn(controlsWidth: CGFloat)
+
+        var isSideColumn: Bool {
+            if case .sideColumn = self { return true }
+            return false
+        }
+    }
+
+    static func landscapeSplit(size: CGSize) -> LandscapeSplit {
+        guard size.height > playerLandscapeMaximumHeight else { return .proportional }
+        return .sideColumn(controlsWidth: playerSideControlsWidth(size: size))
+    }
+
+    /// The side controls column's width: its full 440 pt where the cover is
+    /// held back by the height anyway, narrowing to 340 pt so a window about
+    /// as wide as it is tall still gives the cover the room it would have had
+    /// above the controls.
+    static func playerSideControlsWidth(size: CGSize) -> CGFloat {
+        let besideFullCover = size.width - playerSideMargins - size.height * playerLandscapeArtworkShare
+        return min(playerSideControlsMaximumWidth, max(playerSideControlsMinimumWidth, besideFullCover))
+    }
+
+    /// The cover's side when it stands beside the side controls column.
+    static func sideBySideCover(size: CGSize) -> CGFloat {
+        let centre = size.width - playerSideMargins - playerSideControlsWidth(size: size)
+        return max(0, min(centre, size.height * playerLandscapeArtworkShare))
+    }
+
+    /// The cover's side in the whole-window single column of the same size.
+    static func portraitCover(size: CGSize, hasFold: Bool) -> CGFloat {
+        let column = min(size.width - playerPortraitColumnMargins, playerContentMaximumWidth)
+        let share = portraitArtworkShare(size: size, isColumnPane: false, hasFold: hasFold)
+        return max(0, min(column, size.height * share))
     }
 
     /// A physical side of the screen, whatever the writing direction.
