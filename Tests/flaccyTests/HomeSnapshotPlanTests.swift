@@ -23,6 +23,14 @@ nonisolated final class HomeSnapshotPlanTests: XCTestCase {
         XCTAssertEqual(plan.first?.items, [.getStarted])
     }
 
+    func testUpNextWithNoMixToLeadWithShowsTheLibraryInstead() {
+        XCTAssertEqual(HomeFeedBuilder.heroToShow(.upNext, hasUpNext: false), .dayOne)
+        XCTAssertEqual(HomeFeedBuilder.heroToShow(.upNext, hasUpNext: true), .upNext)
+        XCTAssertEqual(HomeFeedBuilder.heroToShow(.resume, hasUpNext: false), .resume)
+        XCTAssertEqual(HomeFeedBuilder.heroToShow(.dayOne, hasUpNext: false), .dayOne)
+        XCTAssertEqual(HomeFeedBuilder.heroToShow(.empty, hasUpNext: false), .empty)
+    }
+
     @MainActor func testGetStartedTakesTheHeroSlotAndTheRestOfHomeStays() {
         let plan = plan(feed(hero: .dayOne, blocks: [.single(.madeForYou)], promo: .getStarted))
         XCTAssertEqual(plan.map(\.section), [.hero, .madeForYou, .footer])

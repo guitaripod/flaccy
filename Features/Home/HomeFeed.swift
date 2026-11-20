@@ -169,8 +169,9 @@ nonisolated enum HomeFeedBuilder {
             hasOnThisDay: memory != nil,
             hasWeekPlays: week.hasPlays
         )
-        let hero = HomeComposer.hero(for: facts)
-        let upNext = hero == .upNext ? upNextCard(mixes: mixes, index: index) : nil
+        let composed = HomeComposer.hero(for: facts)
+        let upNext = composed == .upNext ? upNextCard(mixes: mixes, index: index) : nil
+        let hero = heroToShow(composed, hasUpNext: upNext != nil)
         let dayOne = hero == .dayOne ? dayOneCard(inputs, recentlyAdded: recentlyAdded) : nil
 
         return HomeFeed(
@@ -188,6 +189,13 @@ nonisolated enum HomeFeedBuilder {
             promo: promo.card,
             proofLines: promo.proof
         )
+    }
+
+    /// Up Next leads with a mix, and a library with only a little history has
+    /// none to lead with yet. Home then shows what a new library shows, as the
+    /// Linux client does, and never a hero with nothing in it.
+    nonisolated static func heroToShow(_ hero: HomeHero, hasUpNext: Bool) -> HomeHero {
+        hero == .upNext && !hasUpNext ? .dayOne : hero
     }
 
     /// The one card Home spends on getting music in or on Flaccy Pro, through
