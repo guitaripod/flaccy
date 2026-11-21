@@ -71,8 +71,10 @@ final class ShowcaseViewController: UIViewController {
     /// How long after the sheet starts to rise the entrance begins, so the two overlap and neither waits for the other.
     private static let entranceDelay: TimeInterval = 0.24
 
-    /// Opens the second page, where everything Flaccy can do is listed.
+    /// Opens the second page, where everything Flaccy can do is listed. The first page is loaded first, so the second
+    /// takes the foot the person's trial calls for even when a launch opens straight on it.
     func showEverything(animated: Bool) {
+        loadViewIfNeeded()
         tap.impactOccurred()
         let everything = ShowcaseFeaturesViewController(footer: footer)
         everything.onFinish = { [weak self] action in self?.finish(with: action) }
