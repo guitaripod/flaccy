@@ -236,7 +236,7 @@ final class ServerMoveService {
         let previous = filesTask
         let task = Task { [weak self] () -> ServerMoveFileOutcome in
             _ = await previous?.value
-            let inUse = await self?.inUseLocalPaths() ?? []
+            let inUse = self?.inUseLocalPaths() ?? []
             return await ServerMoveFiles.finishPending(sparing: inUse, progress: progress)
         }
         filesTask = task
