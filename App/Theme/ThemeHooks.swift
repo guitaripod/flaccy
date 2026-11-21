@@ -62,23 +62,39 @@ enum ThemeHooks {
         return ThemedColor.replacing(color) ?? color
     }
 
+    private static var appClasses: [ObjectIdentifier: Bool] = [:]
+
+    /// Whether an object's class is one the app defines, remembered per
+    /// class.
+    private static func isApps(_ object: AnyObject) -> Bool {
+        let type: AnyClass = Swift.type(of: object)
+        let key = ObjectIdentifier(type)
+        if let known = appClasses[key] { return known }
+        let own = Bundle(for: type) == .main
+        appClasses[key] = own
+        return own
+    }
+
     /// Whether a label belongs to the system's own chrome, which the system
     /// sizes for its own face: a tab bar, the iPad's floating tab bar and
     /// sidebar, a navigation bar's title and buttons, an alert, a text
     /// field's prompt. A wider face there cut "Library" and "Edit" short and
     /// ran a search field's prompt out of room, so chrome keeps the system's
     /// face and takes only the theme's colors. Chrome is told from content
-    /// by who owns it: the first view controller up from the label is a
-    /// container or one UIKit made, where content sits in one of the app's.
+    /// by who owns it: going up from the label, content meets one of the
+    /// app's own views or view controllers first (the mini player is the
+    /// app's even where it rides in the tab bar), chrome meets a container
+    /// or a controller UIKit made.
     private static func keepsSystemFace(_ label: UILabel) -> Bool {
-        var responder = label.next
+        var responder: UIResponder? = label
         var steps = 0
         while let current = responder, steps < 48 {
             if current is UITextField { return true }
             if let controller = current as? UIViewController {
                 return controller is UITabBarController || controller is UINavigationController
-                    || controller is UISplitViewController || Bundle(for: type(of: controller)) != .main
+                    || controller is UISplitViewController || !isApps(controller)
             }
+            if isApps(current) { return false }
             responder = current.next
             steps += 1
         }
