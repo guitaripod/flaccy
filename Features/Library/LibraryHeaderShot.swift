@@ -7,8 +7,8 @@ import UIKit
 /// the app opens the Library's songs and writes three pictures of its own window to
 /// `tmp/header-shot/`: the list at its top, the list after a jump from the A-Z index
 /// (under the shown header), and the header collapsed. It logs `HEADER SHOT
-/// DONE` when the jump held and `HEADER SHOT FAILED` when the list fell back
-/// to its top.
+/// DONE` when the jump held on a song under M and `HEADER SHOT FAILED` when
+/// the list fell back to its top or the index pointed at another row.
 @MainActor
 enum LibraryHeaderShot {
 
@@ -36,11 +36,13 @@ enum LibraryHeaderShot {
             library.view.layoutIfNeeded()
             try? await Task.sleep(for: .seconds(1))
             write(window, to: folder, named: "collapsed")
-            if travelled > 200, let landing, (-1...40).contains(landing) {
+            let songs = library.viewModel.visibleSongs
+            let landed = library.viewModel.indexOfFirstItem(forLetter: "M").flatMap { songs.indices.contains($0) ? songs[$0].title : nil }
+            if travelled > 200, let landing, (-1...40).contains(landing), landed?.uppercased().hasPrefix("M") == true {
                 MidgarLog.info("HEADER SHOT DONE: the index jump held \(Int(travelled)) pt down, its row \(Int(landing)) pt under the header", category: .ui)
             } else {
                 MidgarLog.error(
-                    "HEADER SHOT FAILED: the index jump is \(Int(travelled)) pt from the top, its row \(landing.map { "\(Int($0)) pt under the header" } ?? "not on screen")",
+                    "HEADER SHOT FAILED: the index jump is \(Int(travelled)) pt from the top, its row \(landing.map { "\(Int($0)) pt under the header" } ?? "not on screen"), the song it points at \(landed?.uppercased().hasPrefix("M") == true ? "starts" : "does not start") with M",
                     category: .ui
                 )
             }

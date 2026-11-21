@@ -586,19 +586,28 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    /// Makes an index jump a second time once the list has laid out. A jump
-    /// made while the search bar is showing collapses the bar, and the list's
-    /// next layout pass then puts the list back at its top (iOS 18 and 27
-    /// alike); and a far jump over rows whose heights are still estimates lands
-    /// a row off, with the wanted row under the header. The second jump starts
-    /// from a collapsed bar and measured rows, so it stays and lands exactly.
-    func settleJump(to indexPath: IndexPath) {
+    /// Checks an index jump once the list has laid out, and corrects it at
+    /// most twice. A jump made while the search bar is showing collapses the
+    /// bar, and the list's next layout pass then puts the list back at its top
+    /// (iOS 18 and 27 alike): the jump is made again. A jump that held but left
+    /// its row above or below the header's edge is moved by the difference. It
+    /// never forces a layout pass itself: doing that between the two jumps hung
+    /// the app on iOS 18.
+    func settleJump(to indexPath: IndexPath, attemptsLeft: Int = 2) {
+        guard attemptsLeft > 0 else { return }
         DispatchQueue.main.async { [weak self] in
-            guard let self,
-                  indexPath.section < self.collectionView.numberOfSections,
-                  indexPath.item < self.collectionView.numberOfItems(inSection: indexPath.section) else { return }
-            self.collectionView.layoutIfNeeded()
-            self.collectionView.scrollToItem(at: indexPath, at: .top, animated: false)
+            guard let self, let list = self.collectionView,
+                  indexPath.section < list.numberOfSections,
+                  indexPath.item < list.numberOfItems(inSection: indexPath.section) else { return }
+            let edge = list.contentOffset.y + list.adjustedContentInset.top
+            if let row = list.cellForItem(at: indexPath), edge >= 1 {
+                let gap = row.frame.minY - edge
+                guard abs(gap) >= 1 else { return }
+                list.contentOffset.y += gap
+            } else {
+                list.scrollToItem(at: indexPath, at: .top, animated: false)
+            }
+            self.settleJump(to: indexPath, attemptsLeft: attemptsLeft - 1)
         }
     }
 
