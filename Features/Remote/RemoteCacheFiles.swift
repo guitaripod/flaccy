@@ -1,5 +1,6 @@
 import FlaccyCore
 import FlaccyEngine
+import AVFoundation
 import Foundation
 import UniformTypeIdentifiers
 
@@ -105,8 +106,16 @@ nonisolated enum RemoteAudioType {
         case "wav", "wave": "com.microsoft.waveform-audio"
         case "aif", "aiff": "public.aiff-audio"
         case "caf": "com.apple.coreaudio-format"
+        case "ogg", "oga", "opus": "org.xiph.ogg-audio"
         default: "public.audio"
         }
+    }
+
+    /// The options an asset of this suffix is opened with. An Ogg file carries no length in its header, and
+    /// AVFoundation's guess from the bit rate runs minutes long, so a seek near the guessed end falls off the song
+    /// and the queue jumps ahead; asking for precise timing makes it read the real length.
+    static func assetOptions(forSuffix suffix: String?) -> [String: Any]? {
+        identifier(forSuffix: suffix) == "org.xiph.ogg-audio" ? [AVURLAssetPreferPreciseDurationAndTimingKey: true] : nil
     }
 }
 

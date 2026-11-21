@@ -68,6 +68,9 @@ nonisolated final class RemoteCacheFilesTests: XCTestCase {
         XCTAssertEqual(RemoteAudioType.identifier(forSuffix: "m4a"), "com.apple.m4a-audio")
         XCTAssertEqual(RemoteAudioType.identifier(forSuffix: "alac"), "com.apple.m4a-audio")
         XCTAssertEqual(RemoteAudioType.identifier(forSuffix: "wav"), "com.microsoft.waveform-audio")
+        XCTAssertEqual(RemoteAudioType.identifier(forSuffix: "opus"), "org.xiph.ogg-audio")
+        XCTAssertEqual(RemoteAudioType.identifier(forSuffix: "OGG"), "org.xiph.ogg-audio")
+        XCTAssertEqual(RemoteAudioType.identifier(forSuffix: "oga"), "org.xiph.ogg-audio")
         XCTAssertEqual(RemoteAudioType.identifier(forSuffix: "aiff"), "public.aiff-audio")
         XCTAssertEqual(RemoteAudioType.identifier(forSuffix: nil), "public.audio")
     }

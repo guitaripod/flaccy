@@ -27,6 +27,10 @@ public final class PlaybackEngine {
     var playingItem: AVPlayerItem?
     var preloadedItem: AVPlayerItem?
     var preloadedIndex: Int?
+    /// How often the playing song was built again after failing, and the preloaded one behind it; both start over
+    /// with every new song.
+    var playingItemRecoveries = 0
+    var preloadedItemRecoveries = 0
 
     var sleepTimer: Timer?
     public internal(set) var sleepTimerRemaining: TimeInterval?

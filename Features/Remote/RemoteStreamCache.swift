@@ -85,6 +85,7 @@ actor RemoteStreamCache {
         var activeStream: RemoteByteStream?
         var streamStopRequested = false
         var fetchCursor: Int64?
+        var bytesFetched: Int64 = 0
         var lastSidecarWrite = Date.distantPast
         var lastError: Error?
 
@@ -98,7 +99,9 @@ actor RemoteStreamCache {
     }
 
     private var entries: [String: Entry] = [:]
-    private var prefetchDemands: [String: UUID] = [:]
+    private var prefetchDemands: [String: (id: UUID, range: Range<Int64>)] = [:]
+    private var prefetchCurrent: RemoteTrackPath?
+    private var prefetchNext: RemoteTrackPath?
     private var protectedKeys: Set<String> = []
 
     init(cachesRoot: URL = RemoteCacheLayout.cachesRoot(), pinnedRoot: URL = RemoteCacheLayout.pinnedRoot()) {
@@ -257,20 +260,35 @@ actor RemoteStreamCache {
         protectedKeys = Set([current, next].compactMap { $0.map(RemoteCacheLayout.key(for:)) })
     }
 
-    /// Fetches the rest of the playing song and the first 2 MB of the next one, behind anything playback itself asks for.
+    /// Fetches the rest of the playing song and the first 2 MB of the next one, behind anything playback itself asks
+    /// for. Once the playing song is whole, the next one is fetched whole too, so the change of song never waits
+    /// for the network.
     func prefetch(current: RemoteTrackPath?, next: RemoteTrackPath?) {
+        prefetchCurrent = current
+        prefetchNext = next
         var wanted: [String: (RemoteTrackPath, Range<Int64>)] = [:]
-        if let current, completeFileURL(for: current) == nil { wanted[current.path] = (current, 0..<Int64.max) }
+        let currentIsWhole = current.map { completeFileURL(for: $0) != nil } ?? true
+        if let current, !currentIsWhole { wanted[current.path] = (current, 0..<Int64.max) }
         if let next, next != current, completeFileURL(for: next) == nil {
-            wanted[next.path] = (next, 0..<Self.prefetchHeadBytes)
+            wanted[next.path] = (next, currentIsWhole ? 0..<Int64.max : 0..<Self.prefetchHeadBytes)
         }
-        for (path, id) in prefetchDemands where wanted[path] == nil {
-            if let song = RemoteTrackPath(path: path) { endDemand(song, id) }
+        for (path, demand) in prefetchDemands where wanted[path]?.1 != demand.range {
             prefetchDemands[path] = nil
+            guard let song = RemoteTrackPath(path: path) else { continue }
+            if let request = wanted[path], let id = try? beginDemand(request.0, range: request.1, priority: .prefetch) {
+                prefetchDemands[path] = (id, request.1)
+            }
+            endDemand(song, demand.id)
         }
         for (path, request) in wanted where prefetchDemands[path] == nil {
-            if let id = try? beginDemand(request.0, range: request.1, priority: .prefetch) { prefetchDemands[path] = id }
+            if let id = try? beginDemand(request.0, range: request.1, priority: .prefetch) { prefetchDemands[path] = (id, request.1) }
         }
+    }
+
+    /// Widens the next song's prefetch to the whole file the moment the playing song has arrived in full.
+    private func prefetchNextWholeIfCurrentFinished(_ entry: Entry) {
+        guard entry.song == prefetchCurrent, entry.sidecar.isComplete else { return }
+        prefetch(current: prefetchCurrent, next: prefetchNext)
     }
 
     /// Removes every file of a server, cached or pinned, and stops whatever is fetching them.
@@ -749,13 +767,23 @@ extension RemoteStreamCache {
     }
 
     private func runFetches(_ entry: Entry) async {
+        var failures = 0
         while !Task.isCancelled, entries[entry.song.path] === entry {
             guard let target = nextTarget(entry) else { break }
+            let fetchedBefore = entry.bytesFetched
             do {
                 try await fetch(entry, target)
+                failures = 0
             } catch is CancellationError {
                 break
             } catch {
+                failures = entry.bytesFetched > fetchedBefore ? 1 : failures + 1
+                if Self.canPass(error), let delay = RemoteFetchRetry.delay(afterFailures: failures) {
+                    RemoteLog.info("Fetching \(entry.song.path) failed (\(error.localizedDescription)); trying again in \(delay) s")
+                    persist(entry)
+                    guard (try? await Task.sleep(for: .seconds(delay))) != nil else { break }
+                    continue
+                }
                 entry.lastError = error
                 noteReachability(after: error, entry: entry)
                 failWaiters(entry, with: error)
@@ -769,7 +797,18 @@ extension RemoteStreamCache {
         if entry.sidecar.isComplete {
             closeHandle(entry)
             RemoteAvailability.shared.setComplete(entry.song.path, true)
+            prefetchNextWholeIfCurrentFinished(entry)
             evictIfNeeded()
+        }
+    }
+
+    /// Whether a failed fetch is worth another try: the server not answering or failing for a moment, never a
+    /// refused sign-in, an untrusted connection or a full disk.
+    private static func canPass(_ error: Error) -> Bool {
+        switch error as? RemoteFailure {
+        case .unreachable: true
+        case .httpStatus(let status, _): RemoteFetchRetry.isTransient(httpStatus: status)
+        default: false
         }
     }
 
@@ -799,6 +838,7 @@ extension RemoteStreamCache {
                 try write(chunk, at: cursor, to: entry)
                 cursor += Int64(chunk.count)
                 entry.fetchCursor = cursor
+                entry.bytesFetched += Int64(chunk.count)
                 wroteAny = true
                 resumeSatisfiedWaiters(entry)
                 persistIfDue(entry)

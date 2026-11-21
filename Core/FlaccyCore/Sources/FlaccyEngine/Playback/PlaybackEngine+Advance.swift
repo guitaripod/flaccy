@@ -8,11 +8,21 @@ extension PlaybackEngine {
         guard let player else { return }
         let item = player.currentItem
         if item === playingItem { return }
+        if let failed = playingItem, failed.status == .failed {
+            recoverPlayingItem(reason: failed.error?.localizedDescription ?? "unknown")
+            return
+        }
         guard let item else {
-            handleQueueExhausted()
+            handlePlayerRanOut()
             return
         }
         if item === preloadedItem, let nextIndex = preloadedIndex {
+            if item.status == .failed {
+                MidgarLog.notice("Preloaded index \(nextIndex) had failed by the time it was reached; loading it again", category: .playback)
+                host?.trackDidFinishNaturally()
+                loadTrack(at: nextIndex)
+                return
+            }
             completeAutoAdvance(to: nextIndex, item: item)
             return
         }
@@ -23,6 +33,18 @@ extension PlaybackEngine {
         }
         MidgarLog.notice("Unrecognized current item after advance, reloading index \(currentIndex)", category: .playback)
         loadTrack(at: currentIndex)
+    }
+
+    /// The player holds no item any more. A queue with a song still to come (its preloaded item failed or was never
+    /// accepted) loads that song, and only a queue that is really played through counts as exhausted.
+    func handlePlayerRanOut() {
+        if playingItem != nil, !sleepAtEndOfTrack, let nextIndex = preloadTargetIndex(after: currentIndex) {
+            MidgarLog.notice("Player ran out with index \(nextIndex) still to play; loading it", category: .playback)
+            host?.trackDidFinishNaturally()
+            loadTrack(at: nextIndex)
+            return
+        }
+        handleQueueExhausted()
     }
 
     /// Recovers the queue index for an item the preload bookkeeping no longer knows,
@@ -47,6 +69,9 @@ extension PlaybackEngine {
         preloadedItem = nil
         preloadedIndex = nil
         lastKnownPlaybackPosition = 0
+        playingItemRecoveries = 0
+        preloadedItemRecoveries = 0
+        applyStallPolicy()
 
         let track = queue[currentIndex]
         MidgarLog.info("Auto-advance \(previousIndex) -> \(currentIndex): \(track.title) - \(track.artist)", category: .playback)

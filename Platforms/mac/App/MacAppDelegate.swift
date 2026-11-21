@@ -54,6 +54,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         PlaylistMakerExercise.runIfRequested()
         EqualizerDescribeExercise.runIfRequested()
         RemoteExercise.runIfRequested()
+        RemoteStreamDrill.runIfRequested()
         #endif
         MacLibrarySurfaceModel.shared.start()
 

@@ -25,7 +25,7 @@ nonisolated final class RemoteResourceLoader: NSObject, AVAssetResourceLoaderDel
 
     /// An asset for a song on a server that reads through this loader.
     func makeAsset(for song: RemoteTrackPath) -> AVURLAsset {
-        let asset = AVURLAsset(url: song.assetURL)
+        let asset = AVURLAsset(url: song.assetURL, options: RemoteAudioType.assetOptions(forSuffix: cache.suffix(of: song)))
         asset.resourceLoader.setDelegate(self, queue: queue)
         return asset
     }

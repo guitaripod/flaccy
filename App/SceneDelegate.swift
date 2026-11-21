@@ -57,6 +57,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         RemoteLaunch.start()
         #if DEBUG
         RemoteExercise.runIfRequested()
+        RemoteStreamDrill.runIfRequested()
         ServerSyncExercise.runIfRequested()
         ServerSyncReseedExercise.runIfRequested()
         ServerMoveExercise.runIfRequested()

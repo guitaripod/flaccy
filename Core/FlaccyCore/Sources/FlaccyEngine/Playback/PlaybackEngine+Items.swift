@@ -7,6 +7,7 @@ import FlaccyCore
 final class TrackPlayerItem: AVPlayerItem {
 
     let trackURL: URL
+    var statusObservation: NSKeyValueObservation?
 
     init(asset: AVAsset, trackURL: URL) {
         self.trackURL = trackURL
@@ -33,7 +34,25 @@ extension PlaybackEngine {
         }
         let item = TrackPlayerItem(asset: asset, trackURL: track.fileURL)
         host?.attachEqualizer(to: item, for: track)
+        observeFailure(of: item)
         return item
+    }
+
+    /// Tells the engine when an item can no longer play, whether it is the one playing or the one waiting behind it.
+    private func observeFailure(of item: TrackPlayerItem) {
+        item.statusObservation = item.observe(\.status, options: [.new]) { [weak self] observed, _ in
+            guard observed.status == .failed else { return }
+            let reason = observed.error?.localizedDescription ?? "unknown"
+            DispatchQueue.main.async { self?.handleItemFailed(observed, reason: reason) }
+        }
+    }
+
+    /// A song that streams from a server may run out of bytes for a moment, so the player waits for more instead of
+    /// pausing for good; a file on the device never waits, which keeps its start instant and its handover gapless.
+    func applyStallPolicy() {
+        guard let player else { return }
+        let streams = (playingItem?.asset as? AVURLAsset).map { !$0.url.isFileURL } ?? false
+        if player.automaticallyWaitsToMinimizeStalling != streams { player.automaticallyWaitsToMinimizeStalling = streams }
     }
 
     func makeConfiguredPlayer(with item: AVPlayerItem) -> AVQueuePlayer {
@@ -82,6 +101,8 @@ extension PlaybackEngine {
         currentIndex = index
         userPausedPlayback = false
         pendingQueueExhaustion = false
+        playingItemRecoveries = 0
+        preloadedItemRecoveries = 0
 
         removePlayerObservers()
 
@@ -98,6 +119,7 @@ extension PlaybackEngine {
         } else {
             player = makeConfiguredPlayer(with: item)
         }
+        applyStallPolicy()
 
         preloadNextItem(after: index)
         scheduleAutoplayContinuationIfNeeded()
@@ -201,6 +223,7 @@ extension PlaybackEngine {
         } else {
             player = makeConfiguredPlayer(with: item)
         }
+        applyStallPolicy()
         preloadNextItem(after: currentIndex)
         player?.pause()
         isPlaying = false

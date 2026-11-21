@@ -134,8 +134,7 @@ extension PlaybackEngine {
         let errorDescription = (notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error)?.localizedDescription ?? "unknown"
         DispatchQueue.main.async { [weak self] in
             guard let self, let failedItem, failedItem === self.playingItem else { return }
-            MidgarLog.error("Item failed to play to end at index \(self.currentIndex): \(errorDescription)", category: .playback)
-            self.nextTrack()
+            self.recoverPlayingItem(reason: errorDescription)
         }
     }
 }

@@ -28,7 +28,7 @@ extension AudioPlayer: PlaybackEngineHost {
         guard let song = track.remoteSong else { return AVURLAsset(url: track.fileURL) }
         let route = RemoteAssetRoute.route(for: song, completeFile: RemoteStreamCache.shared.completeFileURL(for: song))
         switch route {
-        case .file(let url): return AVURLAsset(url: url)
+        case .file(let url): return AVURLAsset(url: url, options: RemoteAudioType.assetOptions(forSuffix: url.pathExtension))
         case .stream: return RemoteResourceLoader.shared.makeAsset(for: song)
         }
     }
