@@ -1,7 +1,7 @@
 use crate::app::AppCore;
 use crate::config::Config;
-use crate::theme::look::overrides_from_config;
-use crate::theme::{builtin, Choice, ThemeController};
+use crate::theme::look::{choice_from_config, overrides_from_config};
+use crate::theme::{builtin, ThemeController};
 
 /// The id of the theme `config` has on, with the empty default spelled out.
 pub fn worn_pack_id(config: &Config) -> String {
@@ -66,7 +66,7 @@ fn remember_worn(config: &mut Config) {
 fn apply(core: &AppCore) {
     let (choice, overrides) = {
         let config = core.config.borrow();
-        (Choice::from_config(&config), overrides_from_config(&config))
+        (choice_from_config(&config), overrides_from_config(&config))
     };
     if let Some(controller) = ThemeController::current() {
         controller.apply(choice, overrides);

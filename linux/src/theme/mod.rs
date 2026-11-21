@@ -1,9 +1,11 @@
 pub mod builtin;
-pub mod color;
 pub mod css;
+#[cfg(test)]
+mod golden;
 pub mod look;
-pub mod pack;
 pub mod store;
+
+pub use flaccy_shared::theme::{color, pack};
 
 pub use look::{Choice, Look};
 pub use pack::{AlbumsView, Appearance, CoverShape, Pack, Style};
@@ -111,7 +113,7 @@ impl ThemeController {
         let themes_dir = themes_dir();
         let _ = std::fs::create_dir_all(&themes_dir);
         let library = store::load(&themes_dir);
-        let choice = Choice::from_config(config);
+        let choice = look::choice_from_config(config);
         let overrides = look::overrides_from_config(config);
         let look = Rc::new(Look::resolve(
             &library.find(&choice.pack),

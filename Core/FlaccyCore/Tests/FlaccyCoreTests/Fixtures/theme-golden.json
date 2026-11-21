@@ -1,0 +1,5451 @@
+{
+  "builtin": [
+    {
+      "appearance": "any",
+      "author": "Flaccy",
+      "description": "Covers on a soft wash of the album that is playing.",
+      "id": "flaccy",
+      "looks": [
+        {
+          "albums": "grid",
+          "appearance": "any",
+          "corners": 1.0,
+          "cover_size": 140,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#f6284d",
+            "accent_text": "#fb748c",
+            "card": "#32181d",
+            "headerbar": "#261619",
+            "on_accent": "#ffffff",
+            "popover": "#261619",
+            "sidebar": "#201315",
+            "text": null,
+            "view": "#211517",
+            "wash_a": "#5d0918",
+            "wash_b": "#321306",
+            "window": "#1b0f11"
+          },
+          "dark_with_cover": {
+            "accent": "#317bed",
+            "accent_text": "#78aaf7",
+            "card": "#192231",
+            "headerbar": "#161c26",
+            "on_accent": "#ffffff",
+            "popover": "#161c26",
+            "sidebar": "#131820",
+            "text": null,
+            "view": "#151a21",
+            "wash_a": "#0d2b59",
+            "wash_b": "#0b0830",
+            "window": "#0f141b"
+          },
+          "follows_artwork": true,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#f50a34",
+            "accent_text": "#d1052a",
+            "card": "#fcfafb",
+            "headerbar": "#fbfafa",
+            "on_accent": "#ffffff",
+            "popover": "#fbfafa",
+            "sidebar": "#f6f1f2",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8e2e6",
+            "wash_b": "#fbf6f4",
+            "window": "#f8f4f5"
+          },
+          "scheme": "adaptive",
+          "shadows": true,
+          "variant": null
+        },
+        {
+          "albums": "grid",
+          "appearance": "any",
+          "corners": 1.0,
+          "cover_size": 140,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#f6284d",
+            "accent_text": "#fb748c",
+            "card": "#32181d",
+            "headerbar": "#261619",
+            "on_accent": "#ffffff",
+            "popover": "#261619",
+            "sidebar": "#201315",
+            "text": null,
+            "view": "#211517",
+            "wash_a": "#5d0918",
+            "wash_b": "#321306",
+            "window": "#1b0f11"
+          },
+          "dark_with_cover": {
+            "accent": "#f6284d",
+            "accent_text": "#fb748c",
+            "card": "#32181d",
+            "headerbar": "#261619",
+            "on_accent": "#ffffff",
+            "popover": "#261619",
+            "sidebar": "#201315",
+            "text": null,
+            "view": "#211517",
+            "wash_a": "#5d0918",
+            "wash_b": "#321306",
+            "window": "#1b0f11"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#f50a34",
+            "accent_text": "#d1052a",
+            "card": "#fcfafb",
+            "headerbar": "#fbfafa",
+            "on_accent": "#ffffff",
+            "popover": "#fbfafa",
+            "sidebar": "#f6f1f2",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8e2e6",
+            "wash_b": "#fbf6f4",
+            "window": "#f8f4f5"
+          },
+          "scheme": "rosewater",
+          "shadows": true,
+          "variant": null
+        },
+        {
+          "albums": "grid",
+          "appearance": "any",
+          "corners": 1.0,
+          "cover_size": 140,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#45d9c6",
+            "accent_text": "#85eade",
+            "card": "#1b2f2c",
+            "headerbar": "#172523",
+            "on_accent": "#111114",
+            "popover": "#172523",
+            "sidebar": "#141f1e",
+            "text": null,
+            "view": "#15201f",
+            "wash_a": "#15514a",
+            "wash_b": "#0c212c",
+            "window": "#101a19"
+          },
+          "dark_with_cover": {
+            "accent": "#45d9c6",
+            "accent_text": "#85eade",
+            "card": "#1b2f2c",
+            "headerbar": "#172523",
+            "on_accent": "#111114",
+            "popover": "#172523",
+            "sidebar": "#141f1e",
+            "text": null,
+            "view": "#15201f",
+            "wash_a": "#15514a",
+            "wash_b": "#0c212c",
+            "window": "#101a19"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#2bd4be",
+            "accent_text": "#157a6d",
+            "card": "#fafcfc",
+            "headerbar": "#fafbfb",
+            "on_accent": "#111114",
+            "popover": "#fafbfb",
+            "sidebar": "#f1f6f5",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#e5f5f3",
+            "wash_b": "#f4f8fa",
+            "window": "#f4f8f7"
+          },
+          "scheme": "aurora",
+          "shadows": true,
+          "variant": null
+        },
+        {
+          "albums": "grid",
+          "appearance": "any",
+          "corners": 1.0,
+          "cover_size": 140,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#2851f6",
+            "accent_text": "#748ffb",
+            "card": "#181d32",
+            "headerbar": "#161926",
+            "on_accent": "#ffffff",
+            "popover": "#161926",
+            "sidebar": "#131620",
+            "text": null,
+            "view": "#151721",
+            "wash_a": "#091a5d",
+            "wash_b": "#120632",
+            "window": "#0f111b"
+          },
+          "dark_with_cover": {
+            "accent": "#2851f6",
+            "accent_text": "#748ffb",
+            "card": "#181d32",
+            "headerbar": "#161926",
+            "on_accent": "#ffffff",
+            "popover": "#161926",
+            "sidebar": "#131620",
+            "text": null,
+            "view": "#151721",
+            "wash_a": "#091a5d",
+            "wash_b": "#120632",
+            "window": "#0f111b"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#0a39f5",
+            "accent_text": "#052ed1",
+            "card": "#fafbfc",
+            "headerbar": "#fafafb",
+            "on_accent": "#ffffff",
+            "popover": "#fafafb",
+            "sidebar": "#f1f2f6",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#e2e7f8",
+            "wash_b": "#f6f4fb",
+            "window": "#f4f5f8"
+          },
+          "scheme": "nocturne",
+          "shadows": true,
+          "variant": null
+        },
+        {
+          "albums": "grid",
+          "appearance": "any",
+          "corners": 1.0,
+          "cover_size": 140,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#47d7a2",
+            "accent_text": "#86e9c5",
+            "card": "#1b2e28",
+            "headerbar": "#172520",
+            "on_accent": "#111114",
+            "popover": "#172520",
+            "sidebar": "#141f1b",
+            "text": null,
+            "view": "#16201c",
+            "wash_a": "#15513b",
+            "wash_b": "#0d282b",
+            "window": "#101a16"
+          },
+          "dark_with_cover": {
+            "accent": "#47d7a2",
+            "accent_text": "#86e9c5",
+            "card": "#1b2e28",
+            "headerbar": "#172520",
+            "on_accent": "#111114",
+            "popover": "#172520",
+            "sidebar": "#141f1b",
+            "text": null,
+            "view": "#16201c",
+            "wash_a": "#15513b",
+            "wash_b": "#0d282b",
+            "window": "#101a16"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#2dd296",
+            "accent_text": "#167955",
+            "card": "#fafcfb",
+            "headerbar": "#fafbfb",
+            "on_accent": "#111114",
+            "popover": "#fafbfb",
+            "sidebar": "#f1f6f4",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#e5f5ef",
+            "wash_b": "#f4fafa",
+            "window": "#f4f8f7"
+          },
+          "scheme": "verdant",
+          "shadows": true,
+          "variant": null
+        },
+        {
+          "albums": "grid",
+          "appearance": "any",
+          "corners": 1.0,
+          "cover_size": 140,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#f68a28",
+            "accent_text": "#fbb574",
+            "card": "#322418",
+            "headerbar": "#261e16",
+            "on_accent": "#111114",
+            "popover": "#261e16",
+            "sidebar": "#201913",
+            "text": null,
+            "view": "#211b15",
+            "wash_a": "#5d3109",
+            "wash_b": "#323006",
+            "window": "#1b150f"
+          },
+          "dark_with_cover": {
+            "accent": "#f68a28",
+            "accent_text": "#fbb574",
+            "card": "#322418",
+            "headerbar": "#261e16",
+            "on_accent": "#111114",
+            "popover": "#261e16",
+            "sidebar": "#201913",
+            "text": null,
+            "view": "#211b15",
+            "wash_a": "#5d3109",
+            "wash_b": "#323006",
+            "window": "#1b150f"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#f57b0a",
+            "accent_text": "#b35805",
+            "card": "#fcfbfa",
+            "headerbar": "#fbfafa",
+            "on_accent": "#111114",
+            "popover": "#fbfafa",
+            "sidebar": "#f6f3f1",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8ede2",
+            "wash_b": "#fbfbf4",
+            "window": "#f8f6f4"
+          },
+          "scheme": "sunset",
+          "shadows": true,
+          "variant": null
+        },
+        {
+          "albums": "grid",
+          "appearance": "any",
+          "corners": 1.0,
+          "cover_size": 140,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#8b8e93",
+            "accent_text": "#b1b6be",
+            "card": "#242526",
+            "headerbar": "#1e1e1e",
+            "on_accent": "#ffffff",
+            "popover": "#1e1e1e",
+            "sidebar": "#19191a",
+            "text": null,
+            "view": "#1a1b1b",
+            "wash_a": "#313335",
+            "wash_b": "#1b1b1d",
+            "window": "#151515"
+          },
+          "dark_with_cover": {
+            "accent": "#8b8e93",
+            "accent_text": "#b1b6be",
+            "card": "#242526",
+            "headerbar": "#1e1e1e",
+            "on_accent": "#ffffff",
+            "popover": "#1e1e1e",
+            "sidebar": "#19191a",
+            "text": null,
+            "view": "#1a1b1b",
+            "wash_a": "#313335",
+            "wash_b": "#1b1b1d",
+            "window": "#151515"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#7b7e84",
+            "accent_text": "#626974",
+            "card": "#fbfbfb",
+            "headerbar": "#fafafa",
+            "on_accent": "#ffffff",
+            "popover": "#fafafa",
+            "sidebar": "#f3f3f4",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#ededee",
+            "wash_b": "#f7f7f8",
+            "window": "#f6f6f6"
+          },
+          "scheme": "mono",
+          "shadows": true,
+          "variant": null
+        }
+      ],
+      "name": "Flaccy",
+      "schemes": [
+        {
+          "id": "adaptive",
+          "name": "Adaptive"
+        },
+        {
+          "id": "rosewater",
+          "name": "Rosewater"
+        },
+        {
+          "id": "aurora",
+          "name": "Aurora"
+        },
+        {
+          "id": "nocturne",
+          "name": "Nocturne"
+        },
+        {
+          "id": "verdant",
+          "name": "Verdant"
+        },
+        {
+          "id": "sunset",
+          "name": "Sunset"
+        },
+        {
+          "id": "mono",
+          "name": "Mono"
+        }
+      ],
+      "variants": [],
+      "warnings": []
+    },
+    {
+      "appearance": "dark",
+      "author": "Flaccy",
+      "description": "A terminal for your records: one typeface, hard corners, a list where the wall of covers was.",
+      "id": "phosphor",
+      "looks": [
+        {
+          "albums": "list",
+          "appearance": "dark",
+          "corners": 0.0,
+          "cover_size": 140,
+          "covers": "square",
+          "dark": {
+            "accent": "#2fe36c",
+            "accent_text": "#5dff97",
+            "card": "#0b130d",
+            "headerbar": "#070c08",
+            "on_accent": "#021006",
+            "popover": "#0a110c",
+            "sidebar": "#050806",
+            "text": "#b9ffcf",
+            "view": "#060a07",
+            "wash_a": "#095d26",
+            "wash_b": "#06322a",
+            "window": "#040705"
+          },
+          "dark_with_cover": {
+            "accent": "#2fe36c",
+            "accent_text": "#5dff97",
+            "card": "#0b130d",
+            "headerbar": "#070c08",
+            "on_accent": "#021006",
+            "popover": "#0a110c",
+            "sidebar": "#050806",
+            "text": "#b9ffcf",
+            "view": "#060a07",
+            "wash_a": "#095d26",
+            "wash_b": "#06322a",
+            "window": "#040705"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": "JetBrains Mono, Cascadia Code, Fira Code, DejaVu Sans Mono, monospace",
+          "light": {
+            "accent": "#0af55a",
+            "accent_text": "#03812e",
+            "card": "#fafcfb",
+            "headerbar": "#fafbfa",
+            "on_accent": "#111114",
+            "popover": "#fafbfa",
+            "sidebar": "#f1f6f3",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#e2f8ea",
+            "wash_b": "#f4fbfa",
+            "window": "#f4f8f6"
+          },
+          "scheme": "green",
+          "shadows": false,
+          "variant": "list"
+        },
+        {
+          "albums": "grid",
+          "appearance": "dark",
+          "corners": 0.0,
+          "cover_size": 140,
+          "covers": "square",
+          "dark": {
+            "accent": "#2fe36c",
+            "accent_text": "#5dff97",
+            "card": "#0b130d",
+            "headerbar": "#070c08",
+            "on_accent": "#021006",
+            "popover": "#0a110c",
+            "sidebar": "#050806",
+            "text": "#b9ffcf",
+            "view": "#060a07",
+            "wash_a": "#095d26",
+            "wash_b": "#06322a",
+            "window": "#040705"
+          },
+          "dark_with_cover": {
+            "accent": "#2fe36c",
+            "accent_text": "#5dff97",
+            "card": "#0b130d",
+            "headerbar": "#070c08",
+            "on_accent": "#021006",
+            "popover": "#0a110c",
+            "sidebar": "#050806",
+            "text": "#b9ffcf",
+            "view": "#060a07",
+            "wash_a": "#095d26",
+            "wash_b": "#06322a",
+            "window": "#040705"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": "JetBrains Mono, Cascadia Code, Fira Code, DejaVu Sans Mono, monospace",
+          "light": {
+            "accent": "#0af55a",
+            "accent_text": "#03812e",
+            "card": "#fafcfb",
+            "headerbar": "#fafbfa",
+            "on_accent": "#111114",
+            "popover": "#fafbfa",
+            "sidebar": "#f1f6f3",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#e2f8ea",
+            "wash_b": "#f4fbfa",
+            "window": "#f4f8f6"
+          },
+          "scheme": "green",
+          "shadows": false,
+          "variant": "grid"
+        },
+        {
+          "albums": "list",
+          "appearance": "dark",
+          "corners": 0.0,
+          "cover_size": 140,
+          "covers": "square",
+          "dark": {
+            "accent": "#f5a700",
+            "accent_text": "#ffc23d",
+            "card": "#130e06",
+            "headerbar": "#0c0904",
+            "on_accent": "#140c00",
+            "popover": "#110d05",
+            "sidebar": "#080603",
+            "text": "#ffdf9e",
+            "view": "#0a0703",
+            "wash_a": "#5d4309",
+            "wash_b": "#2b3206",
+            "window": "#070502"
+          },
+          "dark_with_cover": {
+            "accent": "#f5a700",
+            "accent_text": "#ffc23d",
+            "card": "#130e06",
+            "headerbar": "#0c0904",
+            "on_accent": "#140c00",
+            "popover": "#110d05",
+            "sidebar": "#080603",
+            "text": "#ffdf9e",
+            "view": "#0a0703",
+            "wash_a": "#5d4309",
+            "wash_b": "#2b3206",
+            "window": "#070502"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": "JetBrains Mono, Cascadia Code, Fira Code, DejaVu Sans Mono, monospace",
+          "light": {
+            "accent": "#f5ac0a",
+            "accent_text": "#956804",
+            "card": "#fcfbfa",
+            "headerbar": "#fbfbfa",
+            "on_accent": "#111114",
+            "popover": "#fbfbfa",
+            "sidebar": "#f6f4f1",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8f1e2",
+            "wash_b": "#fafbf4",
+            "window": "#f8f7f4"
+          },
+          "scheme": "amber",
+          "shadows": false,
+          "variant": "list"
+        },
+        {
+          "albums": "grid",
+          "appearance": "dark",
+          "corners": 0.0,
+          "cover_size": 140,
+          "covers": "square",
+          "dark": {
+            "accent": "#f5a700",
+            "accent_text": "#ffc23d",
+            "card": "#130e06",
+            "headerbar": "#0c0904",
+            "on_accent": "#140c00",
+            "popover": "#110d05",
+            "sidebar": "#080603",
+            "text": "#ffdf9e",
+            "view": "#0a0703",
+            "wash_a": "#5d4309",
+            "wash_b": "#2b3206",
+            "window": "#070502"
+          },
+          "dark_with_cover": {
+            "accent": "#f5a700",
+            "accent_text": "#ffc23d",
+            "card": "#130e06",
+            "headerbar": "#0c0904",
+            "on_accent": "#140c00",
+            "popover": "#110d05",
+            "sidebar": "#080603",
+            "text": "#ffdf9e",
+            "view": "#0a0703",
+            "wash_a": "#5d4309",
+            "wash_b": "#2b3206",
+            "window": "#070502"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": "JetBrains Mono, Cascadia Code, Fira Code, DejaVu Sans Mono, monospace",
+          "light": {
+            "accent": "#f5ac0a",
+            "accent_text": "#956804",
+            "card": "#fcfbfa",
+            "headerbar": "#fbfbfa",
+            "on_accent": "#111114",
+            "popover": "#fbfbfa",
+            "sidebar": "#f6f4f1",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8f1e2",
+            "wash_b": "#fafbf4",
+            "window": "#f8f7f4"
+          },
+          "scheme": "amber",
+          "shadows": false,
+          "variant": "grid"
+        },
+        {
+          "albums": "list",
+          "appearance": "dark",
+          "corners": 0.0,
+          "cover_size": 140,
+          "covers": "square",
+          "dark": {
+            "accent": "#62c4f5",
+            "accent_text": "#8fd9ff",
+            "card": "#0a1119",
+            "headerbar": "#060a10",
+            "on_accent": "#02101a",
+            "popover": "#091017",
+            "sidebar": "#04070b",
+            "text": "#d3ecff",
+            "view": "#04080d",
+            "wash_a": "#09415d",
+            "wash_b": "#060f32",
+            "window": "#03060a"
+          },
+          "dark_with_cover": {
+            "accent": "#62c4f5",
+            "accent_text": "#8fd9ff",
+            "card": "#0a1119",
+            "headerbar": "#060a10",
+            "on_accent": "#02101a",
+            "popover": "#091017",
+            "sidebar": "#04070b",
+            "text": "#d3ecff",
+            "view": "#04080d",
+            "wash_a": "#09415d",
+            "wash_b": "#060f32",
+            "window": "#03060a"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": "JetBrains Mono, Cascadia Code, Fira Code, DejaVu Sans Mono, monospace",
+          "light": {
+            "accent": "#0aa6f5",
+            "accent_text": "#0472a9",
+            "card": "#fafbfc",
+            "headerbar": "#fafbfb",
+            "on_accent": "#111114",
+            "popover": "#fafbfb",
+            "sidebar": "#f1f4f6",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#e2f1f8",
+            "wash_b": "#f4f5fb",
+            "window": "#f4f7f8"
+          },
+          "scheme": "ice",
+          "shadows": false,
+          "variant": "list"
+        },
+        {
+          "albums": "grid",
+          "appearance": "dark",
+          "corners": 0.0,
+          "cover_size": 140,
+          "covers": "square",
+          "dark": {
+            "accent": "#62c4f5",
+            "accent_text": "#8fd9ff",
+            "card": "#0a1119",
+            "headerbar": "#060a10",
+            "on_accent": "#02101a",
+            "popover": "#091017",
+            "sidebar": "#04070b",
+            "text": "#d3ecff",
+            "view": "#04080d",
+            "wash_a": "#09415d",
+            "wash_b": "#060f32",
+            "window": "#03060a"
+          },
+          "dark_with_cover": {
+            "accent": "#62c4f5",
+            "accent_text": "#8fd9ff",
+            "card": "#0a1119",
+            "headerbar": "#060a10",
+            "on_accent": "#02101a",
+            "popover": "#091017",
+            "sidebar": "#04070b",
+            "text": "#d3ecff",
+            "view": "#04080d",
+            "wash_a": "#09415d",
+            "wash_b": "#060f32",
+            "window": "#03060a"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": "JetBrains Mono, Cascadia Code, Fira Code, DejaVu Sans Mono, monospace",
+          "light": {
+            "accent": "#0aa6f5",
+            "accent_text": "#0472a9",
+            "card": "#fafbfc",
+            "headerbar": "#fafbfb",
+            "on_accent": "#111114",
+            "popover": "#fafbfb",
+            "sidebar": "#f1f4f6",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#e2f1f8",
+            "wash_b": "#f4f5fb",
+            "window": "#f4f7f8"
+          },
+          "scheme": "ice",
+          "shadows": false,
+          "variant": "grid"
+        }
+      ],
+      "name": "Phosphor",
+      "schemes": [
+        {
+          "id": "green",
+          "name": "Green"
+        },
+        {
+          "id": "amber",
+          "name": "Amber"
+        },
+        {
+          "id": "ice",
+          "name": "Ice"
+        }
+      ],
+      "variants": [
+        {
+          "id": "list",
+          "name": "List"
+        },
+        {
+          "id": "grid",
+          "name": "Grid"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "appearance": "dark",
+      "author": "Flaccy",
+      "description": "One album under the lights at a time, flipped through like a jukebox.",
+      "id": "marquee",
+      "looks": [
+        {
+          "albums": "carousel",
+          "appearance": "dark",
+          "corners": 1.6,
+          "cover_size": 172,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#f62896",
+            "accent_text": "#fb74bc",
+            "card": "#1a1029",
+            "headerbar": "#110a1c",
+            "on_accent": "#ffffff",
+            "popover": "#170e24",
+            "sidebar": "#0e0818",
+            "text": null,
+            "view": "#0d0716",
+            "wash_a": "#5a1a6e",
+            "wash_b": "#12306b",
+            "window": "#0b0612"
+          },
+          "dark_with_cover": {
+            "accent": "#f62896",
+            "accent_text": "#fb74bc",
+            "card": "#1a1029",
+            "headerbar": "#110a1c",
+            "on_accent": "#ffffff",
+            "popover": "#170e24",
+            "sidebar": "#0e0818",
+            "text": null,
+            "view": "#0d0716",
+            "wash_a": "#5a1a6e",
+            "wash_b": "#12306b",
+            "window": "#0b0612"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#f50a87",
+            "accent_text": "#d10572",
+            "card": "#fcfafb",
+            "headerbar": "#fbfafa",
+            "on_accent": "#ffffff",
+            "popover": "#fbfafa",
+            "sidebar": "#f6f1f4",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8e2ee",
+            "wash_b": "#fbf4f4",
+            "window": "#f8f4f6"
+          },
+          "scheme": "neon",
+          "shadows": true,
+          "variant": "carousel"
+        },
+        {
+          "albums": "grid",
+          "appearance": "dark",
+          "corners": 1.6,
+          "cover_size": 172,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#f62896",
+            "accent_text": "#fb74bc",
+            "card": "#1a1029",
+            "headerbar": "#110a1c",
+            "on_accent": "#ffffff",
+            "popover": "#170e24",
+            "sidebar": "#0e0818",
+            "text": null,
+            "view": "#0d0716",
+            "wash_a": "#5a1a6e",
+            "wash_b": "#12306b",
+            "window": "#0b0612"
+          },
+          "dark_with_cover": {
+            "accent": "#f62896",
+            "accent_text": "#fb74bc",
+            "card": "#1a1029",
+            "headerbar": "#110a1c",
+            "on_accent": "#ffffff",
+            "popover": "#170e24",
+            "sidebar": "#0e0818",
+            "text": null,
+            "view": "#0d0716",
+            "wash_a": "#5a1a6e",
+            "wash_b": "#12306b",
+            "window": "#0b0612"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#f50a87",
+            "accent_text": "#d10572",
+            "card": "#fcfafb",
+            "headerbar": "#fbfafa",
+            "on_accent": "#ffffff",
+            "popover": "#fbfafa",
+            "sidebar": "#f6f1f4",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8e2ee",
+            "wash_b": "#fbf4f4",
+            "window": "#f8f4f6"
+          },
+          "scheme": "neon",
+          "shadows": true,
+          "variant": "grid"
+        },
+        {
+          "albums": "carousel",
+          "appearance": "dark",
+          "corners": 1.6,
+          "cover_size": 172,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#28ddf6",
+            "accent_text": "#74ebfb",
+            "card": "#0e1828",
+            "headerbar": "#080e19",
+            "on_accent": "#111114",
+            "popover": "#0c1523",
+            "sidebar": "#060b15",
+            "text": null,
+            "view": "#050a13",
+            "wash_a": "#0f4a78",
+            "wash_b": "#4a1f7a",
+            "window": "#04080f"
+          },
+          "dark_with_cover": {
+            "accent": "#28ddf6",
+            "accent_text": "#74ebfb",
+            "card": "#0e1828",
+            "headerbar": "#080e19",
+            "on_accent": "#111114",
+            "popover": "#0c1523",
+            "sidebar": "#060b15",
+            "text": null,
+            "view": "#050a13",
+            "wash_a": "#0f4a78",
+            "wash_b": "#4a1f7a",
+            "window": "#04080f"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#0ad9f5",
+            "accent_text": "#047b8b",
+            "card": "#fafcfc",
+            "headerbar": "#fafbfb",
+            "on_accent": "#111114",
+            "popover": "#fafbfb",
+            "sidebar": "#f1f5f6",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#e2f5f8",
+            "wash_b": "#f4f7fb",
+            "window": "#f4f7f8"
+          },
+          "scheme": "arcade",
+          "shadows": true,
+          "variant": "carousel"
+        },
+        {
+          "albums": "grid",
+          "appearance": "dark",
+          "corners": 1.6,
+          "cover_size": 172,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#28ddf6",
+            "accent_text": "#74ebfb",
+            "card": "#0e1828",
+            "headerbar": "#080e19",
+            "on_accent": "#111114",
+            "popover": "#0c1523",
+            "sidebar": "#060b15",
+            "text": null,
+            "view": "#050a13",
+            "wash_a": "#0f4a78",
+            "wash_b": "#4a1f7a",
+            "window": "#04080f"
+          },
+          "dark_with_cover": {
+            "accent": "#28ddf6",
+            "accent_text": "#74ebfb",
+            "card": "#0e1828",
+            "headerbar": "#080e19",
+            "on_accent": "#111114",
+            "popover": "#0c1523",
+            "sidebar": "#060b15",
+            "text": null,
+            "view": "#050a13",
+            "wash_a": "#0f4a78",
+            "wash_b": "#4a1f7a",
+            "window": "#04080f"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#0ad9f5",
+            "accent_text": "#047b8b",
+            "card": "#fafcfc",
+            "headerbar": "#fafbfb",
+            "on_accent": "#111114",
+            "popover": "#fafbfb",
+            "sidebar": "#f1f5f6",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#e2f5f8",
+            "wash_b": "#f4f7fb",
+            "window": "#f4f7f8"
+          },
+          "scheme": "arcade",
+          "shadows": true,
+          "variant": "grid"
+        },
+        {
+          "albums": "carousel",
+          "appearance": "dark",
+          "corners": 1.6,
+          "cover_size": 172,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#f66528",
+            "accent_text": "#fb9c74",
+            "card": "#21120c",
+            "headerbar": "#150b08",
+            "on_accent": "#ffffff",
+            "popover": "#1c0f0a",
+            "sidebar": "#110906",
+            "text": null,
+            "view": "#100806",
+            "wash_a": "#7a2a10",
+            "wash_b": "#5a1030",
+            "window": "#0d0705"
+          },
+          "dark_with_cover": {
+            "accent": "#f66528",
+            "accent_text": "#fb9c74",
+            "card": "#21120c",
+            "headerbar": "#150b08",
+            "on_accent": "#ffffff",
+            "popover": "#1c0f0a",
+            "sidebar": "#110906",
+            "text": null,
+            "view": "#100806",
+            "wash_a": "#7a2a10",
+            "wash_b": "#5a1030",
+            "window": "#0d0705"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#f5500a",
+            "accent_text": "#c73f05",
+            "card": "#fcfbfa",
+            "headerbar": "#fbfafa",
+            "on_accent": "#ffffff",
+            "popover": "#fbfafa",
+            "sidebar": "#f6f3f1",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8e9e2",
+            "wash_b": "#fbf9f4",
+            "window": "#f8f5f4"
+          },
+          "scheme": "ember",
+          "shadows": true,
+          "variant": "carousel"
+        },
+        {
+          "albums": "grid",
+          "appearance": "dark",
+          "corners": 1.6,
+          "cover_size": 172,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#f66528",
+            "accent_text": "#fb9c74",
+            "card": "#21120c",
+            "headerbar": "#150b08",
+            "on_accent": "#ffffff",
+            "popover": "#1c0f0a",
+            "sidebar": "#110906",
+            "text": null,
+            "view": "#100806",
+            "wash_a": "#7a2a10",
+            "wash_b": "#5a1030",
+            "window": "#0d0705"
+          },
+          "dark_with_cover": {
+            "accent": "#f66528",
+            "accent_text": "#fb9c74",
+            "card": "#21120c",
+            "headerbar": "#150b08",
+            "on_accent": "#ffffff",
+            "popover": "#1c0f0a",
+            "sidebar": "#110906",
+            "text": null,
+            "view": "#100806",
+            "wash_a": "#7a2a10",
+            "wash_b": "#5a1030",
+            "window": "#0d0705"
+          },
+          "follows_artwork": false,
+          "glow": true,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#f5500a",
+            "accent_text": "#c73f05",
+            "card": "#fcfbfa",
+            "headerbar": "#fbfafa",
+            "on_accent": "#ffffff",
+            "popover": "#fbfafa",
+            "sidebar": "#f6f3f1",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8e9e2",
+            "wash_b": "#fbf9f4",
+            "window": "#f8f5f4"
+          },
+          "scheme": "ember",
+          "shadows": true,
+          "variant": "grid"
+        }
+      ],
+      "name": "Marquee",
+      "schemes": [
+        {
+          "id": "neon",
+          "name": "Neon"
+        },
+        {
+          "id": "arcade",
+          "name": "Arcade"
+        },
+        {
+          "id": "ember",
+          "name": "Ember"
+        }
+      ],
+      "variants": [
+        {
+          "id": "carousel",
+          "name": "Carousel"
+        },
+        {
+          "id": "grid",
+          "name": "Grid"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "appearance": "any",
+      "author": "Flaccy",
+      "description": "Nothing but the covers, edge to edge.",
+      "id": "gallery",
+      "looks": [
+        {
+          "albums": "wall",
+          "appearance": "dark",
+          "corners": 0.5,
+          "cover_size": 184,
+          "covers": "square",
+          "dark": {
+            "accent": "#f2f2f2",
+            "accent_text": "#ffffff",
+            "card": "#111111",
+            "headerbar": "#000000",
+            "on_accent": "#000000",
+            "popover": "#141414",
+            "sidebar": "#060606",
+            "text": null,
+            "view": "#000000",
+            "wash_a": "#333333",
+            "wash_b": "#1c1c1c",
+            "window": "#000000"
+          },
+          "dark_with_cover": {
+            "accent": "#f2f2f2",
+            "accent_text": "#ffffff",
+            "card": "#111111",
+            "headerbar": "#000000",
+            "on_accent": "#000000",
+            "popover": "#141414",
+            "sidebar": "#060606",
+            "text": null,
+            "view": "#000000",
+            "wash_a": "#333333",
+            "wash_b": "#1c1c1c",
+            "window": "#000000"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#808080",
+            "accent_text": "#706666",
+            "card": "#fbfbfb",
+            "headerbar": "#fafafa",
+            "on_accent": "#ffffff",
+            "popover": "#fafafa",
+            "sidebar": "#f4f4f4",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#ededed",
+            "wash_b": "#f7f7f7",
+            "window": "#f6f6f6"
+          },
+          "scheme": "black",
+          "shadows": false,
+          "variant": "wall"
+        },
+        {
+          "albums": "wall",
+          "appearance": "dark",
+          "corners": 0.5,
+          "cover_size": 264,
+          "covers": "square",
+          "dark": {
+            "accent": "#f2f2f2",
+            "accent_text": "#ffffff",
+            "card": "#111111",
+            "headerbar": "#000000",
+            "on_accent": "#000000",
+            "popover": "#141414",
+            "sidebar": "#060606",
+            "text": null,
+            "view": "#000000",
+            "wash_a": "#333333",
+            "wash_b": "#1c1c1c",
+            "window": "#000000"
+          },
+          "dark_with_cover": {
+            "accent": "#f2f2f2",
+            "accent_text": "#ffffff",
+            "card": "#111111",
+            "headerbar": "#000000",
+            "on_accent": "#000000",
+            "popover": "#141414",
+            "sidebar": "#060606",
+            "text": null,
+            "view": "#000000",
+            "wash_a": "#333333",
+            "wash_b": "#1c1c1c",
+            "window": "#000000"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#808080",
+            "accent_text": "#706666",
+            "card": "#fbfbfb",
+            "headerbar": "#fafafa",
+            "on_accent": "#ffffff",
+            "popover": "#fafafa",
+            "sidebar": "#f4f4f4",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#ededed",
+            "wash_b": "#f7f7f7",
+            "window": "#f6f6f6"
+          },
+          "scheme": "black",
+          "shadows": false,
+          "variant": "large"
+        },
+        {
+          "albums": "wall",
+          "appearance": "light",
+          "corners": 0.5,
+          "cover_size": 184,
+          "covers": "square",
+          "dark": {
+            "accent": "#8f8f8f",
+            "accent_text": "#bbb4b4",
+            "card": "#252525",
+            "headerbar": "#1e1e1e",
+            "on_accent": "#ffffff",
+            "popover": "#1e1e1e",
+            "sidebar": "#1a1a1a",
+            "text": null,
+            "view": "#1b1b1b",
+            "wash_a": "#333333",
+            "wash_b": "#1c1c1c",
+            "window": "#151515"
+          },
+          "dark_with_cover": {
+            "accent": "#8f8f8f",
+            "accent_text": "#bbb4b4",
+            "card": "#252525",
+            "headerbar": "#1e1e1e",
+            "on_accent": "#ffffff",
+            "popover": "#1e1e1e",
+            "sidebar": "#1a1a1a",
+            "text": null,
+            "view": "#1b1b1b",
+            "wash_a": "#333333",
+            "wash_b": "#1c1c1c",
+            "window": "#151515"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#141414",
+            "accent_text": "#000000",
+            "card": "#f1f1f1",
+            "headerbar": "#ffffff",
+            "on_accent": "#ffffff",
+            "popover": "#ffffff",
+            "sidebar": "#f6f6f6",
+            "text": null,
+            "view": "#ffffff",
+            "wash_a": "#ededed",
+            "wash_b": "#f7f7f7",
+            "window": "#ffffff"
+          },
+          "scheme": "white",
+          "shadows": false,
+          "variant": "wall"
+        },
+        {
+          "albums": "wall",
+          "appearance": "light",
+          "corners": 0.5,
+          "cover_size": 264,
+          "covers": "square",
+          "dark": {
+            "accent": "#8f8f8f",
+            "accent_text": "#bbb4b4",
+            "card": "#252525",
+            "headerbar": "#1e1e1e",
+            "on_accent": "#ffffff",
+            "popover": "#1e1e1e",
+            "sidebar": "#1a1a1a",
+            "text": null,
+            "view": "#1b1b1b",
+            "wash_a": "#333333",
+            "wash_b": "#1c1c1c",
+            "window": "#151515"
+          },
+          "dark_with_cover": {
+            "accent": "#8f8f8f",
+            "accent_text": "#bbb4b4",
+            "card": "#252525",
+            "headerbar": "#1e1e1e",
+            "on_accent": "#ffffff",
+            "popover": "#1e1e1e",
+            "sidebar": "#1a1a1a",
+            "text": null,
+            "view": "#1b1b1b",
+            "wash_a": "#333333",
+            "wash_b": "#1c1c1c",
+            "window": "#151515"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#141414",
+            "accent_text": "#000000",
+            "card": "#f1f1f1",
+            "headerbar": "#ffffff",
+            "on_accent": "#ffffff",
+            "popover": "#ffffff",
+            "sidebar": "#f6f6f6",
+            "text": null,
+            "view": "#ffffff",
+            "wash_a": "#ededed",
+            "wash_b": "#f7f7f7",
+            "window": "#ffffff"
+          },
+          "scheme": "white",
+          "shadows": false,
+          "variant": "large"
+        }
+      ],
+      "name": "Gallery",
+      "schemes": [
+        {
+          "id": "black",
+          "name": "Black"
+        },
+        {
+          "id": "white",
+          "name": "White"
+        }
+      ],
+      "variants": [
+        {
+          "id": "wall",
+          "name": "Wall"
+        },
+        {
+          "id": "large",
+          "name": "Large Wall"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "appearance": "any",
+      "author": "Flaccy",
+      "description": "Paper, ink and a serif, read like the booklet inside the sleeve.",
+      "id": "liner-notes",
+      "looks": [
+        {
+          "albums": "list",
+          "appearance": "light",
+          "corners": 0.4,
+          "cover_size": 140,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#e44639",
+            "accent_text": "#f2867e",
+            "card": "#301b1a",
+            "headerbar": "#261716",
+            "on_accent": "#ffffff",
+            "popover": "#261716",
+            "sidebar": "#201413",
+            "text": null,
+            "view": "#211615",
+            "wash_a": "#561510",
+            "wash_b": "#2e1e0a",
+            "window": "#1a100f"
+          },
+          "dark_with_cover": {
+            "accent": "#e44639",
+            "accent_text": "#f2867e",
+            "card": "#301b1a",
+            "headerbar": "#261716",
+            "on_accent": "#ffffff",
+            "popover": "#261716",
+            "sidebar": "#201413",
+            "text": null,
+            "view": "#211615",
+            "wash_a": "#561510",
+            "wash_b": "#2e1e0a",
+            "window": "#1a100f"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": "Charter, Bitstream Charter, Source Serif 4, Noto Serif, DejaVu Serif, Georgia, serif",
+          "interface_font": null,
+          "light": {
+            "accent": "#8c1c13",
+            "accent_text": "#7a1810",
+            "card": "#fbf8f0",
+            "headerbar": "#f4efe4",
+            "on_accent": "#fbf8f0",
+            "popover": "#fbf8f0",
+            "sidebar": "#eee8da",
+            "text": "#231f1a",
+            "view": "#f8f4ea",
+            "wash_a": "#f7e5e4",
+            "wash_b": "#fbf8f4",
+            "window": "#f4efe4"
+          },
+          "scheme": "oxblood",
+          "shadows": false,
+          "variant": "list"
+        },
+        {
+          "albums": "grid",
+          "appearance": "light",
+          "corners": 0.4,
+          "cover_size": 164,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#e44639",
+            "accent_text": "#f2867e",
+            "card": "#301b1a",
+            "headerbar": "#261716",
+            "on_accent": "#ffffff",
+            "popover": "#261716",
+            "sidebar": "#201413",
+            "text": null,
+            "view": "#211615",
+            "wash_a": "#561510",
+            "wash_b": "#2e1e0a",
+            "window": "#1a100f"
+          },
+          "dark_with_cover": {
+            "accent": "#e44639",
+            "accent_text": "#f2867e",
+            "card": "#301b1a",
+            "headerbar": "#261716",
+            "on_accent": "#ffffff",
+            "popover": "#261716",
+            "sidebar": "#201413",
+            "text": null,
+            "view": "#211615",
+            "wash_a": "#561510",
+            "wash_b": "#2e1e0a",
+            "window": "#1a100f"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": "Charter, Bitstream Charter, Source Serif 4, Noto Serif, DejaVu Serif, Georgia, serif",
+          "interface_font": null,
+          "light": {
+            "accent": "#8c1c13",
+            "accent_text": "#7a1810",
+            "card": "#fbf8f0",
+            "headerbar": "#f4efe4",
+            "on_accent": "#fbf8f0",
+            "popover": "#fbf8f0",
+            "sidebar": "#eee8da",
+            "text": "#231f1a",
+            "view": "#f8f4ea",
+            "wash_a": "#f7e5e4",
+            "wash_b": "#fbf8f4",
+            "window": "#f4efe4"
+          },
+          "scheme": "oxblood",
+          "shadows": false,
+          "variant": "grid"
+        },
+        {
+          "albums": "list",
+          "appearance": "light",
+          "corners": 0.4,
+          "cover_size": 140,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#5184cd",
+            "accent_text": "#8db0e2",
+            "card": "#1d242d",
+            "headerbar": "#181d24",
+            "on_accent": "#ffffff",
+            "popover": "#181d24",
+            "sidebar": "#15191e",
+            "text": null,
+            "view": "#161a1f",
+            "wash_a": "#1a2f4c",
+            "wash_b": "#100f29",
+            "window": "#111419"
+          },
+          "dark_with_cover": {
+            "accent": "#5184cd",
+            "accent_text": "#8db0e2",
+            "card": "#1d242d",
+            "headerbar": "#181d24",
+            "on_accent": "#ffffff",
+            "popover": "#181d24",
+            "sidebar": "#15191e",
+            "text": null,
+            "view": "#161a1f",
+            "wash_a": "#1a2f4c",
+            "wash_b": "#100f29",
+            "window": "#111419"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": "Charter, Bitstream Charter, Source Serif 4, Noto Serif, DejaVu Serif, Georgia, serif",
+          "interface_font": null,
+          "light": {
+            "accent": "#1d3557",
+            "accent_text": "#1a2f4d",
+            "card": "#fafaf5",
+            "headerbar": "#f1f0ea",
+            "on_accent": "#fafaf5",
+            "popover": "#fafaf5",
+            "sidebar": "#e9e8e0",
+            "text": "#1b1e24",
+            "view": "#f6f5ef",
+            "wash_a": "#e6ecf4",
+            "wash_b": "#f5f5fa",
+            "window": "#f1f0ea"
+          },
+          "scheme": "ink",
+          "shadows": false,
+          "variant": "list"
+        },
+        {
+          "albums": "grid",
+          "appearance": "light",
+          "corners": 0.4,
+          "cover_size": 164,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#5184cd",
+            "accent_text": "#8db0e2",
+            "card": "#1d242d",
+            "headerbar": "#181d24",
+            "on_accent": "#ffffff",
+            "popover": "#181d24",
+            "sidebar": "#15191e",
+            "text": null,
+            "view": "#161a1f",
+            "wash_a": "#1a2f4c",
+            "wash_b": "#100f29",
+            "window": "#111419"
+          },
+          "dark_with_cover": {
+            "accent": "#5184cd",
+            "accent_text": "#8db0e2",
+            "card": "#1d242d",
+            "headerbar": "#181d24",
+            "on_accent": "#ffffff",
+            "popover": "#181d24",
+            "sidebar": "#15191e",
+            "text": null,
+            "view": "#161a1f",
+            "wash_a": "#1a2f4c",
+            "wash_b": "#100f29",
+            "window": "#111419"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": "Charter, Bitstream Charter, Source Serif 4, Noto Serif, DejaVu Serif, Georgia, serif",
+          "interface_font": null,
+          "light": {
+            "accent": "#1d3557",
+            "accent_text": "#1a2f4d",
+            "card": "#fafaf5",
+            "headerbar": "#f1f0ea",
+            "on_accent": "#fafaf5",
+            "popover": "#fafaf5",
+            "sidebar": "#e9e8e0",
+            "text": "#1b1e24",
+            "view": "#f6f5ef",
+            "wash_a": "#e6ecf4",
+            "wash_b": "#f5f5fa",
+            "window": "#f1f0ea"
+          },
+          "scheme": "ink",
+          "shadows": false,
+          "variant": "grid"
+        },
+        {
+          "albums": "list",
+          "appearance": "dark",
+          "corners": 0.4,
+          "cover_size": 140,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#d9a55f",
+            "accent_text": "#e6bb80",
+            "card": "#27231d",
+            "headerbar": "#1b1814",
+            "on_accent": "#1b1408",
+            "popover": "#27231d",
+            "sidebar": "#191612",
+            "text": "#ece3d2",
+            "view": "#1f1c17",
+            "wash_a": "#513715",
+            "wash_b": "#2a2b0d",
+            "window": "#1b1814"
+          },
+          "dark_with_cover": {
+            "accent": "#d9a55f",
+            "accent_text": "#e6bb80",
+            "card": "#27231d",
+            "headerbar": "#1b1814",
+            "on_accent": "#1b1408",
+            "popover": "#27231d",
+            "sidebar": "#191612",
+            "text": "#ece3d2",
+            "view": "#1f1c17",
+            "wash_a": "#513715",
+            "wash_b": "#2a2b0d",
+            "window": "#1b1814"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": "Charter, Bitstream Charter, Source Serif 4, Noto Serif, DejaVu Serif, Georgia, serif",
+          "interface_font": null,
+          "light": {
+            "accent": "#d28b2d",
+            "accent_text": "#9b651c",
+            "card": "#fcfbfa",
+            "headerbar": "#fbfbfa",
+            "on_accent": "#111114",
+            "popover": "#fbfbfa",
+            "sidebar": "#f6f4f1",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f5eee5",
+            "wash_b": "#fafaf4",
+            "window": "#f8f6f4"
+          },
+          "scheme": "lamplight",
+          "shadows": false,
+          "variant": "list"
+        },
+        {
+          "albums": "grid",
+          "appearance": "dark",
+          "corners": 0.4,
+          "cover_size": 164,
+          "covers": "rounded",
+          "dark": {
+            "accent": "#d9a55f",
+            "accent_text": "#e6bb80",
+            "card": "#27231d",
+            "headerbar": "#1b1814",
+            "on_accent": "#1b1408",
+            "popover": "#27231d",
+            "sidebar": "#191612",
+            "text": "#ece3d2",
+            "view": "#1f1c17",
+            "wash_a": "#513715",
+            "wash_b": "#2a2b0d",
+            "window": "#1b1814"
+          },
+          "dark_with_cover": {
+            "accent": "#d9a55f",
+            "accent_text": "#e6bb80",
+            "card": "#27231d",
+            "headerbar": "#1b1814",
+            "on_accent": "#1b1408",
+            "popover": "#27231d",
+            "sidebar": "#191612",
+            "text": "#ece3d2",
+            "view": "#1f1c17",
+            "wash_a": "#513715",
+            "wash_b": "#2a2b0d",
+            "window": "#1b1814"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": "Charter, Bitstream Charter, Source Serif 4, Noto Serif, DejaVu Serif, Georgia, serif",
+          "interface_font": null,
+          "light": {
+            "accent": "#d28b2d",
+            "accent_text": "#9b651c",
+            "card": "#fcfbfa",
+            "headerbar": "#fbfbfa",
+            "on_accent": "#111114",
+            "popover": "#fbfbfa",
+            "sidebar": "#f6f4f1",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f5eee5",
+            "wash_b": "#fafaf4",
+            "window": "#f8f6f4"
+          },
+          "scheme": "lamplight",
+          "shadows": false,
+          "variant": "grid"
+        }
+      ],
+      "name": "Liner Notes",
+      "schemes": [
+        {
+          "id": "oxblood",
+          "name": "Oxblood"
+        },
+        {
+          "id": "ink",
+          "name": "Ink"
+        },
+        {
+          "id": "lamplight",
+          "name": "Lamplight"
+        }
+      ],
+      "variants": [
+        {
+          "id": "list",
+          "name": "List"
+        },
+        {
+          "id": "grid",
+          "name": "Grid"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "appearance": "dark",
+      "author": "Flaccy",
+      "description": "Records as records: round sleeves on warm dark wood, lit like a receiver's dial.",
+      "id": "hi-fi",
+      "looks": [
+        {
+          "albums": "grid",
+          "appearance": "dark",
+          "corners": 1.3,
+          "cover_size": 172,
+          "covers": "circle",
+          "dark": {
+            "accent": "#f2a445",
+            "accent_text": "#ffc27a",
+            "card": "#261d16",
+            "headerbar": "#1a140f",
+            "on_accent": "#1f1305",
+            "popover": "#231b14",
+            "sidebar": "#14100c",
+            "text": "#f3e7d8",
+            "view": "#1b1510",
+            "wash_a": "#5d3809",
+            "wash_b": "#313206",
+            "window": "#17120e"
+          },
+          "dark_with_cover": {
+            "accent": "#f2a445",
+            "accent_text": "#ffc27a",
+            "card": "#261d16",
+            "headerbar": "#1a140f",
+            "on_accent": "#1f1305",
+            "popover": "#231b14",
+            "sidebar": "#14100c",
+            "text": "#f3e7d8",
+            "view": "#1b1510",
+            "wash_a": "#5d3809",
+            "wash_b": "#313206",
+            "window": "#17120e"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#f58e0a",
+            "accent_text": "#9f5b04",
+            "card": "#fcfbfa",
+            "headerbar": "#fbfbfa",
+            "on_accent": "#111114",
+            "popover": "#fbfbfa",
+            "sidebar": "#f6f4f1",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8eee2",
+            "wash_b": "#fbfbf4",
+            "window": "#f8f6f4"
+          },
+          "scheme": "dial",
+          "shadows": true,
+          "variant": "grid"
+        },
+        {
+          "albums": "carousel",
+          "appearance": "dark",
+          "corners": 1.3,
+          "cover_size": 172,
+          "covers": "circle",
+          "dark": {
+            "accent": "#f2a445",
+            "accent_text": "#ffc27a",
+            "card": "#261d16",
+            "headerbar": "#1a140f",
+            "on_accent": "#1f1305",
+            "popover": "#231b14",
+            "sidebar": "#14100c",
+            "text": "#f3e7d8",
+            "view": "#1b1510",
+            "wash_a": "#5d3809",
+            "wash_b": "#313206",
+            "window": "#17120e"
+          },
+          "dark_with_cover": {
+            "accent": "#f2a445",
+            "accent_text": "#ffc27a",
+            "card": "#261d16",
+            "headerbar": "#1a140f",
+            "on_accent": "#1f1305",
+            "popover": "#231b14",
+            "sidebar": "#14100c",
+            "text": "#f3e7d8",
+            "view": "#1b1510",
+            "wash_a": "#5d3809",
+            "wash_b": "#313206",
+            "window": "#17120e"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#f58e0a",
+            "accent_text": "#9f5b04",
+            "card": "#fcfbfa",
+            "headerbar": "#fbfbfa",
+            "on_accent": "#111114",
+            "popover": "#fbfbfa",
+            "sidebar": "#f6f4f1",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8eee2",
+            "wash_b": "#fbfbf4",
+            "window": "#f8f6f4"
+          },
+          "scheme": "dial",
+          "shadows": true,
+          "variant": "carousel"
+        },
+        {
+          "albums": "grid",
+          "appearance": "dark",
+          "corners": 1.3,
+          "cover_size": 172,
+          "covers": "circle",
+          "dark": {
+            "accent": "#ee4f55",
+            "accent_text": "#ff8a8d",
+            "card": "#281a1c",
+            "headerbar": "#1a1112",
+            "on_accent": "#ffffff",
+            "popover": "#241719",
+            "sidebar": "#140d0e",
+            "text": "#f6e6e4",
+            "view": "#1b1213",
+            "wash_a": "#5d090b",
+            "wash_b": "#321906",
+            "window": "#170f10"
+          },
+          "dark_with_cover": {
+            "accent": "#ee4f55",
+            "accent_text": "#ff8a8d",
+            "card": "#281a1c",
+            "headerbar": "#1a1112",
+            "on_accent": "#ffffff",
+            "popover": "#241719",
+            "sidebar": "#140d0e",
+            "text": "#f6e6e4",
+            "view": "#1b1213",
+            "wash_a": "#5d090b",
+            "wash_b": "#321906",
+            "window": "#170f10"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#f50a11",
+            "accent_text": "#d1050c",
+            "card": "#fcfafa",
+            "headerbar": "#fbfafa",
+            "on_accent": "#ffffff",
+            "popover": "#fbfafa",
+            "sidebar": "#f6f1f1",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8e2e3",
+            "wash_b": "#fbf7f4",
+            "window": "#f8f4f5"
+          },
+          "scheme": "cherry",
+          "shadows": true,
+          "variant": "grid"
+        },
+        {
+          "albums": "carousel",
+          "appearance": "dark",
+          "corners": 1.3,
+          "cover_size": 172,
+          "covers": "circle",
+          "dark": {
+            "accent": "#ee4f55",
+            "accent_text": "#ff8a8d",
+            "card": "#281a1c",
+            "headerbar": "#1a1112",
+            "on_accent": "#ffffff",
+            "popover": "#241719",
+            "sidebar": "#140d0e",
+            "text": "#f6e6e4",
+            "view": "#1b1213",
+            "wash_a": "#5d090b",
+            "wash_b": "#321906",
+            "window": "#170f10"
+          },
+          "dark_with_cover": {
+            "accent": "#ee4f55",
+            "accent_text": "#ff8a8d",
+            "card": "#281a1c",
+            "headerbar": "#1a1112",
+            "on_accent": "#ffffff",
+            "popover": "#241719",
+            "sidebar": "#140d0e",
+            "text": "#f6e6e4",
+            "view": "#1b1213",
+            "wash_a": "#5d090b",
+            "wash_b": "#321906",
+            "window": "#170f10"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#f50a11",
+            "accent_text": "#d1050c",
+            "card": "#fcfafa",
+            "headerbar": "#fbfafa",
+            "on_accent": "#ffffff",
+            "popover": "#fbfafa",
+            "sidebar": "#f6f1f1",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#f8e2e3",
+            "wash_b": "#fbf7f4",
+            "window": "#f8f4f5"
+          },
+          "scheme": "cherry",
+          "shadows": true,
+          "variant": "carousel"
+        },
+        {
+          "albums": "grid",
+          "appearance": "dark",
+          "corners": 1.3,
+          "cover_size": 172,
+          "covers": "circle",
+          "dark": {
+            "accent": "#62aacd",
+            "accent_text": "#93cde8",
+            "card": "#1a2327",
+            "headerbar": "#11171a",
+            "on_accent": "#06151c",
+            "popover": "#172024",
+            "sidebar": "#0d1215",
+            "text": "#e2edf1",
+            "view": "#12181b",
+            "wash_a": "#183c4e",
+            "wash_b": "#0e142a",
+            "window": "#0f1417"
+          },
+          "dark_with_cover": {
+            "accent": "#62aacd",
+            "accent_text": "#93cde8",
+            "card": "#1a2327",
+            "headerbar": "#11171a",
+            "on_accent": "#06151c",
+            "popover": "#172024",
+            "sidebar": "#0d1215",
+            "text": "#e2edf1",
+            "view": "#12181b",
+            "wash_a": "#183c4e",
+            "wash_b": "#0e142a",
+            "window": "#0f1417"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#3599ca",
+            "accent_text": "#24769e",
+            "card": "#fbfbfc",
+            "headerbar": "#fafbfb",
+            "on_accent": "#ffffff",
+            "popover": "#fafbfb",
+            "sidebar": "#f2f4f6",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#e6f0f4",
+            "wash_b": "#f5f6fa",
+            "window": "#f5f7f8"
+          },
+          "scheme": "tape",
+          "shadows": true,
+          "variant": "grid"
+        },
+        {
+          "albums": "carousel",
+          "appearance": "dark",
+          "corners": 1.3,
+          "cover_size": 172,
+          "covers": "circle",
+          "dark": {
+            "accent": "#62aacd",
+            "accent_text": "#93cde8",
+            "card": "#1a2327",
+            "headerbar": "#11171a",
+            "on_accent": "#06151c",
+            "popover": "#172024",
+            "sidebar": "#0d1215",
+            "text": "#e2edf1",
+            "view": "#12181b",
+            "wash_a": "#183c4e",
+            "wash_b": "#0e142a",
+            "window": "#0f1417"
+          },
+          "dark_with_cover": {
+            "accent": "#62aacd",
+            "accent_text": "#93cde8",
+            "card": "#1a2327",
+            "headerbar": "#11171a",
+            "on_accent": "#06151c",
+            "popover": "#172024",
+            "sidebar": "#0d1215",
+            "text": "#e2edf1",
+            "view": "#12181b",
+            "wash_a": "#183c4e",
+            "wash_b": "#0e142a",
+            "window": "#0f1417"
+          },
+          "follows_artwork": false,
+          "glow": false,
+          "heading_font": null,
+          "interface_font": null,
+          "light": {
+            "accent": "#3599ca",
+            "accent_text": "#24769e",
+            "card": "#fbfbfc",
+            "headerbar": "#fafbfb",
+            "on_accent": "#ffffff",
+            "popover": "#fafbfb",
+            "sidebar": "#f2f4f6",
+            "text": null,
+            "view": "#fefefe",
+            "wash_a": "#e6f0f4",
+            "wash_b": "#f5f6fa",
+            "window": "#f5f7f8"
+          },
+          "scheme": "tape",
+          "shadows": true,
+          "variant": "carousel"
+        }
+      ],
+      "name": "Hi-Fi",
+      "schemes": [
+        {
+          "id": "dial",
+          "name": "Dial Amber"
+        },
+        {
+          "id": "cherry",
+          "name": "Cherry"
+        },
+        {
+          "id": "tape",
+          "name": "Tape Blue"
+        }
+      ],
+      "variants": [
+        {
+          "id": "grid",
+          "name": "Grid"
+        },
+        {
+          "id": "carousel",
+          "name": "Carousel"
+        }
+      ],
+      "warnings": []
+    }
+  ],
+  "derived": [
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#f6284d",
+        "accent_text": "#fb748c",
+        "card": "#32181d",
+        "headerbar": "#261619",
+        "on_accent": "#ffffff",
+        "popover": "#261619",
+        "sidebar": "#201315",
+        "text": null,
+        "view": "#211517",
+        "wash_a": "#5d0918",
+        "wash_b": "#321306",
+        "window": "#1b0f11"
+      },
+      "seed": "#ff4d6d"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#f50a34",
+        "accent_text": "#d1052a",
+        "card": "#fcfafb",
+        "headerbar": "#fbfafa",
+        "on_accent": "#ffffff",
+        "popover": "#fbfafa",
+        "sidebar": "#f6f1f2",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#f8e2e6",
+        "wash_b": "#fbf6f4",
+        "window": "#f8f4f5"
+      },
+      "seed": "#ff4d6d"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#a37b82",
+        "accent_text": "#c8a7ad",
+        "card": "#282223",
+        "headerbar": "#201c1d",
+        "on_accent": "#ffffff",
+        "popover": "#201c1d",
+        "sidebar": "#1b1818",
+        "text": null,
+        "view": "#1c191a",
+        "wash_a": "#3b2b2e",
+        "wash_b": "#201a18",
+        "window": "#161414"
+      },
+      "seed": "#ff4d6d"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#966971",
+        "accent_text": "#84525b",
+        "card": "#fbfbfb",
+        "headerbar": "#fbfafa",
+        "on_accent": "#ffffff",
+        "popover": "#fbfafa",
+        "sidebar": "#f4f3f3",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#efebec",
+        "wash_b": "#f8f7f7",
+        "window": "#f7f6f6"
+      },
+      "seed": "#ff4d6d"
+    },
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#45d9c6",
+        "accent_text": "#85eade",
+        "card": "#1b2f2c",
+        "headerbar": "#172523",
+        "on_accent": "#111114",
+        "popover": "#172523",
+        "sidebar": "#141f1e",
+        "text": null,
+        "view": "#15201f",
+        "wash_a": "#15514a",
+        "wash_b": "#0c212c",
+        "window": "#101a19"
+      },
+      "seed": "#2dd4bf"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#2bd4be",
+        "accent_text": "#157a6d",
+        "card": "#fafcfc",
+        "headerbar": "#fafbfb",
+        "on_accent": "#111114",
+        "popover": "#fafbfb",
+        "sidebar": "#f1f6f5",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#e5f5f3",
+        "wash_b": "#f4f8fa",
+        "window": "#f4f8f7"
+      },
+      "seed": "#2dd4bf"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#7ba39e",
+        "accent_text": "#a7c8c4",
+        "card": "#222827",
+        "headerbar": "#1c2020",
+        "on_accent": "#111114",
+        "popover": "#1c2020",
+        "sidebar": "#181b1b",
+        "text": null,
+        "view": "#191c1c",
+        "wash_a": "#2b3b39",
+        "wash_b": "#181d20",
+        "window": "#141616"
+      },
+      "seed": "#2dd4bf"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#699691",
+        "accent_text": "#4b7772",
+        "card": "#fbfbfb",
+        "headerbar": "#fafbfb",
+        "on_accent": "#ffffff",
+        "popover": "#fafbfb",
+        "sidebar": "#f3f4f4",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#ebefef",
+        "wash_b": "#f7f8f8",
+        "window": "#f6f7f6"
+      },
+      "seed": "#2dd4bf"
+    },
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#2851f6",
+        "accent_text": "#748ffb",
+        "card": "#181d32",
+        "headerbar": "#161926",
+        "on_accent": "#ffffff",
+        "popover": "#161926",
+        "sidebar": "#131620",
+        "text": null,
+        "view": "#151721",
+        "wash_a": "#091a5d",
+        "wash_b": "#120632",
+        "window": "#0f111b"
+      },
+      "seed": "#6e8bff"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#0a39f5",
+        "accent_text": "#052ed1",
+        "card": "#fafbfc",
+        "headerbar": "#fafafb",
+        "on_accent": "#ffffff",
+        "popover": "#fafafb",
+        "sidebar": "#f1f2f6",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#e2e7f8",
+        "wash_b": "#f6f4fb",
+        "window": "#f4f5f8"
+      },
+      "seed": "#6e8bff"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#7b83a3",
+        "accent_text": "#a7aec8",
+        "card": "#222328",
+        "headerbar": "#1c1d20",
+        "on_accent": "#ffffff",
+        "popover": "#1c1d20",
+        "sidebar": "#18191b",
+        "text": null,
+        "view": "#191a1c",
+        "wash_a": "#2b2e3b",
+        "wash_b": "#1a1820",
+        "window": "#141416"
+      },
+      "seed": "#6e8bff"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#697296",
+        "accent_text": "#525c84",
+        "card": "#fbfbfb",
+        "headerbar": "#fafafb",
+        "on_accent": "#ffffff",
+        "popover": "#fafafb",
+        "sidebar": "#f3f3f4",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#ebecef",
+        "wash_b": "#f7f7f8",
+        "window": "#f6f6f7"
+      },
+      "seed": "#6e8bff"
+    },
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#47d7a2",
+        "accent_text": "#86e9c5",
+        "card": "#1b2e28",
+        "headerbar": "#172520",
+        "on_accent": "#111114",
+        "popover": "#172520",
+        "sidebar": "#141f1b",
+        "text": null,
+        "view": "#16201c",
+        "wash_a": "#15513b",
+        "wash_b": "#0d282b",
+        "window": "#101a16"
+      },
+      "seed": "#34d399"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#2dd296",
+        "accent_text": "#167955",
+        "card": "#fafcfb",
+        "headerbar": "#fafbfb",
+        "on_accent": "#111114",
+        "popover": "#fafbfb",
+        "sidebar": "#f1f6f4",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#e5f5ef",
+        "wash_b": "#f4fafa",
+        "window": "#f4f8f7"
+      },
+      "seed": "#34d399"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#7ba394",
+        "accent_text": "#a7c8bc",
+        "card": "#222826",
+        "headerbar": "#1c201f",
+        "on_accent": "#111114",
+        "popover": "#1c201f",
+        "sidebar": "#181b1a",
+        "text": null,
+        "view": "#191c1b",
+        "wash_a": "#2b3b35",
+        "wash_b": "#181f20",
+        "window": "#141615"
+      },
+      "seed": "#34d399"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#699686",
+        "accent_text": "#4b7767",
+        "card": "#fbfbfb",
+        "headerbar": "#fafbfa",
+        "on_accent": "#ffffff",
+        "popover": "#fafbfa",
+        "sidebar": "#f3f4f4",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#ebefee",
+        "wash_b": "#f7f8f8",
+        "window": "#f6f7f6"
+      },
+      "seed": "#34d399"
+    },
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#f68a28",
+        "accent_text": "#fbb574",
+        "card": "#322418",
+        "headerbar": "#261e16",
+        "on_accent": "#111114",
+        "popover": "#261e16",
+        "sidebar": "#201913",
+        "text": null,
+        "view": "#211b15",
+        "wash_a": "#5d3109",
+        "wash_b": "#323006",
+        "window": "#1b150f"
+      },
+      "seed": "#fb8b24"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#f57b0a",
+        "accent_text": "#b35805",
+        "card": "#fcfbfa",
+        "headerbar": "#fbfafa",
+        "on_accent": "#111114",
+        "popover": "#fbfafa",
+        "sidebar": "#f6f3f1",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#f8ede2",
+        "wash_b": "#fbfbf4",
+        "window": "#f8f6f4"
+      },
+      "seed": "#fb8b24"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#a38e7b",
+        "accent_text": "#c8b7a7",
+        "card": "#282522",
+        "headerbar": "#201e1c",
+        "on_accent": "#ffffff",
+        "popover": "#201e1c",
+        "sidebar": "#1b1918",
+        "text": null,
+        "view": "#1c1b19",
+        "wash_a": "#3b332b",
+        "wash_b": "#202018",
+        "window": "#161514"
+      },
+      "seed": "#fb8b24"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#967f69",
+        "accent_text": "#846a52",
+        "card": "#fbfbfb",
+        "headerbar": "#fbfafa",
+        "on_accent": "#ffffff",
+        "popover": "#fbfafa",
+        "sidebar": "#f4f3f3",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#efedeb",
+        "wash_b": "#f8f8f7",
+        "window": "#f7f6f6"
+      },
+      "seed": "#fb8b24"
+    },
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#517fcd",
+        "accent_text": "#8dace2",
+        "card": "#1d232d",
+        "headerbar": "#181d24",
+        "on_accent": "#ffffff",
+        "popover": "#181d24",
+        "sidebar": "#15181e",
+        "text": null,
+        "view": "#161a1f",
+        "wash_a": "#1a2c4c",
+        "wash_b": "#120f29",
+        "window": "#111419"
+      },
+      "seed": "#9ca3af"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#396dc6",
+        "accent_text": "#2b5aab",
+        "card": "#fbfbfc",
+        "headerbar": "#fafafb",
+        "on_accent": "#ffffff",
+        "popover": "#fafafb",
+        "sidebar": "#f2f3f5",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#e6ebf4",
+        "wash_b": "#f5f5fa",
+        "window": "#f5f6f7"
+      },
+      "seed": "#9ca3af"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#8b8e93",
+        "accent_text": "#b1b6be",
+        "card": "#242526",
+        "headerbar": "#1e1e1e",
+        "on_accent": "#ffffff",
+        "popover": "#1e1e1e",
+        "sidebar": "#19191a",
+        "text": null,
+        "view": "#1a1b1b",
+        "wash_a": "#313335",
+        "wash_b": "#1b1b1d",
+        "window": "#151515"
+      },
+      "seed": "#9ca3af"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#7b7e84",
+        "accent_text": "#626974",
+        "card": "#fbfbfb",
+        "headerbar": "#fafafa",
+        "on_accent": "#ffffff",
+        "popover": "#fafafa",
+        "sidebar": "#f3f3f4",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#ededee",
+        "wash_b": "#f7f7f8",
+        "window": "#f6f6f6"
+      },
+      "seed": "#9ca3af"
+    },
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#f6e628",
+        "accent_text": "#fbf174",
+        "card": "#323018",
+        "headerbar": "#262516",
+        "on_accent": "#111114",
+        "popover": "#262516",
+        "sidebar": "#201f13",
+        "text": null,
+        "view": "#212015",
+        "wash_a": "#5d5709",
+        "wash_b": "#213206",
+        "window": "#1b1a0f"
+      },
+      "seed": "#fff040"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#f5e20a",
+        "accent_text": "#776e03",
+        "card": "#fcfcfa",
+        "headerbar": "#fbfbfa",
+        "on_accent": "#111114",
+        "popover": "#fbfbfa",
+        "sidebar": "#f6f5f1",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#f8f6e2",
+        "wash_b": "#f8fbf4",
+        "window": "#f8f7f4"
+      },
+      "seed": "#fff040"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#a3a07b",
+        "accent_text": "#c8c5a7",
+        "card": "#282722",
+        "headerbar": "#20201c",
+        "on_accent": "#111114",
+        "popover": "#20201c",
+        "sidebar": "#1b1b18",
+        "text": null,
+        "view": "#1c1c19",
+        "wash_a": "#3b3a2b",
+        "wash_b": "#1d2018",
+        "window": "#161614"
+      },
+      "seed": "#fff040"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#969369",
+        "accent_text": "#716e47",
+        "card": "#fbfbfb",
+        "headerbar": "#fbfbfa",
+        "on_accent": "#ffffff",
+        "popover": "#fbfbfa",
+        "sidebar": "#f4f4f3",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#efefeb",
+        "wash_b": "#f8f8f7",
+        "window": "#f7f6f6"
+      },
+      "seed": "#fff040"
+    },
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#cd5151",
+        "accent_text": "#e28d8d",
+        "card": "#2d1d1d",
+        "headerbar": "#241818",
+        "on_accent": "#ffffff",
+        "popover": "#241818",
+        "sidebar": "#1e1515",
+        "text": null,
+        "view": "#1f1616",
+        "wash_a": "#4c1a1a",
+        "wash_b": "#291b0f",
+        "window": "#191111"
+      },
+      "seed": "#101010"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#c63939",
+        "accent_text": "#ab2b2b",
+        "card": "#fcfbfb",
+        "headerbar": "#fbfafa",
+        "on_accent": "#ffffff",
+        "popover": "#fbfafa",
+        "sidebar": "#f5f2f2",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#f4e6e6",
+        "wash_b": "#faf7f5",
+        "window": "#f7f5f5"
+      },
+      "seed": "#101010"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#8f8f8f",
+        "accent_text": "#bbb4b4",
+        "card": "#252525",
+        "headerbar": "#1e1e1e",
+        "on_accent": "#ffffff",
+        "popover": "#1e1e1e",
+        "sidebar": "#1a1a1a",
+        "text": null,
+        "view": "#1b1b1b",
+        "wash_a": "#333333",
+        "wash_b": "#1c1c1c",
+        "window": "#151515"
+      },
+      "seed": "#101010"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#808080",
+        "accent_text": "#706666",
+        "card": "#fbfbfb",
+        "headerbar": "#fafafa",
+        "on_accent": "#ffffff",
+        "popover": "#fafafa",
+        "sidebar": "#f4f4f4",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#ededed",
+        "wash_b": "#f7f7f7",
+        "window": "#f6f6f6"
+      },
+      "seed": "#101010"
+    },
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#cd5151",
+        "accent_text": "#e28d8d",
+        "card": "#2d1d1d",
+        "headerbar": "#241818",
+        "on_accent": "#ffffff",
+        "popover": "#241818",
+        "sidebar": "#1e1515",
+        "text": null,
+        "view": "#1f1616",
+        "wash_a": "#4c1a1a",
+        "wash_b": "#291b0f",
+        "window": "#191111"
+      },
+      "seed": "#ffffff"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#c63939",
+        "accent_text": "#ab2b2b",
+        "card": "#fcfbfb",
+        "headerbar": "#fbfafa",
+        "on_accent": "#ffffff",
+        "popover": "#fbfafa",
+        "sidebar": "#f5f2f2",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#f4e6e6",
+        "wash_b": "#faf7f5",
+        "window": "#f7f5f5"
+      },
+      "seed": "#ffffff"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#8f8f8f",
+        "accent_text": "#bbb4b4",
+        "card": "#252525",
+        "headerbar": "#1e1e1e",
+        "on_accent": "#ffffff",
+        "popover": "#1e1e1e",
+        "sidebar": "#1a1a1a",
+        "text": null,
+        "view": "#1b1b1b",
+        "wash_a": "#333333",
+        "wash_b": "#1c1c1c",
+        "window": "#151515"
+      },
+      "seed": "#ffffff"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#808080",
+        "accent_text": "#706666",
+        "card": "#fbfbfb",
+        "headerbar": "#fafafa",
+        "on_accent": "#ffffff",
+        "popover": "#fafafa",
+        "sidebar": "#f4f4f4",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#ededed",
+        "wash_b": "#f7f7f7",
+        "window": "#f6f6f6"
+      },
+      "seed": "#ffffff"
+    },
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#cd5151",
+        "accent_text": "#e28d8d",
+        "card": "#2d1d1d",
+        "headerbar": "#241818",
+        "on_accent": "#ffffff",
+        "popover": "#241818",
+        "sidebar": "#1e1515",
+        "text": null,
+        "view": "#1f1616",
+        "wash_a": "#4c1a1a",
+        "wash_b": "#291b0f",
+        "window": "#191111"
+      },
+      "seed": "#000000"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#c63939",
+        "accent_text": "#ab2b2b",
+        "card": "#fcfbfb",
+        "headerbar": "#fbfafa",
+        "on_accent": "#ffffff",
+        "popover": "#fbfafa",
+        "sidebar": "#f5f2f2",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#f4e6e6",
+        "wash_b": "#faf7f5",
+        "window": "#f7f5f5"
+      },
+      "seed": "#000000"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#8f8f8f",
+        "accent_text": "#bbb4b4",
+        "card": "#252525",
+        "headerbar": "#1e1e1e",
+        "on_accent": "#ffffff",
+        "popover": "#1e1e1e",
+        "sidebar": "#1a1a1a",
+        "text": null,
+        "view": "#1b1b1b",
+        "wash_a": "#333333",
+        "wash_b": "#1c1c1c",
+        "window": "#151515"
+      },
+      "seed": "#000000"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#808080",
+        "accent_text": "#706666",
+        "card": "#fbfbfb",
+        "headerbar": "#fafafa",
+        "on_accent": "#ffffff",
+        "popover": "#fafafa",
+        "sidebar": "#f4f4f4",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#ededed",
+        "wash_b": "#f7f7f7",
+        "window": "#f6f6f6"
+      },
+      "seed": "#000000"
+    },
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#e27d3b",
+        "accent_text": "#f0ac7f",
+        "card": "#30231a",
+        "headerbar": "#261c16",
+        "on_accent": "#111114",
+        "popover": "#261c16",
+        "sidebar": "#201813",
+        "text": null,
+        "view": "#211a15",
+        "wash_a": "#552c11",
+        "wash_b": "#2e290a",
+        "window": "#1a140f"
+      },
+      "seed": "#7a3b12"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#de6b21",
+        "accent_text": "#b75515",
+        "card": "#fcfbfa",
+        "headerbar": "#fbfafa",
+        "on_accent": "#ffffff",
+        "popover": "#fbfafa",
+        "sidebar": "#f6f3f1",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#f6ebe4",
+        "wash_b": "#fbfaf4",
+        "window": "#f8f6f4"
+      },
+      "seed": "#7a3b12"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#a38b7b",
+        "accent_text": "#c8b4a7",
+        "card": "#282422",
+        "headerbar": "#201e1c",
+        "on_accent": "#ffffff",
+        "popover": "#201e1c",
+        "sidebar": "#1b1918",
+        "text": null,
+        "view": "#1c1a19",
+        "wash_a": "#3b312b",
+        "wash_b": "#201f18",
+        "window": "#161514"
+      },
+      "seed": "#7a3b12"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#967b69",
+        "accent_text": "#846652",
+        "card": "#fbfbfb",
+        "headerbar": "#fbfafa",
+        "on_accent": "#ffffff",
+        "popover": "#fbfafa",
+        "sidebar": "#f4f3f3",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#efedeb",
+        "wash_b": "#f8f8f7",
+        "window": "#f7f6f6"
+      },
+      "seed": "#7a3b12"
+    },
+    {
+      "dark": true,
+      "muted": false,
+      "palette": {
+        "accent": "#28f66e",
+        "accent_text": "#74fba2",
+        "card": "#183221",
+        "headerbar": "#16261c",
+        "on_accent": "#111114",
+        "popover": "#16261c",
+        "sidebar": "#132017",
+        "text": null,
+        "view": "#152119",
+        "wash_a": "#095d26",
+        "wash_b": "#06322a",
+        "window": "#0f1b13"
+      },
+      "seed": "#3dff7f"
+    },
+    {
+      "dark": false,
+      "muted": false,
+      "palette": {
+        "accent": "#0af55a",
+        "accent_text": "#03812e",
+        "card": "#fafcfb",
+        "headerbar": "#fafbfa",
+        "on_accent": "#111114",
+        "popover": "#fafbfa",
+        "sidebar": "#f1f6f3",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#e2f8ea",
+        "wash_b": "#f4fbfa",
+        "window": "#f4f8f6"
+      },
+      "seed": "#3dff7f"
+    },
+    {
+      "dark": true,
+      "muted": true,
+      "palette": {
+        "accent": "#7ba388",
+        "accent_text": "#a7c8b2",
+        "card": "#222824",
+        "headerbar": "#1c201d",
+        "on_accent": "#111114",
+        "popover": "#1c201d",
+        "sidebar": "#181b19",
+        "text": null,
+        "view": "#191c1a",
+        "wash_a": "#2b3b30",
+        "wash_b": "#18201f",
+        "window": "#141614"
+      },
+      "seed": "#3dff7f"
+    },
+    {
+      "dark": false,
+      "muted": true,
+      "palette": {
+        "accent": "#699678",
+        "accent_text": "#4b775a",
+        "card": "#fbfbfb",
+        "headerbar": "#fafbfa",
+        "on_accent": "#ffffff",
+        "popover": "#fafbfa",
+        "sidebar": "#f3f4f3",
+        "text": null,
+        "view": "#fefefe",
+        "wash_a": "#ebefec",
+        "wash_b": "#f7f8f8",
+        "window": "#f6f7f6"
+      },
+      "seed": "#3dff7f"
+    }
+  ],
+  "documents": [
+    {
+      "document": "name = \"Plain\"",
+      "name": "a name alone",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "default",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Plain",
+        "schemes": [
+          {
+            "id": "default",
+            "name": "Default"
+          }
+        ],
+        "variants": [],
+        "warnings": []
+      }
+    },
+    {
+      "document": "author = \"me\"",
+      "name": "no name",
+      "refused": "theme.toml has no name. Add a line like name = \"My Theme\"."
+    },
+    {
+      "document": "name = \"   \"",
+      "name": "a blank name",
+      "refused": "theme.toml has no name. Add a line like name = \"My Theme\"."
+    },
+    {
+      "document": "format = 2\nname = \"Later\"",
+      "name": "a newer format",
+      "refused": "This theme is written for a newer Flaccy (format 2, this one reads up to 1)."
+    },
+    {
+      "document": "format = 1.5\nname = \"Between\"",
+      "name": "a format with a fraction",
+      "refused": "This theme is written for a newer Flaccy (format 1.5, this one reads up to 1)."
+    },
+    {
+      "document": "name = ",
+      "name": "not toml",
+      "refused": "theme.toml is not valid TOML (line 1: a value is missing)."
+    },
+    {
+      "document": "name = \"Open\ndescription = \"x\"",
+      "name": "an open string",
+      "refused": "theme.toml is not valid TOML (line 2: a string is never closed)."
+    },
+    {
+      "document": "name = \"Twice\"\nname = \"Again\"",
+      "name": "a key set twice",
+      "refused": "theme.toml is not valid TOML (line 2: name is set twice)."
+    },
+    {
+      "document": "name \"Nope\"",
+      "name": "a missing equals",
+      "refused": "theme.toml is not valid TOML (line 1: a key must be followed by =)."
+    },
+    {
+      "document": "name = \"Typo\"\ncolour = \"red\"\nappearance = \"night\"\n[layout]\nalbums = \"gird\"\ncover_size = 900\nglow = \"yes\"\n[shape]\ncorners = 7\ncovrs = \"square\"\n[[scheme]]\nname = \"One\"\naccent = \"pink\"\n[scheme.dark]\nwindow = \"#12\"\n[[scheme]]\nname = \"One\"\n",
+      "name": "every mistake at once",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 2.0,
+            "cover_size": 320,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "one",
+            "shadows": true,
+            "variant": null
+          },
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 2.0,
+            "cover_size": 320,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "one-2",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Typo",
+        "schemes": [
+          {
+            "id": "one",
+            "name": "One"
+          },
+          {
+            "id": "one-2",
+            "name": "One"
+          }
+        ],
+        "variants": [],
+        "warnings": [
+          "appearance: \"night\" is not one of any, dark, light",
+          "shape.corners: 7 is outside 0 to 2, so the nearest end is used",
+          "shape.covrs is not something a theme can set",
+          "layout.albums: \"gird\" is not one of grid, wall, list, carousel",
+          "layout.cover_size: 900 is outside 96 to 320, so the nearest end is used",
+          "layout.glow must be true or false",
+          "scheme 1.accent: \"pink\" is not a color (write it as #rrggbb, or \"artwork\" to follow the cover)",
+          "scheme 1.dark.window: \"#12\" is not a color (write it as #rrggbb)",
+          "scheme 2: the id \"one\" is used twice, so this one becomes \"one-2\"",
+          "colour is not something a theme can set"
+        ]
+      }
+    },
+    {
+      "document": "name = \"Single\"\n[scheme]\nname = \"Only\"\naccent = \"#123456\"\n",
+      "name": "a scheme written as one table",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "default",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Single",
+        "schemes": [
+          {
+            "id": "default",
+            "name": "Default"
+          }
+        ],
+        "variants": [],
+        "warnings": [
+          "scheme must be written as [[scheme]] blocks"
+        ]
+      }
+    },
+    {
+      "document": "name = \"Flat\"\nfonts = \"Inter\"\nlayout = 3\nvariant = \"wall\"\n",
+      "name": "tables written as values",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "default",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Flat",
+        "schemes": [
+          {
+            "id": "default",
+            "name": "Default"
+          }
+        ],
+        "variants": [],
+        "warnings": [
+          "fonts must be a [fonts] table",
+          "layout must be a [layout] table",
+          "variant must be written as [[variant]] blocks"
+        ]
+      }
+    },
+    {
+      "document": "name = \"Numbers\"\n[shape]\ncorners = 0.3\n[layout]\ncover_size = 171.6\n[[variant]]\nname = \"Low\"\n[variant.shape]\ncorners = -1\n[variant.layout]\ncover_size = 12\n[[variant]]\nname = \"High\"\n[variant.shape]\ncorners = 2.5\n",
+      "name": "numbers of every kind",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 0.0,
+            "cover_size": 96,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "default",
+            "shadows": true,
+            "variant": "low"
+          },
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 2.0,
+            "cover_size": 172,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "default",
+            "shadows": true,
+            "variant": "high"
+          }
+        ],
+        "name": "Numbers",
+        "schemes": [
+          {
+            "id": "default",
+            "name": "Default"
+          }
+        ],
+        "variants": [
+          {
+            "id": "low",
+            "name": "Low"
+          },
+          {
+            "id": "high",
+            "name": "High"
+          }
+        ],
+        "warnings": [
+          "variant 1.shape.corners: -1 is outside 0 to 2, so the nearest end is used",
+          "variant 1.layout.cover_size: 12 is outside 96 to 320, so the nearest end is used",
+          "variant 2.shape.corners: 2.5 is outside 0 to 2, so the nearest end is used"
+        ]
+      }
+    },
+    {
+      "document": "name = \"Types\"\nauthor = 7\ndescription = true\n[fonts]\ninterface = 12\nheadings = [\"a\"]\n[shape]\ncorners = true\ncovers = 1\nshadows = \"no\"\n[layout]\nalbums = false\ncover_size = \"big\"\nglow = 1\n[[scheme]]\nname = 3\naccent = 0xff\nmuted = \"yes\"\nappearance = 1\n",
+      "name": "wrong types everywhere",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "colors-1",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Types",
+        "schemes": [
+          {
+            "id": "colors-1",
+            "name": "Colors 1"
+          }
+        ],
+        "variants": [],
+        "warnings": [
+          "author must be text in quotes",
+          "description must be text in quotes",
+          "fonts.interface must be text in quotes",
+          "fonts.headings must be text in quotes",
+          "shape.corners must be sharp, standard, round or a number from 0 to 2",
+          "shape.covers must be text in quotes",
+          "shape.shadows must be true or false",
+          "layout.albums must be text in quotes",
+          "layout.cover_size must be a number",
+          "layout.glow must be true or false",
+          "scheme 1.name must be text in quotes",
+          "scheme 1.accent must be text in quotes",
+          "scheme 1.muted must be true or false",
+          "scheme 1.appearance must be text in quotes"
+        ]
+      }
+    },
+    {
+      "document": "name = \"Ids\"\n[[scheme]]\nname = \"Amber Glow\"\n[[scheme]]\nid = \"  Hi-Fi  '77! \"\nname = \"Second\"\n[[scheme]]\nname = \"¡¡¡\"\n[[scheme]]\nid = \"amber glow\"\nname = \"Fourth\"\n[[variant]]\n[[variant]]\nname = \"Variant 1\"\n",
+      "name": "names that need ids",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "amber-glow",
+            "shadows": true,
+            "variant": "variant-1"
+          },
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "amber-glow",
+            "shadows": true,
+            "variant": "variant-1-2"
+          },
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "hi-fi-77",
+            "shadows": true,
+            "variant": "variant-1"
+          },
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "hi-fi-77",
+            "shadows": true,
+            "variant": "variant-1-2"
+          },
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "scheme-3",
+            "shadows": true,
+            "variant": "variant-1"
+          },
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "scheme-3",
+            "shadows": true,
+            "variant": "variant-1-2"
+          },
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "amber-glow-4",
+            "shadows": true,
+            "variant": "variant-1"
+          },
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "amber-glow-4",
+            "shadows": true,
+            "variant": "variant-1-2"
+          }
+        ],
+        "name": "Ids",
+        "schemes": [
+          {
+            "id": "amber-glow",
+            "name": "Amber Glow"
+          },
+          {
+            "id": "hi-fi-77",
+            "name": "Second"
+          },
+          {
+            "id": "scheme-3",
+            "name": "¡¡¡"
+          },
+          {
+            "id": "amber-glow-4",
+            "name": "Fourth"
+          }
+        ],
+        "variants": [
+          {
+            "id": "variant-1",
+            "name": "Variant 1"
+          },
+          {
+            "id": "variant-1-2",
+            "name": "Variant 1"
+          }
+        ],
+        "warnings": [
+          "scheme 4: the id \"amber-glow\" is used twice, so this one becomes \"amber-glow-4\"",
+          "variant 2: the id \"variant-1\" is used twice, so this one becomes \"variant-1-2\""
+        ]
+      }
+    },
+    {
+      "document": "name = \"Dotted\"\nfonts.interface = \"Inter, sans-serif\"\nshape = { corners = \"round\", covers = \"circle\" }\nlayout.albums = \"CAROUSEL\"\nlayout.glow = false\n",
+      "name": "dotted keys and inline tables",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "carousel",
+            "appearance": "any",
+            "corners": 1.6,
+            "cover_size": 140,
+            "covers": "circle",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": false,
+            "heading_font": null,
+            "interface_font": "Inter, sans-serif",
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "default",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Dotted",
+        "schemes": [
+          {
+            "id": "default",
+            "name": "Default"
+          }
+        ],
+        "variants": [],
+        "warnings": []
+      }
+    },
+    {
+      "document": "# made on windows\r\nname = \"Windows\"  # trailing\r\n[layout]\r\nalbums = 'wall'\r\n\r\n[[scheme]]\r\nname = \"Day\"\r\naccent = \"#0F8\"\r\n",
+      "name": "a windows file with comments",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "wall",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#28f696",
+              "accent_text": "#74fbbc",
+              "card": "#183226",
+              "headerbar": "#16261f",
+              "on_accent": "#111114",
+              "popover": "#16261f",
+              "sidebar": "#13201a",
+              "text": null,
+              "view": "#15211b",
+              "wash_a": "#095d36",
+              "wash_b": "#063232",
+              "window": "#0f1b15"
+            },
+            "dark_with_cover": {
+              "accent": "#28f696",
+              "accent_text": "#74fbbc",
+              "card": "#183226",
+              "headerbar": "#16261f",
+              "on_accent": "#111114",
+              "popover": "#16261f",
+              "sidebar": "#13201a",
+              "text": null,
+              "view": "#15211b",
+              "wash_a": "#095d36",
+              "wash_b": "#063232",
+              "window": "#0f1b15"
+            },
+            "follows_artwork": false,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#0af587",
+              "accent_text": "#038146",
+              "card": "#fafcfb",
+              "headerbar": "#fafbfa",
+              "on_accent": "#111114",
+              "popover": "#fafbfa",
+              "sidebar": "#f1f6f4",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#e2f8ee",
+              "wash_b": "#f4fbfb",
+              "window": "#f4f8f6"
+            },
+            "scheme": "day",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Windows",
+        "schemes": [
+          {
+            "id": "day",
+            "name": "Day"
+          }
+        ],
+        "variants": [],
+        "warnings": []
+      }
+    },
+    {
+      "document": "name = \"\"\"Long\"\"\"\ndescription = \"\"\"\nTwo lines \\\n   made one.\"\"\"\nauthor = '''Some\"one'''\n",
+      "name": "long strings",
+      "theme": {
+        "appearance": "any",
+        "author": "Some\"one",
+        "description": "Two lines made one.",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "default",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Long",
+        "schemes": [
+          {
+            "id": "default",
+            "name": "Default"
+          }
+        ],
+        "variants": [],
+        "warnings": []
+      }
+    },
+    {
+      "document": "name = \"Exact\"\n[[scheme]]\nname = \"Both\"\naccent = \"ARTWORK\"\nmuted = true\n[scheme.dark]\nwindow = \"#000000\"\nheaderbar = \"#101010\"\naccent = \"#ffee00\"\ntext = \"#e0fff8\"\n[scheme.light]\ncard = \"#ffffff\"\npopover = \"#fafafa\"\non_accent = \"#000\"\naccent_text = \"#102030\"\nwash_a = \"#abcdef\"\nwash_b = \"#fedcba\"\nsidebar = \"#eeeeee\"\nview = \"#fdfdfd\"\n",
+      "name": "exact colors in both modes",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#ffee00",
+              "accent_text": "#c8a7ad",
+              "card": "#282223",
+              "headerbar": "#101010",
+              "on_accent": "#111114",
+              "popover": "#101010",
+              "sidebar": "#1b1818",
+              "text": "#e0fff8",
+              "view": "#1c191a",
+              "wash_a": "#3b2b2e",
+              "wash_b": "#201a18",
+              "window": "#000000"
+            },
+            "dark_with_cover": {
+              "accent": "#ffee00",
+              "accent_text": "#a7b4c8",
+              "card": "#222428",
+              "headerbar": "#101010",
+              "on_accent": "#111114",
+              "popover": "#101010",
+              "sidebar": "#18191b",
+              "text": "#e0fff8",
+              "view": "#191a1c",
+              "wash_a": "#2b313b",
+              "wash_b": "#181820",
+              "window": "#000000"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#966971",
+              "accent_text": "#102030",
+              "card": "#ffffff",
+              "headerbar": "#fbfafa",
+              "on_accent": "#000000",
+              "popover": "#fafafa",
+              "sidebar": "#eeeeee",
+              "text": null,
+              "view": "#fdfdfd",
+              "wash_a": "#abcdef",
+              "wash_b": "#fedcba",
+              "window": "#f7f6f6"
+            },
+            "scheme": "both",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Exact",
+        "schemes": [
+          {
+            "id": "both",
+            "name": "Both"
+          }
+        ],
+        "variants": [],
+        "warnings": []
+      }
+    },
+    {
+      "document": "name = \"Modes\"\nappearance = \"light\"\n[[scheme]]\nname = \"Day\"\naccent = \"#8c1c13\"\n[[scheme]]\nname = \"Night\"\naccent = \"#e0b070\"\nappearance = \"dark\"\n[[scheme]]\nname = \"Either\"\naccent = \"#2dd4bf\"\nappearance = \"any\"\n",
+      "name": "a scheme with its own mode",
+      "theme": {
+        "appearance": "light",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "grid",
+            "appearance": "light",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#e44639",
+              "accent_text": "#f2867e",
+              "card": "#301b1a",
+              "headerbar": "#261716",
+              "on_accent": "#ffffff",
+              "popover": "#261716",
+              "sidebar": "#201413",
+              "text": null,
+              "view": "#211615",
+              "wash_a": "#561510",
+              "wash_b": "#2e1e0a",
+              "window": "#1a100f"
+            },
+            "dark_with_cover": {
+              "accent": "#e44639",
+              "accent_text": "#f2867e",
+              "card": "#301b1a",
+              "headerbar": "#261716",
+              "on_accent": "#ffffff",
+              "popover": "#261716",
+              "sidebar": "#201413",
+              "text": null,
+              "view": "#211615",
+              "wash_a": "#561510",
+              "wash_b": "#2e1e0a",
+              "window": "#1a100f"
+            },
+            "follows_artwork": false,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#e12d1e",
+              "accent_text": "#c22114",
+              "card": "#fcfafa",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f2f1",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f7e5e4",
+              "wash_b": "#fbf8f4",
+              "window": "#f8f5f4"
+            },
+            "scheme": "day",
+            "shadows": true,
+            "variant": null
+          },
+          {
+            "albums": "grid",
+            "appearance": "dark",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#d79947",
+              "accent_text": "#e9bf86",
+              "card": "#2e261b",
+              "headerbar": "#251f17",
+              "on_accent": "#111114",
+              "popover": "#251f17",
+              "sidebar": "#1f1a14",
+              "text": null,
+              "view": "#201c16",
+              "wash_a": "#513715",
+              "wash_b": "#2a2b0d",
+              "window": "#1a1610"
+            },
+            "dark_with_cover": {
+              "accent": "#d79947",
+              "accent_text": "#e9bf86",
+              "card": "#2e261b",
+              "headerbar": "#251f17",
+              "on_accent": "#111114",
+              "popover": "#251f17",
+              "sidebar": "#1f1a14",
+              "text": null,
+              "view": "#201c16",
+              "wash_a": "#513715",
+              "wash_b": "#2a2b0d",
+              "window": "#1a1610"
+            },
+            "follows_artwork": false,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#d28b2d",
+              "accent_text": "#9b651c",
+              "card": "#fcfbfa",
+              "headerbar": "#fbfbfa",
+              "on_accent": "#111114",
+              "popover": "#fbfbfa",
+              "sidebar": "#f6f4f1",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f5eee5",
+              "wash_b": "#fafaf4",
+              "window": "#f8f6f4"
+            },
+            "scheme": "night",
+            "shadows": true,
+            "variant": null
+          },
+          {
+            "albums": "grid",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#45d9c6",
+              "accent_text": "#85eade",
+              "card": "#1b2f2c",
+              "headerbar": "#172523",
+              "on_accent": "#111114",
+              "popover": "#172523",
+              "sidebar": "#141f1e",
+              "text": null,
+              "view": "#15201f",
+              "wash_a": "#15514a",
+              "wash_b": "#0c212c",
+              "window": "#101a19"
+            },
+            "dark_with_cover": {
+              "accent": "#45d9c6",
+              "accent_text": "#85eade",
+              "card": "#1b2f2c",
+              "headerbar": "#172523",
+              "on_accent": "#111114",
+              "popover": "#172523",
+              "sidebar": "#141f1e",
+              "text": null,
+              "view": "#15201f",
+              "wash_a": "#15514a",
+              "wash_b": "#0c212c",
+              "window": "#101a19"
+            },
+            "follows_artwork": false,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#2bd4be",
+              "accent_text": "#157a6d",
+              "card": "#fafcfc",
+              "headerbar": "#fafbfb",
+              "on_accent": "#111114",
+              "popover": "#fafbfb",
+              "sidebar": "#f1f6f5",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#e5f5f3",
+              "wash_b": "#f4f8fa",
+              "window": "#f4f8f7"
+            },
+            "scheme": "either",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Modes",
+        "schemes": [
+          {
+            "id": "day",
+            "name": "Day"
+          },
+          {
+            "id": "night",
+            "name": "Night"
+          },
+          {
+            "id": "either",
+            "name": "Either"
+          }
+        ],
+        "variants": [],
+        "warnings": []
+      }
+    },
+    {
+      "document": "name = \"Dated\"\nmade = 2026-11-21\n[layout]\nalbums = \"list\"\n",
+      "name": "a date nobody asked for",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "list",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "rounded",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": true,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "default",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Dated",
+        "schemes": [
+          {
+            "id": "default",
+            "name": "Default"
+          }
+        ],
+        "variants": [],
+        "warnings": [
+          "made is not something a theme can set"
+        ]
+      }
+    },
+    {
+      "document": "name = \"Twice\"\n[layout]\nalbums = \"list\"\n[shape]\ncovers = \"square\"\n[layout]\nglow = false\n",
+      "name": "a table reopened",
+      "theme": {
+        "appearance": "any",
+        "author": "",
+        "description": "",
+        "id": "case",
+        "looks": [
+          {
+            "albums": "list",
+            "appearance": "any",
+            "corners": 1.0,
+            "cover_size": 140,
+            "covers": "square",
+            "dark": {
+              "accent": "#f6284d",
+              "accent_text": "#fb748c",
+              "card": "#32181d",
+              "headerbar": "#261619",
+              "on_accent": "#ffffff",
+              "popover": "#261619",
+              "sidebar": "#201315",
+              "text": null,
+              "view": "#211517",
+              "wash_a": "#5d0918",
+              "wash_b": "#321306",
+              "window": "#1b0f11"
+            },
+            "dark_with_cover": {
+              "accent": "#317bed",
+              "accent_text": "#78aaf7",
+              "card": "#192231",
+              "headerbar": "#161c26",
+              "on_accent": "#ffffff",
+              "popover": "#161c26",
+              "sidebar": "#131820",
+              "text": null,
+              "view": "#151a21",
+              "wash_a": "#0d2b59",
+              "wash_b": "#0b0830",
+              "window": "#0f141b"
+            },
+            "follows_artwork": true,
+            "glow": false,
+            "heading_font": null,
+            "interface_font": null,
+            "light": {
+              "accent": "#f50a34",
+              "accent_text": "#d1052a",
+              "card": "#fcfafb",
+              "headerbar": "#fbfafa",
+              "on_accent": "#ffffff",
+              "popover": "#fbfafa",
+              "sidebar": "#f6f1f2",
+              "text": null,
+              "view": "#fefefe",
+              "wash_a": "#f8e2e6",
+              "wash_b": "#fbf6f4",
+              "window": "#f8f4f5"
+            },
+            "scheme": "default",
+            "shadows": true,
+            "variant": null
+          }
+        ],
+        "name": "Twice",
+        "schemes": [
+          {
+            "id": "default",
+            "name": "Default"
+          }
+        ],
+        "variants": [],
+        "warnings": []
+      }
+    }
+  ],
+  "flow": [
+    {
+      "count": 829,
+      "gap": 49.0,
+      "height": 600.0,
+      "pitch": 373.0,
+      "position": 0.0,
+      "side": 540.0,
+      "slots": [
+        {
+          "index": 1,
+          "opacity": 0.62,
+          "side": 324.0,
+          "x": 994.0,
+          "y": 138.0
+        },
+        {
+          "index": 0,
+          "opacity": 1.0,
+          "side": 540.0,
+          "x": 405.0,
+          "y": 30.0
+        }
+      ],
+      "width": 1350.0
+    },
+    {
+      "count": 829,
+      "gap": 49.0,
+      "height": 600.0,
+      "pitch": 373.0,
+      "position": 5.0,
+      "side": 540.0,
+      "slots": [
+        {
+          "index": 4,
+          "opacity": 0.62,
+          "side": 324.0,
+          "x": 32.0,
+          "y": 138.0
+        },
+        {
+          "index": 6,
+          "opacity": 0.62,
+          "side": 324.0,
+          "x": 994.0,
+          "y": 138.0
+        },
+        {
+          "index": 5,
+          "opacity": 1.0,
+          "side": 540.0,
+          "x": 405.0,
+          "y": 30.0
+        }
+      ],
+      "width": 1350.0
+    },
+    {
+      "count": 829,
+      "gap": 49.0,
+      "height": 600.0,
+      "pitch": 373.0,
+      "position": 5.37,
+      "side": 540.0,
+      "slots": [
+        {
+          "index": 7,
+          "opacity": 0.62,
+          "side": 324.0,
+          "x": 1228.99,
+          "y": 138.0
+        },
+        {
+          "index": 4,
+          "opacity": 0.62,
+          "side": 324.0,
+          "x": -106.00999999999999,
+          "y": 138.0
+        },
+        {
+          "index": 6,
+          "opacity": 0.7606,
+          "side": 403.92,
+          "x": 776.0699999999999,
+          "y": 98.03999999999999
+        },
+        {
+          "index": 5,
+          "opacity": 0.8593999999999999,
+          "side": 460.08,
+          "x": 266.99,
+          "y": 69.96000000000001
+        }
+      ],
+      "width": 1350.0
+    },
+    {
+      "count": 829,
+      "gap": 49.0,
+      "height": 600.0,
+      "pitch": 373.0,
+      "position": 828.0,
+      "side": 540.0,
+      "slots": [
+        {
+          "index": 827,
+          "opacity": 0.62,
+          "side": 324.0,
+          "x": 32.0,
+          "y": 138.0
+        },
+        {
+          "index": 828,
+          "opacity": 1.0,
+          "side": 540.0,
+          "x": 405.0,
+          "y": 30.0
+        }
+      ],
+      "width": 1350.0
+    },
+    {
+      "count": 6,
+      "gap": 14.0,
+      "height": 320.0,
+      "pitch": 107.6,
+      "position": 2.5,
+      "side": 156.0,
+      "slots": [
+        {
+          "index": 1,
+          "opacity": 0.62,
+          "side": 93.6,
+          "x": -44.40000000000002,
+          "y": 113.2
+        },
+        {
+          "index": 4,
+          "opacity": 0.62,
+          "side": 93.6,
+          "x": 340.8,
+          "y": 113.2
+        },
+        {
+          "index": 2,
+          "opacity": 0.81,
+          "side": 124.8,
+          "x": 63.199999999999996,
+          "y": 97.6
+        },
+        {
+          "index": 3,
+          "opacity": 0.81,
+          "side": 124.8,
+          "x": 201.99999999999997,
+          "y": 97.6
+        }
+      ],
+      "width": 390.0
+    },
+    {
+      "count": 2,
+      "gap": 34.0,
+      "height": 420.0,
+      "pitch": 262.0,
+      "position": 0.5,
+      "side": 380.0,
+      "slots": [
+        {
+          "index": 0,
+          "opacity": 0.81,
+          "side": 304.0,
+          "x": 191.0,
+          "y": 58.0
+        },
+        {
+          "index": 1,
+          "opacity": 0.81,
+          "side": 304.0,
+          "x": 529.0,
+          "y": 58.0
+        }
+      ],
+      "width": 1024.0
+    },
+    {
+      "count": 1,
+      "gap": 12.0,
+      "height": 100.0,
+      "pitch": 91.2,
+      "position": 0.0,
+      "side": 132.0,
+      "slots": [
+        {
+          "index": 0,
+          "opacity": 1.0,
+          "side": 132.0,
+          "x": 84.0,
+          "y": -16.0
+        }
+      ],
+      "width": 300.0
+    },
+    {
+      "count": 100,
+      "gap": 50.0,
+      "height": 2000.0,
+      "pitch": 386.0,
+      "position": 40.75,
+      "side": 560.0,
+      "slots": [
+        {
+          "index": 46,
+          "opacity": 0.62,
+          "side": 336.0,
+          "x": 3970.5,
+          "y": 832.0
+        },
+        {
+          "index": 36,
+          "opacity": 0.62,
+          "side": 336.0,
+          "x": -113.5,
+          "y": 832.0
+        },
+        {
+          "index": 45,
+          "opacity": 0.62,
+          "side": 336.0,
+          "x": 3584.5,
+          "y": 832.0
+        },
+        {
+          "index": 37,
+          "opacity": 0.62,
+          "side": 336.0,
+          "x": 272.5,
+          "y": 832.0
+        },
+        {
+          "index": 44,
+          "opacity": 0.62,
+          "side": 336.0,
+          "x": 3198.5,
+          "y": 832.0
+        },
+        {
+          "index": 38,
+          "opacity": 0.62,
+          "side": 336.0,
+          "x": 658.5,
+          "y": 832.0
+        },
+        {
+          "index": 43,
+          "opacity": 0.62,
+          "side": 336.0,
+          "x": 2812.5,
+          "y": 832.0
+        },
+        {
+          "index": 39,
+          "opacity": 0.62,
+          "side": 336.0,
+          "x": 1044.5,
+          "y": 832.0
+        },
+        {
+          "index": 42,
+          "opacity": 0.62,
+          "side": 336.0,
+          "x": 2426.5,
+          "y": 832.0
+        },
+        {
+          "index": 40,
+          "opacity": 0.715,
+          "side": 392.0,
+          "x": 1430.5,
+          "y": 804.0
+        },
+        {
+          "index": 41,
+          "opacity": 0.905,
+          "side": 504.0,
+          "x": 1872.5,
+          "y": 748.0
+        }
+      ],
+      "width": 4000.0
+    },
+    {
+      "count": 0,
+      "gap": 29.0,
+      "height": 400.0,
+      "pitch": 221.0,
+      "position": 0.0,
+      "side": 320.0,
+      "slots": [],
+      "width": 800.0
+    }
+  ],
+  "glide": [
+    {
+      "frame": 10,
+      "position": 2.033927991476065,
+      "velocity": 8.778752613287493
+    },
+    {
+      "frame": 20,
+      "position": 2.7743376203604213,
+      "velocity": 2.141598297422255
+    },
+    {
+      "frame": 30,
+      "position": 2.948173618527973,
+      "velocity": 0.49314685217747056
+    },
+    {
+      "frame": 40,
+      "position": 2.9881100323648564,
+      "velocity": 0.11315625842576937
+    },
+    {
+      "frame": 50,
+      "position": 2.9972723968828556,
+      "velocity": 0.025958744493838035
+    },
+    {
+      "frame": 59,
+      "position": 3.0,
+      "velocity": 0.0
+    }
+  ],
+  "own_choices": [
+    {
+      "look": {
+        "albums": "list",
+        "appearance": "dark",
+        "corners": 0.0,
+        "cover_size": 140,
+        "covers": "square",
+        "dark": {
+          "accent": "#2fe36c",
+          "accent_text": "#5dff97",
+          "card": "#0b130d",
+          "headerbar": "#070c08",
+          "on_accent": "#021006",
+          "popover": "#0a110c",
+          "sidebar": "#050806",
+          "text": "#b9ffcf",
+          "view": "#060a07",
+          "wash_a": "#095d26",
+          "wash_b": "#06322a",
+          "window": "#040705"
+        },
+        "dark_with_cover": {
+          "accent": "#2fe36c",
+          "accent_text": "#5dff97",
+          "card": "#0b130d",
+          "headerbar": "#070c08",
+          "on_accent": "#021006",
+          "popover": "#0a110c",
+          "sidebar": "#050806",
+          "text": "#b9ffcf",
+          "view": "#060a07",
+          "wash_a": "#095d26",
+          "wash_b": "#06322a",
+          "window": "#040705"
+        },
+        "follows_artwork": false,
+        "glow": false,
+        "heading_font": null,
+        "interface_font": "JetBrains Mono, Cascadia Code, Fira Code, DejaVu Sans Mono, monospace",
+        "light": {
+          "accent": "#0af55a",
+          "accent_text": "#03812e",
+          "card": "#fafcfb",
+          "headerbar": "#fafbfa",
+          "on_accent": "#111114",
+          "popover": "#fafbfa",
+          "sidebar": "#f1f6f3",
+          "text": null,
+          "view": "#fefefe",
+          "wash_a": "#e2f8ea",
+          "wash_b": "#f4fbfa",
+          "window": "#f4f8f6"
+        },
+        "scheme": "green",
+        "shadows": false,
+        "variant": "list"
+      },
+      "own": {
+        "albums": null,
+        "corners": null,
+        "cover_size": null,
+        "covers": null,
+        "glow": null,
+        "heading_font": null,
+        "interface_font": null,
+        "shadows": null
+      },
+      "scheme": "gone",
+      "variant": "gone"
+    },
+    {
+      "look": {
+        "albums": "carousel",
+        "appearance": "dark",
+        "corners": 1.6,
+        "cover_size": 320,
+        "covers": "circle",
+        "dark": {
+          "accent": "#f5a700",
+          "accent_text": "#ffc23d",
+          "card": "#130e06",
+          "headerbar": "#0c0904",
+          "on_accent": "#140c00",
+          "popover": "#110d05",
+          "sidebar": "#080603",
+          "text": "#ffdf9e",
+          "view": "#0a0703",
+          "wash_a": "#5d4309",
+          "wash_b": "#2b3206",
+          "window": "#070502"
+        },
+        "dark_with_cover": {
+          "accent": "#f5a700",
+          "accent_text": "#ffc23d",
+          "card": "#130e06",
+          "headerbar": "#0c0904",
+          "on_accent": "#140c00",
+          "popover": "#110d05",
+          "sidebar": "#080603",
+          "text": "#ffdf9e",
+          "view": "#0a0703",
+          "wash_a": "#5d4309",
+          "wash_b": "#2b3206",
+          "window": "#070502"
+        },
+        "follows_artwork": false,
+        "glow": true,
+        "heading_font": null,
+        "interface_font": "Inter",
+        "light": {
+          "accent": "#f5ac0a",
+          "accent_text": "#956804",
+          "card": "#fcfbfa",
+          "headerbar": "#fbfbfa",
+          "on_accent": "#111114",
+          "popover": "#fbfbfa",
+          "sidebar": "#f6f4f1",
+          "text": null,
+          "view": "#fefefe",
+          "wash_a": "#f8f1e2",
+          "wash_b": "#fafbf4",
+          "window": "#f8f7f4"
+        },
+        "scheme": "amber",
+        "shadows": false,
+        "variant": "grid"
+      },
+      "own": {
+        "albums": "carousel",
+        "corners": 1.6,
+        "cover_size": 999,
+        "covers": "circle",
+        "glow": true,
+        "heading_font": null,
+        "interface_font": "Inter",
+        "shadows": null
+      },
+      "scheme": "amber",
+      "variant": "grid"
+    },
+    {
+      "look": {
+        "albums": "list",
+        "appearance": "dark",
+        "corners": 0.0,
+        "cover_size": 96,
+        "covers": "square",
+        "dark": {
+          "accent": "#62c4f5",
+          "accent_text": "#8fd9ff",
+          "card": "#0a1119",
+          "headerbar": "#060a10",
+          "on_accent": "#02101a",
+          "popover": "#091017",
+          "sidebar": "#04070b",
+          "text": "#d3ecff",
+          "view": "#04080d",
+          "wash_a": "#09415d",
+          "wash_b": "#060f32",
+          "window": "#03060a"
+        },
+        "dark_with_cover": {
+          "accent": "#62c4f5",
+          "accent_text": "#8fd9ff",
+          "card": "#0a1119",
+          "headerbar": "#060a10",
+          "on_accent": "#02101a",
+          "popover": "#091017",
+          "sidebar": "#04070b",
+          "text": "#d3ecff",
+          "view": "#04080d",
+          "wash_a": "#09415d",
+          "wash_b": "#060f32",
+          "window": "#03060a"
+        },
+        "follows_artwork": false,
+        "glow": false,
+        "heading_font": "Charter",
+        "interface_font": "JetBrains Mono, Cascadia Code, Fira Code, DejaVu Sans Mono, monospace",
+        "light": {
+          "accent": "#0aa6f5",
+          "accent_text": "#0472a9",
+          "card": "#fafbfc",
+          "headerbar": "#fafbfb",
+          "on_accent": "#111114",
+          "popover": "#fafbfb",
+          "sidebar": "#f1f4f6",
+          "text": null,
+          "view": "#fefefe",
+          "wash_a": "#e2f1f8",
+          "wash_b": "#f4f5fb",
+          "window": "#f4f7f8"
+        },
+        "scheme": "ice",
+        "shadows": true,
+        "variant": "list"
+      },
+      "own": {
+        "albums": null,
+        "corners": null,
+        "cover_size": 10,
+        "covers": null,
+        "glow": null,
+        "heading_font": "Charter",
+        "interface_font": null,
+        "shadows": true
+      },
+      "scheme": "ice",
+      "variant": ""
+    }
+  ]
+}

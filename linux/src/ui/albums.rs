@@ -143,6 +143,15 @@ impl AdmissionStamp {
     }
 }
 
+fn view_icon(view: AlbumsView) -> &'static str {
+    match view {
+        AlbumsView::Grid => "flaccy-view-grid-symbolic",
+        AlbumsView::Wall => "flaccy-view-wall-symbolic",
+        AlbumsView::List => "flaccy-view-list-symbolic",
+        AlbumsView::Carousel => "flaccy-view-carousel-symbolic",
+    }
+}
+
 /// The switch between the ways the shelf can be laid out, in the page header.
 /// It shows the view the look resolves to and reports a click as the person's
 /// own choice for the theme that is on.
@@ -162,7 +171,7 @@ impl ViewSwitch {
         let mut buttons: Vec<(AlbumsView, gtk::ToggleButton)> = Vec::new();
         for view in AlbumsView::ALL {
             let button = gtk::ToggleButton::builder()
-                .icon_name(view.icon())
+                .icon_name(view_icon(view))
                 .tooltip_text(format!("{} view", view.title()))
                 .build();
             button.update_property(&[gtk::accessible::Property::Label(&format!("{} view", view.title()))]);

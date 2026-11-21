@@ -1,4 +1,4 @@
-use super::flow_geometry::{clamped, Glide, Slot};
+use flaccy_shared::flow_geometry::{clamped, Glide, Slot};
 use super::{album_facts, request_size, AlbumCard, AlbumView, Shelf};
 use crate::theme::AlbumsView;
 use adw::prelude::*;
@@ -25,7 +25,7 @@ const LONGEST_GLIDE: f64 = 7.0;
 const BACKDROP_SETTLE: Duration = Duration::from_millis(260);
 
 mod imp {
-    use super::super::flow_geometry::{Flow, Glide, Slot};
+    use flaccy_shared::flow_geometry::{Flow, Glide, Slot};
     use crate::ui::FrameDriver;
     use gtk::prelude::*;
     use gtk::subclass::prelude::*;

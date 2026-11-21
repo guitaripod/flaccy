@@ -1,4 +1,5 @@
 use super::color::{parse_hex, Rgb};
+use super::document::{self, Table, Value};
 use std::cell::RefCell;
 use std::path::PathBuf;
 
@@ -59,15 +60,6 @@ impl AlbumsView {
             AlbumsView::Wall => "Wall",
             AlbumsView::List => "List",
             AlbumsView::Carousel => "Carousel",
-        }
-    }
-
-    pub fn icon(self) -> &'static str {
-        match self {
-            AlbumsView::Grid => "flaccy-view-grid-symbolic",
-            AlbumsView::Wall => "flaccy-view-wall-symbolic",
-            AlbumsView::List => "flaccy-view-list-symbolic",
-            AlbumsView::Carousel => "flaccy-view-carousel-symbolic",
         }
     }
 }
@@ -232,14 +224,14 @@ const CORNER_NAMES: [(&str, f64); 3] = [
 /// Reads one table of a theme document, noting every key it cannot use and
 /// every key nobody asked for, so a typo is named instead of silently ignored.
 struct Reader<'a> {
-    table: &'a toml::Table,
+    table: &'a Table,
     path: String,
     asked: RefCell<Vec<&'static str>>,
     notes: &'a RefCell<Vec<String>>,
 }
 
 impl<'a> Reader<'a> {
-    fn root(table: &'a toml::Table, notes: &'a RefCell<Vec<String>>) -> Reader<'a> {
+    fn root(table: &'a Table, notes: &'a RefCell<Vec<String>>) -> Reader<'a> {
         Reader {
             table,
             path: String::new(),
@@ -260,15 +252,15 @@ impl<'a> Reader<'a> {
         self.notes.borrow_mut().push(text);
     }
 
-    fn value(&self, key: &'static str) -> Option<&'a toml::Value> {
+    fn value(&self, key: &'static str) -> Option<&'a Value> {
         self.asked.borrow_mut().push(key);
         self.table.get(key)
     }
 
     fn text(&self, key: &'static str) -> Option<String> {
         match self.value(key)? {
-            toml::Value::String(text) if !text.trim().is_empty() => Some(text.trim().to_string()),
-            toml::Value::String(_) => None,
+            Value::Text(text) if !text.trim().is_empty() => Some(text.trim().to_string()),
+            Value::Text(_) => None,
             _ => {
                 self.note(format!("{} must be text in quotes", self.named(key)));
                 None
@@ -278,7 +270,7 @@ impl<'a> Reader<'a> {
 
     fn flag(&self, key: &'static str) -> Option<bool> {
         match self.value(key)? {
-            toml::Value::Boolean(flag) => Some(*flag),
+            Value::Flag(flag) => Some(*flag),
             _ => {
                 self.note(format!("{} must be true or false", self.named(key)));
                 None
@@ -288,8 +280,8 @@ impl<'a> Reader<'a> {
 
     fn number(&self, key: &'static str) -> Option<f64> {
         match self.value(key)? {
-            toml::Value::Integer(number) => Some(*number as f64),
-            toml::Value::Float(number) if number.is_finite() => Some(*number),
+            Value::Integer(number) => Some(*number as f64),
+            Value::Float(number) if number.is_finite() => Some(*number),
             _ => {
                 self.note(format!("{} must be a number", self.named(key)));
                 None
@@ -328,7 +320,7 @@ impl<'a> Reader<'a> {
 
     fn table(&self, key: &'static str) -> Option<Reader<'a>> {
         match self.value(key)? {
-            toml::Value::Table(table) => Some(Reader {
+            Value::Table(table) => Some(Reader {
                 table,
                 path: self.named(key),
                 asked: RefCell::new(Vec::new()),
@@ -348,11 +340,11 @@ impl<'a> Reader<'a> {
     fn tables(&self, key: &'static str) -> Vec<Reader<'a>> {
         match self.value(key) {
             None => Vec::new(),
-            Some(toml::Value::Array(items)) => items
+            Some(Value::List(items)) => items
                 .iter()
                 .enumerate()
                 .filter_map(|(index, item)| match item {
-                    toml::Value::Table(table) => Some(Reader {
+                    Value::Table(table) => Some(Reader {
                         table,
                         path: format!("{} {}", self.named(key), index + 1),
                         asked: RefCell::new(Vec::new()),
@@ -376,7 +368,7 @@ impl<'a> Reader<'a> {
     fn finish(self) {
         let asked = self.asked.borrow();
         for key in self.table.keys() {
-            if !asked.iter().any(|known| known == key) {
+            if !asked.iter().any(|known| *known == key) {
                 self.note(format!(
                     "{} is not something a theme can set",
                     self.named(key)
@@ -389,8 +381,8 @@ impl<'a> Reader<'a> {
 fn read_corners(shape: &Reader) -> Option<f64> {
     shape.asked.borrow_mut().push("corners");
     match shape.table.get("corners")? {
-        toml::Value::String(_) => shape.choice("corners", &CORNER_NAMES),
-        toml::Value::Integer(_) | toml::Value::Float(_) => {
+        Value::Text(_) => shape.choice("corners", &CORNER_NAMES),
+        Value::Integer(_) | Value::Float(_) => {
             let scale = shape.number("corners")?;
             if !(0.0..=CORNERS_MAX).contains(&scale) {
                 shape.note(format!(
@@ -573,9 +565,7 @@ fn read_variants(root: &Reader) -> Vec<Variant> {
 /// key, a color that is not one) is skipped and listed in `warnings`, and the
 /// rest of the theme still applies.
 pub fn parse(id: &str, document: &str) -> Result<Pack, String> {
-    let table: toml::Table = document.parse().map_err(|error: toml::de::Error| {
-        format!("theme.toml is not valid TOML: {}", error.message())
-    })?;
+    let table = document::read(document).map_err(|error| format!("theme.toml is not valid TOML ({error})."))?;
     let notes = RefCell::new(Vec::new());
     let root = Reader::root(&table, &notes);
 
