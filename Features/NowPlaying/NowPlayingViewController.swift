@@ -234,7 +234,6 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        FlaccyLifestream.opened(.nowPlaying)
         runAppearanceAnimationIfNeeded()
     }
 

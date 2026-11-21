@@ -556,6 +556,9 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         }
         UIAccessibility.post(notification: .screenChanged, argument: landedFull ? npc.view : miniPlayer)
         MidgarLog.info("Player morph settled -> \(landedFull ? "full" : "dock")", category: .ui)
+        if landedFull, terminal != sessionStartTerminal {
+            FlaccyLifestream.opened(.nowPlaying)
+        }
         if !landedFull, let settle = onSettleToDock {
             onSettleToDock = nil
             settle()

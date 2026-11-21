@@ -9,7 +9,7 @@ enum FlaccyLifestream {
         case settings
     }
 
-    /// A screen that is also a feature: opening it goes on the crash trail and counts as using the feature that week.
+    /// A screen that is also a feature: opening it goes on the crash trail and counts as using the feature that week. Now Playing counts when the player opens over the library, not when its view loads: the view is there from launch, under the mini player.
     enum Feature: String {
         case nowPlaying = "now_playing"
         case equalizer
