@@ -68,7 +68,7 @@ final class RecapNotificationsViewController: UITableViewController {
         tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.delegate = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellReuseIdentifier)
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         configureDataSource()
         applySnapshot(animated: false)
         refreshAuthorization()
@@ -158,7 +158,7 @@ final class RecapNotificationsViewController: UITableViewController {
         content.textProperties.adjustsFontForContentSizeCategory = true
         content.secondaryTextProperties.font = .preferredFont(forTextStyle: .body)
         content.secondaryTextProperties.adjustsFontForContentSizeCategory = true
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = .flaccySecondaryLabel
 
         switch row {
         case .permissionDenied:
@@ -228,7 +228,7 @@ final class RecapNotificationsViewController: UITableViewController {
         content.textProperties.adjustsFontForContentSizeCategory = true
         content.secondaryTextProperties.font = .preferredFont(forTextStyle: .footnote)
         content.secondaryTextProperties.adjustsFontForContentSizeCategory = true
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = .flaccySecondaryLabel
         content.secondaryTextProperties.numberOfLines = 3
         content.textToSecondaryTextVerticalPadding = 2
         content.image = UIImage(systemName: "sparkles")?.withTintColor(.systemIndigo, renderingMode: .alwaysOriginal)
@@ -286,7 +286,7 @@ final class RecapNotificationsViewController: UITableViewController {
         var config = UIButton.Configuration.gray()
         config.title = title
         config.cornerStyle = .medium
-        config.baseForegroundColor = .label
+        config.baseForegroundColor = .flaccyLabel
         config.buttonSize = .small
         let button = UIButton(configuration: config)
         button.menu = UIMenu(children: actions)

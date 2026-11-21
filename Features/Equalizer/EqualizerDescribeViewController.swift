@@ -176,7 +176,7 @@ final class EqualizerDescribeViewController: UIViewController, UITextViewDelegat
     /// so a long hint wraps and holds the box open to its own height.
     private func buildField() {
         inputBox.backgroundColor = UIColor.white.withAlphaComponent(0.07)
-        inputBox.layer.cornerRadius = 18
+        inputBox.layer.themedCornerRadius = 18
         inputBox.layer.cornerCurve = .continuous
         inputBox.layer.borderWidth = 1
         inputBox.layer.borderColor = UIColor.white.withAlphaComponent(0.12).cgColor
@@ -253,7 +253,7 @@ final class EqualizerDescribeViewController: UIViewController, UITextViewDelegat
 
     private func makeCard() -> UIView {
         card.backgroundColor = UIColor.white.withAlphaComponent(0.06)
-        card.layer.cornerRadius = 22
+        card.layer.themedCornerRadius = 22
         card.layer.cornerCurve = .continuous
         card.layer.borderWidth = 1
         card.layer.borderColor = UIColor.white.withAlphaComponent(0.1).cgColor
@@ -267,7 +267,7 @@ final class EqualizerDescribeViewController: UIViewController, UITextViewDelegat
         configure(noteLabel, style: .footnote, size: 13, color: EqualizerTheme.caution)
 
         curveView.backgroundColor = UIColor.black.withAlphaComponent(0.22)
-        curveView.layer.cornerRadius = 14
+        curveView.layer.themedCornerRadius = 14
         curveView.layer.masksToBounds = true
         curveView.translatesAutoresizingMaskIntoConstraints = false
         curveView.heightAnchor.constraint(equalToConstant: 110).isActive = true

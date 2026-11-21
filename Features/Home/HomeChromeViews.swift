@@ -90,9 +90,9 @@ final class HomeEditFooterCell: UICollectionViewCell {
         configuration.title = HomeCopy.editHome
         configuration.image = UIImage(systemName: "slider.horizontal.3")
         configuration.imagePadding = 8
-        configuration.baseForegroundColor = .label
+        configuration.baseForegroundColor = .flaccyLabel
         configuration.cornerStyle = .capsule
-        configuration.background.backgroundColor = UIColor.label.withAlphaComponent(0.1)
+        configuration.background.backgroundColor = UIColor.flaccyLabel.withAlphaComponent(0.1)
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20)
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var attributes = attributes

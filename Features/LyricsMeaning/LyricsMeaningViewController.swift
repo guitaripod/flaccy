@@ -49,7 +49,7 @@ final class LyricsMeaningViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = LyricsMeaningCopy.title
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .flaccyBackground
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             systemItem: .close,
             primaryAction: UIAction { [weak self] _ in
@@ -92,21 +92,21 @@ final class LyricsMeaningViewController: UIViewController {
         ])
 
         let song = label(
-            "\(load.song.title) — \(load.song.artist)", style: .subheadline, color: .secondaryLabel)
+            "\(load.song.title) — \(load.song.artist)", style: .subheadline, color: .flaccySecondaryLabel)
         stack.addArrangedSubview(song)
         if let focus = load.focus {
             stack.addArrangedSubview(quote(focus.line))
         }
         let header = label(
             load.focus == nil ? LyricsMeaningCopy.songHeader : LyricsMeaningCopy.lineHeader,
-            style: .title3, color: .label, weight: .semibold)
+            style: .title3, color: .flaccyLabel, weight: .semibold)
         header.accessibilityTraits = .header
         stack.addArrangedSubview(header)
 
         spinner.startAnimating()
         statusLabel.font = .preferredFont(forTextStyle: .subheadline)
         statusLabel.adjustsFontForContentSizeCategory = true
-        statusLabel.textColor = .secondaryLabel
+        statusLabel.textColor = .flaccySecondaryLabel
         statusLabel.numberOfLines = 0
         statusRow.axis = .horizontal
         statusRow.spacing = 10
@@ -115,12 +115,12 @@ final class LyricsMeaningViewController: UIViewController {
         statusRow.addArrangedSubview(statusLabel)
         stack.addArrangedSubview(statusRow)
 
-        configure(bodyLabel, style: .body, color: .label)
+        configure(bodyLabel, style: .body, color: .flaccyLabel)
         stack.addArrangedSubview(bodyLabel)
-        configure(noteLabel, style: .footnote, color: .tertiaryLabel)
+        configure(noteLabel, style: .footnote, color: .flaccyTertiaryLabel)
         noteLabel.text = LyricsMeaningCopy.writtenByAI
         stack.addArrangedSubview(noteLabel)
-        configure(failureLabel, style: .callout, color: .secondaryLabel)
+        configure(failureLabel, style: .callout, color: .flaccySecondaryLabel)
         stack.addArrangedSubview(failureLabel)
         let actionRow = UIStackView(arrangedSubviews: [actionButton, UIView()])
         actionRow.axis = .horizontal
@@ -130,7 +130,7 @@ final class LyricsMeaningViewController: UIViewController {
         wikipediaStack.spacing = 10
         stack.addArrangedSubview(wikipediaStack)
         stack.setCustomSpacing(28, after: actionRow)
-        configure(wikipediaFailureLabel, style: .footnote, color: .secondaryLabel)
+        configure(wikipediaFailureLabel, style: .footnote, color: .flaccySecondaryLabel)
         stack.addArrangedSubview(wikipediaFailureLabel)
     }
 
@@ -197,27 +197,27 @@ final class LyricsMeaningViewController: UIViewController {
 
     private func fill(_ story: SongStory) {
         wikipediaStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        let header = label(LyricsMeaningCopy.wikipediaHeader, style: .title3, color: .label, weight: .semibold)
+        let header = label(LyricsMeaningCopy.wikipediaHeader, style: .title3, color: .flaccyLabel, weight: .semibold)
         header.accessibilityTraits = .header
         wikipediaStack.addArrangedSubview(header)
         if !story.lead.isEmpty {
             let lead = UILabel()
-            configure(lead, style: .body, color: .label)
+            configure(lead, style: .body, color: .flaccyLabel)
             lead.attributedText = Self.paragraphs(story.lead)
             wikipediaStack.addArrangedSubview(lead)
         }
         for section in story.sections {
-            let heading = label(section.heading, style: .headline, color: .label)
+            let heading = label(section.heading, style: .headline, color: .flaccyLabel)
             heading.accessibilityTraits = .header
             wikipediaStack.addArrangedSubview(heading)
             wikipediaStack.setCustomSpacing(4, after: heading)
             let body = UILabel()
-            configure(body, style: .body, color: .label)
+            configure(body, style: .body, color: .flaccyLabel)
             body.attributedText = Self.paragraphs(section.body)
             wikipediaStack.addArrangedSubview(body)
         }
         wikipediaStack.addArrangedSubview(label(
-            LyricsMeaningCopy.wikipediaCredit(story.article), style: .footnote, color: .secondaryLabel))
+            LyricsMeaningCopy.wikipediaCredit(story.article), style: .footnote, color: .flaccySecondaryLabel))
         if let url = URL(string: story.url) {
             var config = UIButton.Configuration.plain()
             config.title = LyricsMeaningCopy.readOnWikipedia
@@ -262,9 +262,9 @@ final class LyricsMeaningViewController: UIViewController {
     private func quote(_ text: String) -> UIView {
         let bar = UIView()
         bar.backgroundColor = view.tintColor
-        bar.layer.cornerRadius = 1.5
+        bar.layer.themedCornerRadius = 1.5
         bar.widthAnchor.constraint(equalToConstant: 3).isActive = true
-        let line = label(text, style: .title3, color: .label, weight: .semibold)
+        let line = label(text, style: .title3, color: .flaccyLabel, weight: .semibold)
         let row = UIStackView(arrangedSubviews: [bar, line])
         row.axis = .horizontal
         row.spacing = 12
@@ -303,7 +303,7 @@ final class LyricsMeaningViewController: UIViewController {
             string: text.replacingOccurrences(of: "\n\n", with: "\n"),
             attributes: [
                 .font: UIFont.preferredFont(forTextStyle: .body),
-                .foregroundColor: UIColor.label,
+                .foregroundColor: UIColor.flaccyLabel,
                 .paragraphStyle: style,
             ]
         )

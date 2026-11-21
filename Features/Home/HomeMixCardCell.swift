@@ -46,7 +46,7 @@ final class HomeMixCardCell: UICollectionViewCell {
         titleLabel.font = .scaled(.subheadline, size: 15, weight: .semibold)
         titleLabel.numberOfLines = 1
         subtitleLabel.font = .scaled(.footnote, size: 13, weight: .regular)
-        subtitleLabel.textColor = .secondaryLabel
+        subtitleLabel.textColor = .flaccySecondaryLabel
         subtitleLabel.numberOfLines = 2
         titleLabel.adjustsFontForContentSizeCategory = true
         subtitleLabel.adjustsFontForContentSizeCategory = true
@@ -62,7 +62,7 @@ final class HomeMixCardCell: UICollectionViewCell {
         contentView.addSubview(dashed)
         placeholderLabel.font = .scaled(.footnote, size: 13, weight: .medium)
         placeholderLabel.adjustsFontForContentSizeCategory = true
-        placeholderLabel.textColor = .secondaryLabel
+        placeholderLabel.textColor = .flaccySecondaryLabel
         placeholderLabel.numberOfLines = 0
         placeholderLabel.textAlignment = .center
         placeholderLabel.isHidden = true
@@ -168,7 +168,7 @@ final class HomeDashedOutlineView: UIView {
         outline.lineDashPattern = [6, 5]
         layer.addSublayer(outline)
         applyColors()
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: HomeDashedOutlineView, _) in view.applyColors() }
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, ThemeEpochTrait.self]) { (view: HomeDashedOutlineView, _) in view.applyColors() }
     }
 
     @available(*, unavailable)
@@ -181,7 +181,7 @@ final class HomeDashedOutlineView: UIView {
     }
 
     private func applyColors() {
-        outline.strokeColor = UIColor.label.withAlphaComponent(0.3).resolvedColor(with: traitCollection).cgColor
-        backgroundColor = UIColor.label.withAlphaComponent(0.05)
+        outline.strokeColor = UIColor.flaccyLabel.withAlphaComponent(0.3).resolvedColor(with: traitCollection).cgColor
+        backgroundColor = UIColor.flaccyLabel.withAlphaComponent(0.05)
     }
 }

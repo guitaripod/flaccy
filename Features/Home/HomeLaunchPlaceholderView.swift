@@ -98,7 +98,7 @@ final class HomeLaunchPlaceholderView: UIView {
     private func addHero(in frame: CGRect) {
         let hero = addBlock(frame, radius: 28)
         hero.layer.borderWidth = 1
-        hero.layer.borderColor = UIColor.label.withAlphaComponent(0.08).resolvedColor(with: traitCollection).cgColor
+        hero.layer.borderColor = UIColor.flaccyLabel.withAlphaComponent(0.08).resolvedColor(with: traitCollection).cgColor
         let inset: CGFloat = 16
         let cover = CGRect(x: inset, y: inset, width: Self.coverSide, height: Self.coverSide)
         addInner(cover, radius: 12, to: hero)
@@ -122,7 +122,7 @@ final class HomeLaunchPlaceholderView: UIView {
     @discardableResult
     private func addBlock(_ frame: CGRect, radius: CGFloat) -> UIView {
         let block = UIView(frame: frame)
-        block.backgroundColor = .tertiarySystemFill
+        block.backgroundColor = .flaccyTertiaryFill
         block.layer.cornerRadius = radius
         block.layer.cornerCurve = .continuous
         addSubview(block)
@@ -132,7 +132,7 @@ final class HomeLaunchPlaceholderView: UIView {
 
     private func addInner(_ frame: CGRect, radius: CGFloat, to parent: UIView) {
         let inner = UIView(frame: frame)
-        inner.backgroundColor = .quaternarySystemFill
+        inner.backgroundColor = .flaccyQuaternaryFill
         inner.layer.cornerRadius = radius
         inner.layer.cornerCurve = .continuous
         parent.addSubview(inner)

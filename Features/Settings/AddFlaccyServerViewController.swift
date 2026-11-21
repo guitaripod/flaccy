@@ -193,7 +193,7 @@ final class AddFlaccyServerViewController: UITableViewController {
             content.text = String(localized: "Connect")
             content.textProperties.alignment = .center
             content.textProperties.font = .preferredFont(forTextStyle: .headline)
-            content.textProperties.color = model.canConnect ? .tintColor : .secondaryLabel
+            content.textProperties.color = model.canConnect ? .tintColor : .flaccySecondaryLabel
             cell.contentConfiguration = content
             cell.accessoryView = nil
             cell.accessibilityTraits = model.canConnect ? .button : [.button, .notEnabled]
@@ -232,7 +232,7 @@ final class AddFlaccyServerViewController: UITableViewController {
         content.textProperties.numberOfLines = 0
         content.secondaryTextProperties.numberOfLines = 0
         content.secondaryTextProperties.font = .preferredFont(forTextStyle: .subheadline)
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = .flaccySecondaryLabel
         cell.accessoryView = nil
         switch model.state {
         case .idle:

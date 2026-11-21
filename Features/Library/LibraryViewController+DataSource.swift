@@ -61,12 +61,12 @@ extension LibraryViewController {
             systemName: "waveform",
             withConfiguration: UIImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
         ))
-        glyph.tintColor = .tertiaryLabel
+        glyph.tintColor = .flaccyTertiaryLabel
 
         let label = UILabel()
         label.text = count > 999 ? String(localized: "\(count / 1000)k") : "\(count)"
         label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
 
         stack.addArrangedSubview(glyph)
         stack.addArrangedSubview(label)
@@ -82,8 +82,8 @@ extension LibraryViewController {
         var content = UIListContentConfiguration.subtitleCell()
         content.text = title
         content.secondaryText = subtitle
-        content.secondaryTextProperties.color = .secondaryLabel
-        content.imageProperties.cornerRadius = cornerRadius
+        content.secondaryTextProperties.color = .flaccySecondaryLabel
+        content.imageProperties.cornerRadius = ThemeShape.coverRadius(cornerRadius, side: 44)
         content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
         content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
         if let cached = AlbumArtworkCache.shared.thumbnail(forAlbum: albumTitle, artist: artist) {
@@ -91,7 +91,7 @@ extension LibraryViewController {
             cell.currentArtworkKey = nil
         } else {
             content.image = UIImage(systemName: "music.note")
-            content.imageProperties.tintColor = .tertiaryLabel
+            content.imageProperties.tintColor = .flaccyTertiaryLabel
             let artKey = "\(albumTitle)|\(artist)"
             cell.currentArtworkKey = artKey
             AlbumArtworkCache.shared.loadThumbnail(forAlbum: albumTitle, artist: artist) { [weak cell] image in
@@ -114,6 +114,11 @@ extension LibraryViewController {
             )
         }
 
+        let albumWallRegistration = UICollectionView.CellRegistration<AlbumCell, Album> { cell, _, album in
+            cell.isBareCover = true
+            cell.configure(with: album)
+        }
+
         let albumListRegistration = UICollectionView.CellRegistration<ListArtworkCell, Album> { [weak self] cell, _, album in
             self?.configureArtworkRow(
                 cell: cell, title: album.title, subtitle: album.artist,
@@ -129,7 +134,7 @@ extension LibraryViewController {
             var content = UIListContentConfiguration.valueCell()
             content.text = album.title
             content.secondaryText = album.artist
-            content.secondaryTextProperties.color = .secondaryLabel
+            content.secondaryTextProperties.color = .flaccySecondaryLabel
             content.textProperties.font = .scaled(.subheadline, size: 15, weight: .regular)
             cell.contentConfiguration = content
             cell.currentArtworkKey = nil
@@ -149,7 +154,7 @@ extension LibraryViewController {
             var content = UIListContentConfiguration.valueCell()
             content.text = track.title
             content.secondaryText = track.artist
-            content.secondaryTextProperties.color = .secondaryLabel
+            content.secondaryTextProperties.color = .flaccySecondaryLabel
             content.textProperties.font = .scaled(.subheadline, size: 15, weight: .regular)
             cell.contentConfiguration = content
             cell.currentArtworkKey = nil
@@ -171,7 +176,7 @@ extension LibraryViewController {
             content.secondaryText = artist.albumCount > 0
                 ? String(localized: "\(artist.albumCount) albums")
                 : String(localized: "Appears on \(artist.appearanceCount) albums")
-            content.secondaryTextProperties.color = .secondaryLabel
+            content.secondaryTextProperties.color = .flaccySecondaryLabel
             content.imageProperties.cornerRadius = 22
             content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
             content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
@@ -184,7 +189,7 @@ extension LibraryViewController {
                 cell.currentArtworkKey = nil
             } else {
                 content.image = UIImage(systemName: "person.crop.circle.fill")
-                content.imageProperties.tintColor = .tertiaryLabel
+                content.imageProperties.tintColor = .flaccyTertiaryLabel
                 if let firstAlbum {
                     let artKey = "\(firstAlbum.title)|\(firstAlbum.artist)|\(artist.name)"
                     cell.currentArtworkKey = artKey
@@ -207,7 +212,7 @@ extension LibraryViewController {
             var content = UIListContentConfiguration.subtitleCell()
             content.text = playlist.name
             content.secondaryText = PlaylistCopy.summary(songs: playlist.trackCount, seconds: playlist.seconds, missing: 0)
-            content.secondaryTextProperties.color = .secondaryLabel
+            content.secondaryTextProperties.color = .flaccySecondaryLabel
             cell.contentConfiguration = content
             let thumbnail = UICellAccessory.CustomViewConfiguration(
                 customView: cell.thumbnail,
@@ -225,7 +230,7 @@ extension LibraryViewController {
             var content = UIListContentConfiguration.subtitleCell()
             content.text = suggestion.title
             content.secondaryText = String(localized: "\(suggestion.subtitle) · \(suggestion.tracks.count) songs")
-            content.secondaryTextProperties.color = .secondaryLabel
+            content.secondaryTextProperties.color = .flaccySecondaryLabel
             content.image = UIImage(systemName: suggestion.systemImage)
             content.imageProperties.tintColor = .tintColor
             content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
@@ -243,7 +248,7 @@ extension LibraryViewController {
             var content = UIListContentConfiguration.subtitleCell()
             content.text = String(localized: "Recap")
             content.secondaryText = String(localized: "Your listening stats")
-            content.secondaryTextProperties.color = .secondaryLabel
+            content.secondaryTextProperties.color = .flaccySecondaryLabel
             content.image = UIImage(systemName: "chart.bar.fill")
             content.imageProperties.tintColor = .systemPink
             content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
@@ -260,7 +265,7 @@ extension LibraryViewController {
             content.secondaryText = unseen > 0
                 ? String(localized: "\(unseen) new suggestions")
                 : String(localized: "Music to get & discoveries")
-            content.secondaryTextProperties.color = unseen > 0 ? .systemTeal : .secondaryLabel
+            content.secondaryTextProperties.color = unseen > 0 ? .systemTeal : .flaccySecondaryLabel
             content.image = UIImage(systemName: "sparkle.magnifyingglass")
             content.imageProperties.tintColor = .systemTeal
             content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
@@ -275,7 +280,7 @@ extension LibraryViewController {
             var config = UIListContentConfiguration.header()
             config.text = String(localized: "Recently Played")
             config.textProperties.font = .scaled(.footnote, size: 13, weight: .semibold)
-            config.textProperties.color = .secondaryLabel
+            config.textProperties.color = .flaccySecondaryLabel
             supplementaryView.contentConfiguration = config
         }
 
@@ -299,14 +304,17 @@ extension LibraryViewController {
         dataSource = UICollectionViewDiffableDataSource(collectionView: collectionView) {
             [weak self] collectionView, indexPath, item in
             let mode = self?.viewModel.layoutMode ?? .grid
+            let albumsMode = self?.viewModel.albumsLayoutMode ?? .grid
             switch item {
             case .recentAlbum(let album):
                 return collectionView.dequeueConfiguredReusableCell(
                     using: albumGridRegistration, for: indexPath, item: album
                 )
             case .album(let album):
-                switch mode {
-                case .grid:
+                switch albumsMode {
+                case .wall:
+                    return collectionView.dequeueConfiguredReusableCell(using: albumWallRegistration, for: indexPath, item: album)
+                case .grid, .carousel:
                     return collectionView.dequeueConfiguredReusableCell(using: albumGridRegistration, for: indexPath, item: album)
                 case .list:
                     return collectionView.dequeueConfiguredReusableCell(using: albumListRegistration, for: indexPath, item: album)
@@ -315,7 +323,7 @@ extension LibraryViewController {
                 }
             case .song(let track):
                 switch mode {
-                case .grid:
+                case .grid, .wall, .carousel:
                     return collectionView.dequeueConfiguredReusableCell(using: songGridRegistration, for: indexPath, item: track)
                 case .list:
                     return collectionView.dequeueConfiguredReusableCell(using: songRegistration, for: indexPath, item: track)

@@ -140,7 +140,7 @@ final class SectionIndexView: UIView {
         bubbleView.alpha = 0
         bubbleView.isUserInteractionEnabled = false
         if UIAccessibility.isReduceTransparencyEnabled {
-            bubbleView.backgroundColor = .secondarySystemBackground
+            bubbleView.backgroundColor = .flaccySecondaryBackground
         } else {
             let glass = LiquidGlass.view(cornerRadius: 26)
             glass.frame = CGRect(x: 0, y: 0, width: 52, height: 52)
@@ -148,7 +148,7 @@ final class SectionIndexView: UIView {
             bubbleView.addSubview(glass)
             bubbleGlass = glass
         }
-        bubbleView.layer.cornerRadius = 26
+        bubbleView.layer.themedCornerRadius = 26
         bubbleView.layer.cornerCurve = .continuous
         bubbleView.layer.shadowColor = UIColor.black.cgColor
         bubbleView.layer.shadowOpacity = 0.2
@@ -157,7 +157,7 @@ final class SectionIndexView: UIView {
 
         bubbleLabel.font = .scaled(.title2, size: 24, weight: .bold, maxSize: 30)
         bubbleLabel.adjustsFontForContentSizeCategory = true
-        bubbleLabel.textColor = .label
+        bubbleLabel.textColor = .flaccyLabel
         bubbleLabel.textAlignment = .center
         bubbleLabel.frame = CGRect(x: 0, y: 0, width: 52, height: 52)
         bubbleLabel.autoresizingMask = [.flexibleWidth, .flexibleHeight]

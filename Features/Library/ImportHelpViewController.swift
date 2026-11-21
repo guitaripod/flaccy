@@ -91,7 +91,7 @@ final class ImportHelpViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         navigationItem.title = reason == nil ? String(localized: "Can't Find Your Music?") : String(localized: "Nothing Was Added")
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.rightBarButtonItem = UIBarButtonItem(
@@ -167,7 +167,7 @@ final class ImportHelpViewController: UIViewController {
         let label = UILabel()
         label.text = String(localized: "Flaccy plays music files you own: FLAC, ALAC, MP3, AAC, WAV and AIFF. Where is yours?")
         label.font = .preferredFont(forTextStyle: .subheadline)
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
         label.adjustsFontForContentSizeCategory = true
         label.numberOfLines = 0
         let holder = UIView()
@@ -201,7 +201,7 @@ final class ImportHelpViewController: UIViewController {
         let detail = UILabel()
         detail.text = place.detail
         detail.font = .preferredFont(forTextStyle: .subheadline)
-        detail.textColor = .secondaryLabel
+        detail.textColor = .flaccySecondaryLabel
         detail.adjustsFontForContentSizeCategory = true
         detail.numberOfLines = 0
 
@@ -214,7 +214,7 @@ final class ImportHelpViewController: UIViewController {
         row.alignment = .center
         if place.action != nil {
             let chevron = UIImageView(image: UIImage(systemName: "chevron.forward"))
-            chevron.tintColor = .tertiaryLabel
+            chevron.tintColor = .flaccyTertiaryLabel
             chevron.preferredSymbolConfiguration = UIImage.SymbolConfiguration(textStyle: .footnote, scale: .medium)
             chevron.setContentHuggingPriority(.required, for: .horizontal)
             row.addArrangedSubview(chevron)
@@ -222,7 +222,7 @@ final class ImportHelpViewController: UIViewController {
         row.isUserInteractionEnabled = false
 
         guard let action = place.action else {
-            let card = wrapInCard(row, color: .secondarySystemGroupedBackground)
+            let card = wrapInCard(row, color: .flaccySecondaryGroupedBackground)
             card.isAccessibilityElement = true
             card.accessibilityLabel = "\(place.title). \(place.detail)"
             card.accessibilityIdentifier = place.identifier
@@ -233,7 +233,7 @@ final class ImportHelpViewController: UIViewController {
         })
         button.configurationUpdateHandler = { button in
             var background = UIBackgroundConfiguration.clear()
-            background.backgroundColor = button.isHighlighted ? .tertiarySystemGroupedBackground : .secondarySystemGroupedBackground
+            background.backgroundColor = button.isHighlighted ? .flaccyTertiaryGroupedBackground : .flaccySecondaryGroupedBackground
             background.cornerRadius = 16
             button.configuration?.background = background
         }
@@ -288,7 +288,7 @@ final class ImportHelpViewController: UIViewController {
     private func wrapInCard(_ content: UIView, color: UIColor) -> UIView {
         let card = UIView()
         card.backgroundColor = color
-        card.layer.cornerRadius = 16
+        card.layer.themedCornerRadius = 16
         card.layer.cornerCurve = .continuous
         content.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(content)

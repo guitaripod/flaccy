@@ -17,11 +17,11 @@ final class ArtistCardCell: UICollectionViewCell {
         cover.liftsUnderPointer(cornerRadius: 40)
 
         disc.backgroundColor = UIColor.white.withAlphaComponent(0.08)
-        disc.layer.cornerRadius = 40
+        disc.layer.themedCornerRadius = 40
         disc.layer.masksToBounds = true
         disc.translatesAutoresizingMaskIntoConstraints = false
 
-        cover.layer.cornerRadius = 40
+        cover.layer.themedCornerRadius = 40
         cover.layer.masksToBounds = true
         cover.isHidden = true
         cover.translatesAutoresizingMaskIntoConstraints = false
@@ -37,7 +37,7 @@ final class ArtistCardCell: UICollectionViewCell {
         rankLabel.textColor = .black
         rankLabel.textAlignment = .center
         rankLabel.backgroundColor = .white
-        rankLabel.layer.cornerRadius = 11
+        rankLabel.layer.themedCornerRadius = 11
         rankLabel.layer.masksToBounds = true
         rankLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -122,7 +122,7 @@ final class AlbumCoverCell: UICollectionViewCell {
         super.init(frame: frame)
         cover.liftsUnderPointer(cornerRadius: 10)
 
-        cover.layer.cornerRadius = 10
+        cover.shapeAsCover(radius: 10)
         cover.layer.cornerCurve = .continuous
         cover.translatesAutoresizingMaskIntoConstraints = false
 
@@ -140,7 +140,7 @@ final class AlbumCoverCell: UICollectionViewCell {
         rankLabel.textColor = .white
         rankLabel.textAlignment = .center
         rankLabel.backgroundColor = UIColor.black.withAlphaComponent(0.55)
-        rankLabel.layer.cornerRadius = 9
+        rankLabel.layer.themedCornerRadius = 9
         rankLabel.layer.masksToBounds = true
         rankLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -206,7 +206,7 @@ final class TrackRowCell: UICollectionViewCell {
         rankLabel.textAlignment = .center
         rankLabel.setContentHuggingPriority(.required, for: .horizontal)
 
-        artwork.layer.cornerRadius = 6
+        artwork.shapeAsCover(radius: 6)
         artwork.layer.cornerCurve = .continuous
         artwork.translatesAutoresizingMaskIntoConstraints = false
 

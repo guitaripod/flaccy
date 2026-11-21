@@ -74,6 +74,11 @@ extension SettingsViewController {
         navigationController?.pushViewController(SongVolumesViewController(), animated: true)
     }
 
+    func handleThemeTap() {
+        selectionFeedback.selectionChanged()
+        navigationController?.pushViewController(ThemesViewController(), animated: true)
+    }
+
     func handleHomeScreenTap() {
         selectionFeedback.selectionChanged()
         let editor = EditHomeViewController()

@@ -11,16 +11,16 @@ class HomeGlanceCardCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
         contentView.highlightsUnderPointer(cornerRadius: 22)
-        contentView.backgroundColor = UIColor.label.withAlphaComponent(0.08)
-        contentView.layer.cornerRadius = 22
+        contentView.backgroundColor = UIColor.flaccyLabel.withAlphaComponent(0.08)
+        contentView.layer.themedCornerRadius = 22
         contentView.layer.cornerCurve = .continuous
         contentView.clipsToBounds = true
 
-        kickerIcon.tintColor = .secondaryLabel
+        kickerIcon.tintColor = .flaccySecondaryLabel
         kickerIcon.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
         kickerIcon.setContentHuggingPriority(.required, for: .horizontal)
         kickerLabel.font = .scaled(.caption1, size: 12, weight: .semibold)
-        kickerLabel.textColor = .secondaryLabel
+        kickerLabel.textColor = .flaccySecondaryLabel
         kickerLabel.adjustsFontForContentSizeCategory = true
         kickerLabel.numberOfLines = 1
         let kicker = UIStackView(arrangedSubviews: [kickerIcon, kickerLabel])
@@ -72,7 +72,7 @@ final class HomeMemoryCardCell: HomeGlanceCardCell {
         titleLabel.font = .scaled(.subheadline, size: 15, weight: .semibold)
         titleLabel.numberOfLines = 2
         detailLabel.font = .scaled(.footnote, size: 13, weight: .regular)
-        detailLabel.textColor = .secondaryLabel
+        detailLabel.textColor = .flaccySecondaryLabel
         detailLabel.numberOfLines = 2
         titleLabel.adjustsFontForContentSizeCategory = true
         detailLabel.adjustsFontForContentSizeCategory = true
@@ -145,12 +145,12 @@ final class HomeWeekCardCell: HomeGlanceCardCell {
                 string: delta,
                 attributes: [.foregroundColor: Self.color(for: week.playsDelta)]
             )
-            text.append(NSAttributedString(string: " · \(plays)", attributes: [.foregroundColor: UIColor.secondaryLabel]))
+            text.append(NSAttributedString(string: " · \(plays)", attributes: [.foregroundColor: UIColor.flaccySecondaryLabel]))
             deltaLabel.attributedText = text
         } else {
             deltaLabel.attributedText = nil
             deltaLabel.text = plays
-            deltaLabel.textColor = .secondaryLabel
+            deltaLabel.textColor = .flaccySecondaryLabel
         }
         accessibilityLabel = [HomeCopy.thisWeek, listeningLabel.text, delta, plays].compactMap { $0 }.joined(separator: ", ")
         accessibilityHint = HomeCopy.openRecap
@@ -160,7 +160,7 @@ final class HomeWeekCardCell: HomeGlanceCardCell {
         switch delta {
         case .down: negativeColor
         case .up, .new: positiveColor
-        default: .secondaryLabel
+        default: .flaccySecondaryLabel
         }
     }
 }

@@ -39,7 +39,7 @@ final class ComputerTransferGuideViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         navigationItem.title = String(localized: "Moving music from a computer")
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.rightBarButtonItem = UIBarButtonItem(
@@ -92,7 +92,7 @@ final class ComputerTransferGuideViewController: UIViewController {
         let detail = UILabel()
         detail.text = route.detail
         detail.font = .preferredFont(forTextStyle: .subheadline)
-        detail.textColor = .secondaryLabel
+        detail.textColor = .flaccySecondaryLabel
         detail.adjustsFontForContentSizeCategory = true
         detail.numberOfLines = 0
 
@@ -142,7 +142,7 @@ final class ComputerTransferGuideViewController: UIViewController {
         let body = UILabel()
         body.text = FlaccyServerNudge.text
         body.font = .preferredFont(forTextStyle: .subheadline)
-        body.textColor = .secondaryLabel
+        body.textColor = .flaccySecondaryLabel
         body.adjustsFontForContentSizeCategory = true
         body.numberOfLines = 0
 
@@ -159,7 +159,7 @@ final class ComputerTransferGuideViewController: UIViewController {
 
         var closeConfiguration = UIButton.Configuration.plain()
         closeConfiguration.image = UIImage(systemName: "xmark.circle.fill")
-        closeConfiguration.baseForegroundColor = .tertiaryLabel
+        closeConfiguration.baseForegroundColor = .flaccyTertiaryLabel
         let close = UIButton(configuration: closeConfiguration)
         close.accessibilityLabel = String(localized: "Close")
         close.accessibilityHint = String(localized: "Hides this suggestion for good")
@@ -177,8 +177,8 @@ final class ComputerTransferGuideViewController: UIViewController {
         body.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true
 
         let card = UIView()
-        card.backgroundColor = .secondarySystemGroupedBackground
-        card.layer.cornerRadius = 16
+        card.backgroundColor = .flaccySecondaryGroupedBackground
+        card.layer.themedCornerRadius = 16
         card.layer.cornerCurve = .continuous
         content.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(content)
@@ -201,7 +201,7 @@ final class ComputerTransferGuideViewController: UIViewController {
         let label = UILabel()
         label.text = (DeviceKind.isPad ? String(localized: "Songs copied in with Finder or the Files app (On My iPad › Flaccy) appear the next time Flaccy launches.") : String(localized: "Songs copied in with Finder or the Files app (On My iPhone › Flaccy) appear the next time Flaccy launches."))
         label.font = .preferredFont(forTextStyle: .footnote)
-        label.textColor = .tertiaryLabel
+        label.textColor = .flaccyTertiaryLabel
         label.adjustsFontForContentSizeCategory = true
         label.numberOfLines = 0
         return label

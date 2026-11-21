@@ -126,7 +126,7 @@ final class LibraryDebutSummaryCard: UIView {
         label.text = text
         label.font = .scaled(.subheadline, size: 15, weight: .regular).monospacedDigits
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
         label.numberOfLines = 2
         return label
     }
@@ -141,19 +141,19 @@ final class LibraryDebutSummaryCard: UIView {
         guard aiSkippedForEntitlement else {
             label.text = LibraryDebutCopy.paywallLine
             label.font = .preferredFont(forTextStyle: .footnote)
-            label.textColor = .tertiaryLabel
+            label.textColor = .flaccyTertiaryLabel
             return label
         }
         label.text = LibraryDebutCopy.aiSkippedHeadline
         label.font = .scaled(.subheadline, size: 15, weight: .medium)
-        label.textColor = .label
+        label.textColor = .flaccyLabel
         return label
     }
 
     private func makeDivider() -> UIView {
         let container = UIView()
         let line = UIView()
-        line.backgroundColor = .separator
+        line.backgroundColor = .flaccySeparator
         line.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(line)
         NSLayoutConstraint.activate([
@@ -190,7 +190,7 @@ final class LibraryDebutSummaryCard: UIView {
         secondary.title = aiSkippedForEntitlement
             ? LibraryDebutCopy.aiSkippedAction
             : LibraryDebutCopy.secondaryAction
-        secondary.baseForegroundColor = .secondaryLabel
+        secondary.baseForegroundColor = .flaccySecondaryLabel
         secondary.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 8, bottom: 10, trailing: 8)
         secondary.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
@@ -254,7 +254,7 @@ private final class SummaryStatCell: UIView {
         titleLabel.text = label
         titleLabel.font = .scaled(.caption2, size: 11, weight: .medium)
         titleLabel.adjustsFontForContentSizeCategory = true
-        titleLabel.textColor = .secondaryLabel
+        titleLabel.textColor = .flaccySecondaryLabel
         titleLabel.numberOfLines = 1
 
         let stack = UIStackView(arrangedSubviews: [valueLabel, titleLabel])

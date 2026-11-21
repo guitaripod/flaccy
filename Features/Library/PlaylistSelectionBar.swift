@@ -55,7 +55,7 @@ final class PlaylistSelectionBar: UIView {
         configuration.title = title
         configuration.imagePlacement = .top
         configuration.imagePadding = 4
-        configuration.baseForegroundColor = .label
+        configuration.baseForegroundColor = .flaccyLabel
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var updated = attributes
             updated.font = UIFont.preferredFont(forTextStyle: .caption1)
@@ -68,8 +68,8 @@ final class PlaylistSelectionBar: UIView {
 
     private static func solidBackground() -> UIView {
         let view = UIView()
-        view.backgroundColor = .secondarySystemBackground
-        view.layer.cornerRadius = 30
+        view.backgroundColor = .flaccySecondaryBackground
+        view.layer.themedCornerRadius = 30
         view.layer.cornerCurve = .continuous
         return view
     }

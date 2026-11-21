@@ -42,7 +42,7 @@ class HomePromoCardCell: UICollectionViewCell {
             content.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20),
         ])
         applyBorder()
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (cell: HomePromoCardCell, _) in cell.applyBorder() }
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, ThemeEpochTrait.self]) { (cell: HomePromoCardCell, _) in cell.applyBorder() }
     }
 
     @available(*, unavailable)
@@ -50,14 +50,14 @@ class HomePromoCardCell: UICollectionViewCell {
 
     private func applyBorder() {
         glass.layer.borderWidth = 1
-        glass.layer.borderColor = UIColor.label.withAlphaComponent(0.14).resolvedColor(with: traitCollection).cgColor
+        glass.layer.borderColor = UIColor.flaccyLabel.withAlphaComponent(0.14).resolvedColor(with: traitCollection).cgColor
     }
 
     func resetContent() {
         content.arrangedSubviews.forEach { content.removeArrangedSubview($0); $0.removeFromSuperview() }
     }
 
-    func label(_ text: String, style: UIFont.TextStyle, size: CGFloat, weight: UIFont.Weight, maxSize: CGFloat? = nil, color: UIColor = .label) -> UILabel {
+    func label(_ text: String, style: UIFont.TextStyle, size: CGFloat, weight: UIFont.Weight, maxSize: CGFloat? = nil, color: UIColor = .flaccyLabel) -> UILabel {
         let label = UILabel()
         label.text = text
         label.font = maxSize.map { .scaled(style, size: size, weight: weight, maxSize: $0) } ?? .scaled(style, size: size, weight: weight)
@@ -73,12 +73,12 @@ class HomePromoCardCell: UICollectionViewCell {
         configuration.image = symbol.flatMap { UIImage(systemName: $0) }
         configuration.imagePadding = 8
         configuration.cornerStyle = .capsule
-        configuration.baseBackgroundColor = .label
-        configuration.baseForegroundColor = .systemBackground
+        configuration.baseBackgroundColor = .flaccyLabel
+        configuration.baseForegroundColor = .flaccyBackground
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var attributes = attributes
             attributes.font = UIFont.scaled(.body, size: 17, weight: .semibold, maxSize: 22)
-            attributes.foregroundColor = UIColor.systemBackground
+            attributes.foregroundColor = UIColor.flaccyBackground
             return attributes
         }
         return button(configuration: configuration, title: title, action: action)
@@ -91,10 +91,10 @@ class HomePromoCardCell: UICollectionViewCell {
         configuration.image = symbol.flatMap { UIImage(systemName: $0) }
         configuration.imagePadding = 8
         configuration.showsActivityIndicator = showsActivity
-        configuration.baseForegroundColor = .label
+        configuration.baseForegroundColor = .flaccyLabel
         configuration.titleAlignment = .center
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 18, bottom: 8, trailing: 18)
-        configuration.background.backgroundColor = UIColor.label.withAlphaComponent(0.12)
+        configuration.background.backgroundColor = UIColor.flaccyLabel.withAlphaComponent(0.12)
         configuration.background.cornerRadius = Self.buttonHeight / 2
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var attributes = attributes
@@ -104,7 +104,7 @@ class HomePromoCardCell: UICollectionViewCell {
         configuration.subtitleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var attributes = attributes
             attributes.font = UIFont.scaled(.caption1, size: 12, weight: .regular, maxSize: 16)
-            attributes.foregroundColor = UIColor.secondaryLabel
+            attributes.foregroundColor = UIColor.flaccySecondaryLabel
             return attributes
         }
         return button(configuration: configuration, title: title, action: action)
@@ -164,7 +164,7 @@ final class HomeGetStartedCell: HomePromoCardCell {
         let title = label(content.title, style: .title2, size: 26, weight: .heavy, maxSize: 34)
         title.accessibilityTraits = .header
         self.content.addArrangedSubview(title)
-        self.content.addArrangedSubview(label(content.body, style: .subheadline, size: 15, weight: .regular, color: .secondaryLabel))
+        self.content.addArrangedSubview(label(content.body, style: .subheadline, size: 15, weight: .regular, color: .flaccySecondaryLabel))
         self.content.setCustomSpacing(18, after: self.content.arrangedSubviews.last ?? title)
         self.content.addArrangedSubview(primaryButton(title: HomeCopy.addMusic, symbol: "plus", action: .addMusic))
         self.content.addArrangedSubview(secondaryButton(
@@ -179,7 +179,7 @@ final class HomeGetStartedCell: HomePromoCardCell {
         let guide = linkButton(title: HomeCopy.otherWaysToAdd, symbol: "laptopcomputer.and.iphone", action: .computerGuide)
         self.content.addArrangedSubview(guide)
         if let footnote = content.footnote {
-            self.content.addArrangedSubview(label(footnote, style: .footnote, size: 13, weight: .regular, color: .secondaryLabel))
+            self.content.addArrangedSubview(label(footnote, style: .footnote, size: 13, weight: .regular, color: .flaccySecondaryLabel))
         }
     }
 }
@@ -192,7 +192,7 @@ final class HomePlanCardCell: HomePromoCardCell {
 
     func configure(with plan: HomePlanCardContent) {
         resetContent()
-        content.addArrangedSubview(label(plan.kicker, style: .footnote, size: 13, weight: .semibold, color: .secondaryLabel))
+        content.addArrangedSubview(label(plan.kicker, style: .footnote, size: 13, weight: .semibold, color: .flaccySecondaryLabel))
         let title = label(plan.title, style: .title2, size: 26, weight: .heavy, maxSize: 34)
         title.accessibilityTraits = .header
         content.addArrangedSubview(title)
@@ -202,7 +202,7 @@ final class HomePlanCardCell: HomePromoCardCell {
         content.setCustomSpacing(18, after: content.arrangedSubviews.last ?? title)
         content.addArrangedSubview(primaryButton(title: plan.primaryTitle, symbol: nil, action: .getLifetime))
         if let caption = plan.caption {
-            let captionLabel = label(caption, style: .footnote, size: 13, weight: .regular, color: .secondaryLabel)
+            let captionLabel = label(caption, style: .footnote, size: 13, weight: .regular, color: .flaccySecondaryLabel)
             captionLabel.textAlignment = .center
             content.addArrangedSubview(captionLabel)
         }
@@ -225,7 +225,7 @@ final class HomeSecondLookCell: HomePromoCardCell {
         let title = label(secondLook.title, style: .largeTitle, size: 34, weight: .heavy, maxSize: 42)
         title.accessibilityTraits = .header
         content.addArrangedSubview(title)
-        content.addArrangedSubview(label(secondLook.body, style: .subheadline, size: 15, weight: .regular, color: .secondaryLabel))
+        content.addArrangedSubview(label(secondLook.body, style: .subheadline, size: 15, weight: .regular, color: .flaccySecondaryLabel))
         content.setCustomSpacing(16, after: content.arrangedSubviews.last ?? title)
         for line in secondLook.highlights {
             content.addArrangedSubview(checkRow(line))
@@ -247,7 +247,7 @@ final class HomePromoNoteCell: UICollectionViewCell {
         super.init(frame: frame)
         noteLabel.font = .scaled(.footnote, size: 13, weight: .regular)
         noteLabel.adjustsFontForContentSizeCategory = true
-        noteLabel.textColor = .secondaryLabel
+        noteLabel.textColor = .flaccySecondaryLabel
         noteLabel.numberOfLines = 0
         noteLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(noteLabel)

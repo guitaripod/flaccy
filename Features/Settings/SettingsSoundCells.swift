@@ -18,7 +18,7 @@ final class SignalPathCell: UITableViewCell {
         selectionStyle = .none
         accessibilityIdentifier = "settings.signalPath"
 
-        verdictDot.layer.cornerRadius = 5
+        verdictDot.layer.themedCornerRadius = 5
         verdictDot.translatesAutoresizingMaskIntoConstraints = false
         verdictLabel.font = .preferredFont(forTextStyle: .subheadline)
         verdictLabel.adjustsFontForContentSizeCategory = true
@@ -27,7 +27,7 @@ final class SignalPathCell: UITableViewCell {
         verdict.spacing = 10
         verdict.alignment = .firstBaseline
 
-        let divider = HairlineView(color: .separator)
+        let divider = HairlineView(color: .flaccySeparator)
 
         let stack = UIStackView(arrangedSubviews: [
             fileStage, Self.connector(), flaccyStage, Self.connector(), outputStage, divider, verdict,
@@ -73,7 +73,7 @@ final class SignalPathCell: UITableViewCell {
 
     private static func color(for verdict: SignalPathVerdict) -> UIColor {
         switch verdict {
-        case .idle: .tertiaryLabel
+        case .idle: .flaccyTertiaryLabel
         case .untouched: .systemGreen
         case .shaped: .systemBlue
         case .reencodedForBluetooth: .systemOrange
@@ -85,8 +85,8 @@ final class SignalPathCell: UITableViewCell {
     private static func connector() -> UIView {
         let holder = UIView()
         let line = UIView()
-        line.backgroundColor = .tertiaryLabel
-        line.layer.cornerRadius = 1
+        line.backgroundColor = .flaccyTertiaryLabel
+        line.layer.themedCornerRadius = 1
         line.translatesAutoresizingMaskIntoConstraints = false
         holder.addSubview(line)
         NSLayoutConstraint.activate([
@@ -110,11 +110,11 @@ final class SignalPathCell: UITableViewCell {
             super.init(frame: frame)
             isAccessibilityElement = true
             captionLabel.font = .preferredFont(forTextStyle: .caption2).withSymbolicTraits(.traitBold)
-            captionLabel.textColor = .secondaryLabel
+            captionLabel.textColor = .flaccySecondaryLabel
             titleLabel.font = .preferredFont(forTextStyle: .headline)
             titleLabel.numberOfLines = 0
             detailLabel.font = .preferredFont(forTextStyle: .footnote)
-            detailLabel.textColor = .secondaryLabel
+            detailLabel.textColor = .flaccySecondaryLabel
             detailLabel.numberOfLines = 0
             for label in [captionLabel, titleLabel, detailLabel] { label.adjustsFontForContentSizeCategory = true }
             let labels = UIStackView(arrangedSubviews: [captionLabel, titleLabel, detailLabel])
@@ -241,7 +241,7 @@ final class LibraryOverviewCell: UITableViewCell {
         captionLabel.text = caption.uppercased()
         captionLabel.font = .preferredFont(forTextStyle: .caption2)
         captionLabel.adjustsFontForContentSizeCategory = true
-        captionLabel.textColor = .secondaryLabel
+        captionLabel.textColor = .flaccySecondaryLabel
         captionLabel.textAlignment = .center
         captionLabel.adjustsFontSizeToFitWidth = true
         captionLabel.minimumScaleFactor = 0.7
@@ -257,7 +257,7 @@ final class LibraryOverviewCell: UITableViewCell {
             if index > 0 { text.append(NSAttributedString(string: "   ")) }
             text.append(NSAttributedString(string: "● ", attributes: [.foregroundColor: color(for: share.codec)]))
             let percent = share.fraction.formatted(.percent.precision(.fractionLength(0)))
-            text.append(NSAttributedString(string: "\(share.codec) \(percent)", attributes: [.foregroundColor: UIColor.secondaryLabel]))
+            text.append(NSAttributedString(string: "\(share.codec) \(percent)", attributes: [.foregroundColor: UIColor.flaccySecondaryLabel]))
         }
         return text
     }
@@ -302,7 +302,7 @@ final class LibraryOverviewCell: UITableViewCell {
             super.init(frame: frame)
             layer.cornerRadius = 5
             clipsToBounds = true
-            backgroundColor = .tertiarySystemFill
+            backgroundColor = .flaccyTertiaryFill
         }
 
         @available(*, unavailable)

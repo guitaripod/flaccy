@@ -84,7 +84,7 @@ extension NowPlayingViewController {
 
         compactArtworkView.contentMode = .scaleAspectFill
         compactArtworkView.clipsToBounds = true
-        compactArtworkView.layer.cornerRadius = 10
+        compactArtworkView.layer.themedCornerRadius = 10
         compactArtworkView.layer.cornerCurve = .continuous
         compactArtworkView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         compactArtworkView.tintColor = UIColor.white.withAlphaComponent(0.35)
@@ -188,7 +188,7 @@ extension NowPlayingViewController {
 
         artworkView.contentMode = .scaleAspectFill
         artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 20
+        artworkView.shapeAsCover(radius: 20)
         artworkView.layer.cornerCurve = .continuous
         artworkView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         artworkView.image = UIImage(systemName: "music.note")
@@ -232,7 +232,7 @@ extension NowPlayingViewController {
     func setupPeekArtwork() {
         peekArtworkView.contentMode = .scaleAspectFill
         peekArtworkView.clipsToBounds = true
-        peekArtworkView.layer.cornerRadius = 20
+        peekArtworkView.layer.themedCornerRadius = 20
         peekArtworkView.layer.cornerCurve = .continuous
         peekArtworkView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         peekArtworkView.tintColor = UIColor.white.withAlphaComponent(0.35)
@@ -264,7 +264,7 @@ extension NowPlayingViewController {
         artistAvatarButton.contentMode = .scaleAspectFill
         artistAvatarButton.imageView?.contentMode = .scaleAspectFill
         artistAvatarButton.clipsToBounds = true
-        artistAvatarButton.layer.cornerRadius = 11
+        artistAvatarButton.layer.themedCornerRadius = 11
         artistAvatarButton.isHidden = true
         artistAvatarButton.accessibilityLabel = String(localized: "Artist photo")
         artistAvatarButton.accessibilityHint = String(localized: "Shows the artist's albums")
@@ -425,7 +425,7 @@ extension NowPlayingViewController {
 
     func setupScrubBubble() {
         scrubBubble.backgroundColor = UIColor.white.withAlphaComponent(0.95)
-        scrubBubble.layer.cornerRadius = 12
+        scrubBubble.layer.themedCornerRadius = 12
         scrubBubble.layer.cornerCurve = .continuous
         scrubBubble.alpha = 0
         scrubBubbleLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .semibold)

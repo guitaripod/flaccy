@@ -19,7 +19,7 @@ final class StreamingLinksViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         title = String(localized: "Share")
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(
@@ -138,7 +138,7 @@ final class StreamingLinksViewController: UIViewController {
         artistLabel.text = result.artist
         artistLabel.font = .preferredFont(forTextStyle: .subheadline)
         artistLabel.adjustsFontForContentSizeCategory = true
-        artistLabel.textColor = .secondaryLabel
+        artistLabel.textColor = .flaccySecondaryLabel
         artistLabel.textAlignment = .center
         artistLabel.numberOfLines = 2
 
@@ -157,7 +157,7 @@ final class StreamingLinksViewController: UIViewController {
         label.text = text.uppercased()
         label.font = .preferredFont(forTextStyle: .footnote)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
         label.accessibilityTraits = .header
 
         let container = UIStackView(arrangedSubviews: [label])
@@ -172,7 +172,7 @@ final class StreamingLinksViewController: UIViewController {
         label.text = text
         label.font = .preferredFont(forTextStyle: .footnote)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
         label.numberOfLines = 0
 
         let container = UIStackView(arrangedSubviews: [label])
@@ -229,13 +229,13 @@ final class StreamingLinksViewController: UIViewController {
     }
 
     /// Resolves a brand hex to a dynamic color, lifting near-black brands
-    /// (Tidal, Spinrilla) to `.label` so glyphs stay visible on glass in dark mode.
+    /// (Tidal, Spinrilla) to `.flaccyLabel` so glyphs stay visible on glass in dark mode.
     private func brandColor(fromHex hex: UInt) -> UIColor {
         let red = CGFloat((hex >> 16) & 0xFF) / 255
         let green = CGFloat((hex >> 8) & 0xFF) / 255
         let blue = CGFloat(hex & 0xFF) / 255
         if max(red, green, blue) < 0.2 {
-            return .label
+            return .flaccyLabel
         }
         return UIColor(red: red, green: green, blue: blue, alpha: 1)
     }
@@ -308,14 +308,14 @@ private final class GlassRow: UIControl {
             subtitleLabel.text = subtitle
             subtitleLabel.font = .preferredFont(forTextStyle: .caption2)
             subtitleLabel.adjustsFontForContentSizeCategory = true
-            subtitleLabel.textColor = .tertiaryLabel
+            subtitleLabel.textColor = .flaccyTertiaryLabel
             subtitleLabel.numberOfLines = 1
             subtitleLabel.lineBreakMode = .byTruncatingMiddle
             textStack.addArrangedSubview(subtitleLabel)
         }
 
         let accessoryView = UIImageView(image: accessory)
-        accessoryView.tintColor = .tertiaryLabel
+        accessoryView.tintColor = .flaccyTertiaryLabel
         accessoryView.contentMode = .scaleAspectFit
         accessoryView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
         accessoryView.setContentHuggingPriority(.required, for: .horizontal)
@@ -364,7 +364,7 @@ private final class GlassRow: UIControl {
     private static func makeBackground() -> UIView {
         if UIAccessibility.isReduceTransparencyEnabled {
             let solid = UIView()
-            solid.backgroundColor = .secondarySystemGroupedBackground
+            solid.backgroundColor = .flaccySecondaryGroupedBackground
             solid.layer.cornerRadius = cornerRadius
             solid.layer.cornerCurve = .continuous
             solid.clipsToBounds = true

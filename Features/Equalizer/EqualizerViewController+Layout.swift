@@ -79,7 +79,7 @@ extension EqualizerViewController {
         }
         outputButton.configuration = configuration
         outputButton.backgroundColor = UIColor.white.withAlphaComponent(0.08)
-        outputButton.layer.cornerRadius = 15
+        outputButton.layer.themedCornerRadius = 15
         outputButton.layer.cornerCurve = .continuous
         outputButton.layer.borderWidth = 1
         outputButton.layer.borderColor = UIColor.white.withAlphaComponent(0.12).cgColor
@@ -104,7 +104,7 @@ extension EqualizerViewController {
     }
 
     func makeCurveCard() -> UIView {
-        curveCard.layer.cornerRadius = 28
+        curveCard.layer.themedCornerRadius = 28
         curveCard.layer.cornerCurve = .continuous
         curveCard.clipsToBounds = true
         curveCard.backgroundColor = UIColor.white.withAlphaComponent(0.06)

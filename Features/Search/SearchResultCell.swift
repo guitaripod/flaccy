@@ -23,7 +23,7 @@ final class SearchResultCell: UICollectionViewCell {
         titleLabel.adjustsFontForContentSizeCategory = true
         detailLabel.font = .scaled(.footnote, size: 13, weight: .regular)
         detailLabel.adjustsFontForContentSizeCategory = true
-        detailLabel.textColor = .secondaryLabel
+        detailLabel.textColor = .flaccySecondaryLabel
 
         let text = UIStackView(arrangedSubviews: [titleLabel, detailLabel])
         text.axis = .vertical
@@ -36,7 +36,7 @@ final class SearchResultCell: UICollectionViewCell {
         row.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(row)
 
-        separator.backgroundColor = .separator
+        separator.backgroundColor = .flaccySeparator
         separator.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(separator)
 
@@ -79,7 +79,7 @@ final class SearchResultCell: UICollectionViewCell {
             remoteURL: nil,
             placeholder: UIImage(systemName: item.placeholderSymbol)
         )
-        coverView.tintColor = .tertiaryLabel
+        coverView.tintColor = .flaccyTertiaryLabel
         isAccessibilityElement = true
         accessibilityLabel = item.accessibilityLabel
         accessibilityTraits = .button

@@ -315,7 +315,7 @@ struct WatchAlbumPresentation {
         guard case .waitingForWatch = readiness else {
             return WatchAlbumPresentation(
                 statusText: String(localized: "Waiting to send  ·  \(size)"),
-                statusColor: .secondaryLabel,
+                statusColor: .flaccySecondaryLabel,
                 accessory: .spinner,
                 voiceOverValue: String(localized: "Waiting"),
                 voiceOverHint: String(localized: "Queued. It sends on its own."),
@@ -347,8 +347,8 @@ struct WatchAlbumPresentation {
             : String(localized: "Double-tap to see how to set up your Apple Watch")
         return WatchAlbumPresentation(
             statusText: reason,
-            statusColor: .secondaryLabel,
-            accessory: .icon(name: "applewatch.slash", tint: .tertiaryLabel),
+            statusColor: .flaccySecondaryLabel,
+            accessory: .icon(name: "applewatch.slash", tint: .flaccyTertiaryLabel),
             voiceOverValue: reason,
             voiceOverHint: hint,
             state: state,
@@ -381,7 +381,7 @@ struct WatchAlbumPresentation {
             : String(localized: "\(total) tracks  ·  \(size) on Watch")
         return WatchAlbumPresentation(
             statusText: text,
-            statusColor: .secondaryLabel,
+            statusColor: .flaccySecondaryLabel,
             accessory: .pill(String(localized: "Send")),
             voiceOverValue: voiceOver,
             voiceOverHint: String(localized: "Double-tap to send to your Apple Watch"),

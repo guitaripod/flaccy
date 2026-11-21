@@ -58,7 +58,7 @@ final class RecapShareCardView: UIView {
         personaBadge.textColor = .white
         personaBadge.textAlignment = .center
         personaBadge.backgroundColor = UIColor.white.withAlphaComponent(0.18)
-        personaBadge.layer.cornerRadius = 16
+        personaBadge.layer.themedCornerRadius = 16
         personaBadge.layer.masksToBounds = true
 
         footer.font = .systemFont(ofSize: 12, weight: .semibold)

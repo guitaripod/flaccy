@@ -4,6 +4,22 @@ import FlaccyCore
 import UIKit
 import UniformTypeIdentifiers
 
+/// The proportions of the Albums carousel on a touch screen.
+nonisolated enum CarouselMetrics {
+    static let spacing: CGFloat = 14
+    static let captionHeight: CGFloat = 64
+    static let neighbourScale: CGFloat = 0.82
+    static let widthShare: CGFloat = 0.68
+    static let largestSide: CGFloat = 420
+    static let verticalBias: CGFloat = 0.36
+
+    /// The cover's edge: most of the width, but never taller than the room
+    /// left above the mini player.
+    static func coverSide(width: CGFloat, height: CGFloat) -> CGFloat {
+        max(160, min(width * widthShare, height - captionHeight - 140, largestSide)).rounded()
+    }
+}
+
 extension LibraryViewController {
 
     /// A cover-wall section of square art tiles at the given column count,
@@ -33,6 +49,49 @@ extension LibraryViewController {
         return section
     }
 
+    /// Covers edge to edge with nothing between them: twice as many columns as
+    /// the grid would be wide tiles, each exactly as wide as its column.
+    func wallSection(environment: NSCollectionLayoutEnvironment) -> NSCollectionLayoutSection {
+        let width = environment.container.effectiveContentSize.width
+        let columns = max(3, AdaptiveLayout.gridColumns(forWidth: width))
+        let side = NSCollectionLayoutDimension.fractionalWidth(1.0 / CGFloat(columns))
+        let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(widthDimension: side, heightDimension: side))
+        let group = NSCollectionLayoutGroup.horizontal(
+            layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: side),
+            repeatingSubitem: item, count: columns
+        )
+        let section = NSCollectionLayoutSection(group: group)
+        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 0, bottom: 24, trailing: 0)
+        return section
+    }
+
+    /// One album at a time: a large cover in the middle of the screen that
+    /// pages sideways, its neighbours smaller and dimmer on either side.
+    func carouselSection(environment: NSCollectionLayoutEnvironment) -> NSCollectionLayoutSection {
+        let container = environment.container.effectiveContentSize
+        let side = CarouselMetrics.coverSide(width: container.width, height: container.height)
+        let size = NSCollectionLayoutSize(
+            widthDimension: .absolute(side), heightDimension: .absolute(side + CarouselMetrics.captionHeight)
+        )
+        let item = NSCollectionLayoutItem(layoutSize: size)
+        let group = NSCollectionLayoutGroup.horizontal(layoutSize: size, subitems: [item])
+        let section = NSCollectionLayoutSection(group: group)
+        section.orthogonalScrollingBehavior = .groupPagingCentered
+        section.interGroupSpacing = CarouselMetrics.spacing
+        let top = max(12, (container.height - size.heightDimension.dimension) * CarouselMetrics.verticalBias)
+        section.contentInsets = NSDirectionalEdgeInsets(top: top, leading: 0, bottom: 24, trailing: 0)
+        section.visibleItemsInvalidationHandler = { items, offset, environment in
+            let centre = offset.x + environment.container.contentSize.width / 2
+            for item in items {
+                let distance = min(abs(item.frame.midX - centre) / (side + CarouselMetrics.spacing), 1)
+                let scale = 1 - (1 - CarouselMetrics.neighbourScale) * distance
+                item.transform = CGAffineTransform(scaleX: scale, y: scale)
+                item.alpha = 1 - (1 - CGFloat(FlowGeometry.neighbourOpacity)) * distance
+            }
+        }
+        return section
+    }
+
     func listLayout(leadingInset: CGFloat, leadingSwipeLove: Bool) -> UICollectionViewCompositionalLayout {
         var config = UICollectionLayoutListConfiguration(appearance: .plain)
         config.showsSeparators = true
@@ -53,7 +112,15 @@ extension LibraryViewController {
     func createLayout(for segment: LibraryViewModel.Segment) -> UICollectionViewCompositionalLayout {
         switch segment {
         case .albums:
-            switch viewModel.layoutMode {
+            switch viewModel.albumsLayoutMode {
+            case .wall:
+                return UICollectionViewCompositionalLayout { [weak self] _, environment in
+                    self?.wallSection(environment: environment)
+                }
+            case .carousel:
+                return UICollectionViewCompositionalLayout { [weak self] _, environment in
+                    self?.carouselSection(environment: environment)
+                }
             case .grid:
                 return UICollectionViewCompositionalLayout { [weak self] sectionIndex, environment in
                     guard let self else { return nil }
@@ -88,7 +155,7 @@ extension LibraryViewController {
             }
         case .songs:
             switch viewModel.layoutMode {
-            case .grid:
+            case .grid, .wall, .carousel:
                 return UICollectionViewCompositionalLayout { [weak self] _, environment in
                     self?.gridSection(environment: environment, topInset: 12)
                 }

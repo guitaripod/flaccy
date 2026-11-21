@@ -209,7 +209,7 @@ final class YearInMusicStoryView: UIView {
             thumb = monogramTile(name: entry.title, fontSize: 15)
         }
         thumb.clipsToBounds = true
-        thumb.layer.cornerRadius = 8
+        thumb.layer.themedCornerRadius = 8
         thumb.layer.cornerCurve = .continuous
         thumb.widthAnchor.constraint(equalToConstant: 34).isActive = true
         thumb.heightAnchor.constraint(equalToConstant: 34).isActive = true
@@ -551,7 +551,7 @@ final class YearInMusicStoryView: UIView {
         stack.isLayoutMarginsRelativeArrangement = true
         stack.layoutMargins = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
         stack.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        stack.layer.cornerRadius = 17
+        stack.layer.themedCornerRadius = 17
         stack.layer.cornerCurve = .continuous
         stack.layer.borderWidth = 0.5
         stack.layer.borderColor = theme.accent.withAlphaComponent(0.5).cgColor
@@ -585,7 +585,7 @@ final class YearInMusicStoryView: UIView {
             tile = monogramTile(name: name, fontSize: side * 0.42)
         }
         tile.clipsToBounds = true
-        tile.layer.cornerRadius = 20
+        tile.layer.themedCornerRadius = 20
         tile.layer.cornerCurve = .continuous
         tile.layer.borderWidth = 0.5
         tile.layer.borderColor = UIColor.white.withAlphaComponent(0.2).cgColor
@@ -596,7 +596,7 @@ final class YearInMusicStoryView: UIView {
 
     private func collageView(artwork: StoryArtwork, albums: [ChartAlbum], side: CGFloat) -> UIView {
         let container = UIView()
-        container.layer.cornerRadius = 18
+        container.layer.themedCornerRadius = 18
         container.layer.cornerCurve = .continuous
         container.clipsToBounds = true
         container.layer.borderWidth = 0.5

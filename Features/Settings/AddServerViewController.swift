@@ -176,7 +176,7 @@ final class AddServerViewController: UITableViewController {
             var content = UIListContentConfiguration.cell()
             content.text = String(localized: "Test")
             content.image = UIImage(systemName: "bolt.horizontal.circle")
-            content.textProperties.color = form.testState == .testing ? .secondaryLabel : .tintColor
+            content.textProperties.color = form.testState == .testing ? .flaccySecondaryLabel : .tintColor
             cell.contentConfiguration = content
             cell.accessibilityIdentifier = "addServer.test"
             return cell
@@ -196,20 +196,20 @@ final class AddServerViewController: UITableViewController {
         switch form.testState {
         case .idle:
             content.text = RemoteCopy.explainer
-            content.textProperties.color = .secondaryLabel
+            content.textProperties.color = .flaccySecondaryLabel
         case .testing:
             content.text = String(localized: "Testing the connection\u{2026}")
-            content.textProperties.color = .secondaryLabel
+            content.textProperties.color = .flaccySecondaryLabel
         case .passed(let summary):
             content.text = summary
             content.image = UIImage(systemName: "checkmark.circle.fill")
             content.imageProperties.tintColor = .systemGreen
-            content.textProperties.color = .label
+            content.textProperties.color = .flaccyLabel
         case .failed(let message):
             content.text = message
             content.image = UIImage(systemName: "exclamationmark.triangle.fill")
             content.imageProperties.tintColor = .systemRed
-            content.textProperties.color = .label
+            content.textProperties.color = .flaccyLabel
         }
         return content
     }

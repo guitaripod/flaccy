@@ -22,7 +22,7 @@ final class WelcomeViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         navigationItem.backButtonTitle = String(localized: "Back")
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             title: WelcomeCopy.notNow, primaryAction: UIAction { [weak self] _ in self?.choose(.notNow) }
@@ -45,7 +45,7 @@ final class WelcomeViewController: UIViewController {
         header.alignment = .center
         header.spacing = 16
 
-        let subtitle = Self.label(WelcomeCopy.subtitle, style: .title3, color: .secondaryLabel)
+        let subtitle = Self.label(WelcomeCopy.subtitle, style: .title3, color: .flaccySecondaryLabel)
         subtitle.textAlignment = .center
 
         let question = Self.label(WelcomeCopy.question, style: .headline)
@@ -77,7 +77,7 @@ final class WelcomeViewController: UIViewController {
         sample.accessibilityIdentifier = "welcome.sample"
         sample.addAction(UIAction { [weak self] _ in self?.choose(.sample) }, for: .touchUpInside)
 
-        let trial = Self.label(PaywallCopy.trialStartsLine, style: .footnote, color: .tertiaryLabel)
+        let trial = Self.label(PaywallCopy.trialStartsLine, style: .footnote, color: .flaccyTertiaryLabel)
         trial.textAlignment = .center
         trial.isHidden = PurchaseManager.shared.state != .trialNotStarted
 
@@ -133,7 +133,7 @@ final class WelcomeViewController: UIViewController {
         let icon = UIImageView(image: image ?? UIImage(systemName: "music.note"))
         icon.contentMode = .scaleAspectFit
         icon.tintColor = .tintColor
-        icon.layer.cornerRadius = 20
+        icon.layer.themedCornerRadius = 20
         icon.layer.cornerCurve = .continuous
         icon.clipsToBounds = image != nil
         icon.isAccessibilityElement = false
@@ -154,7 +154,7 @@ final class WelcomeViewController: UIViewController {
     }
 
     static func label(
-        _ text: String, style: UIFont.TextStyle, weight: UIFont.Weight? = nil, color: UIColor = .label
+        _ text: String, style: UIFont.TextStyle, weight: UIFont.Weight? = nil, color: UIColor = .flaccyLabel
     ) -> UILabel {
         let label = UILabel()
         label.text = text
@@ -197,7 +197,7 @@ final class WelcomeChoiceButton: UIButton {
         configuration.subtitleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var attributes = attributes
             attributes.font = UIFont.preferredFont(forTextStyle: .subheadline)
-            attributes.foregroundColor = UIColor.secondaryLabel
+            attributes.foregroundColor = UIColor.flaccySecondaryLabel
             return attributes
         }
         self.configuration = configuration

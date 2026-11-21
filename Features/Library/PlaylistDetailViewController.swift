@@ -86,7 +86,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .flaccyBackground
         navigationItem.largeTitleDisplayMode = .never
         setupSearch()
         setupTableView()
@@ -288,7 +288,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         var name = UIButton.Configuration.plain()
         name.titleLineBreakMode = .byWordWrapping
         name.contentInsets = .zero
-        name.baseForegroundColor = .label
+        name.baseForegroundColor = .flaccyLabel
         name.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var updated = attributes
             updated.font = UIFontMetrics(forTextStyle: .title1).scaledFont(for: .systemFont(ofSize: 26, weight: .bold))
@@ -303,7 +303,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
 
         summaryLabel.font = .preferredFont(forTextStyle: .subheadline)
         summaryLabel.adjustsFontForContentSizeCategory = true
-        summaryLabel.textColor = .secondaryLabel
+        summaryLabel.textColor = .flaccySecondaryLabel
         summaryLabel.numberOfLines = 0
 
         var note = UIButton.Configuration.plain()
@@ -359,7 +359,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
     private func installEditCoverButton() {
         let disc = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterial))
         disc.isUserInteractionEnabled = false
-        disc.layer.cornerRadius = 16
+        disc.layer.themedCornerRadius = 16
         disc.layer.cornerCurve = .continuous
         disc.clipsToBounds = true
         disc.translatesAutoresizingMaskIntoConstraints = false
@@ -367,7 +367,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         let glyph = UIImageView(image: UIImage(
             systemName: "pencil", withConfiguration: UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
         ))
-        glyph.tintColor = .label
+        glyph.tintColor = .flaccyLabel
         glyph.contentMode = .center
         glyph.translatesAutoresizingMaskIntoConstraints = false
         disc.contentView.addSubview(glyph)
@@ -530,7 +530,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         configuration.title = title
         configuration.image = UIImage(systemName: systemImage)
         configuration.imagePadding = 6
-        configuration.baseForegroundColor = .label
+        configuration.baseForegroundColor = .flaccyLabel
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var updated = attributes
             updated.font = UIFont.preferredFont(forTextStyle: .headline)

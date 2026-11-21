@@ -55,21 +55,11 @@ private extension UIColor {
 @MainActor
 enum AccentApplier {
 
-    /// Tints every window of every connected scene, crossfading unless Reduce
-    /// Motion is on.
+    /// Tints every window with the picked accent, crossfading unless Reduce
+    /// Motion is on. The accent is the color scheme of Flaccy's own theme, so
+    /// `AppTheme` applies it.
     static func apply(_ accent: AccentChoice = AppAccent.current, animated: Bool = false) {
-        for scene in UIApplication.shared.connectedScenes {
-            guard let windowScene = scene as? UIWindowScene else { continue }
-            for window in windowScene.windows {
-                if animated && !UIAccessibility.isReduceMotionEnabled {
-                    UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve) {
-                        window.tintColor = accent.windowTint
-                    }
-                } else {
-                    window.tintColor = accent.windowTint
-                }
-            }
-        }
+        AppTheme.shared.accentChanged(animated: animated)
         NotificationCenter.default.post(name: AppAccent.didChange, object: nil)
     }
 }

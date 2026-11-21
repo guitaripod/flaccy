@@ -349,7 +349,7 @@ private final class StatusPillControl: UIControl {
         super.init(frame: frame)
         translatesAutoresizingMaskIntoConstraints = false
 
-        background.layer.cornerRadius = 16
+        background.layer.themedCornerRadius = 16
         background.layer.cornerCurve = .continuous
         background.layer.borderWidth = 1
         background.isUserInteractionEnabled = false

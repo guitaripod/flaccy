@@ -109,7 +109,7 @@ final class YearInMusicViewController: UIViewController {
         closeConfig.baseForegroundColor = .white
         let closeButton = UIButton(configuration: closeConfig)
         closeButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        closeButton.layer.cornerRadius = 17
+        closeButton.layer.themedCornerRadius = 17
         closeButton.accessibilityLabel = String(localized: "Close")
         closeButton.accessibilityIdentifier = "yearInMusic.close"
         closeButton.addAction(UIAction { [weak self] _ in
@@ -339,7 +339,7 @@ final class YearInMusicViewController: UIViewController {
         themeRow.arrangedSubviews.forEach { $0.removeFromSuperview() }
         for (index, theme) in themes.enumerated() {
             let swatch = UIButton(type: .custom)
-            swatch.layer.cornerRadius = 16
+            swatch.layer.themedCornerRadius = 16
             swatch.accessibilityLabel = String(localized: "\(theme.name) theme")
 
             let gradient = CAGradientLayer()
@@ -389,7 +389,7 @@ final class YearInMusicViewController: UIViewController {
             pageViews = slideImages.map { _ in
                 let imageView = UIImageView()
                 imageView.contentMode = .scaleAspectFit
-                imageView.layer.cornerRadius = 24
+                imageView.layer.themedCornerRadius = 24
                 imageView.layer.cornerCurve = .continuous
                 imageView.clipsToBounds = true
                 pagesStack.addArrangedSubview(imageView)

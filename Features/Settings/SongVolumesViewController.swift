@@ -58,7 +58,7 @@ final class SongVolumesViewController: UITableViewController {
         cell.selectionStyle = .none
         guard songs.indices.contains(indexPath.row) else {
             content.text = String(localized: "Every song plays at its own level")
-            content.textProperties.color = .secondaryLabel
+            content.textProperties.color = .flaccySecondaryLabel
             cell.contentConfiguration = content
             return cell
         }
@@ -66,12 +66,12 @@ final class SongVolumesViewController: UITableViewController {
         content = .subtitleCell()
         content.text = song.track.title
         content.secondaryText = song.track.artist
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = .flaccySecondaryLabel
         cell.contentConfiguration = content
         let level = UILabel()
         level.text = SongGain.label(song.tenths)
         level.font = .monospacedDigitSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .regular)
-        level.textColor = song.tenths > 0 ? .systemOrange : .secondaryLabel
+        level.textColor = song.tenths > 0 ? .systemOrange : .flaccySecondaryLabel
         level.sizeToFit()
         cell.accessoryView = level
         cell.accessibilityLabel = "\(song.track.title), \(song.track.artist)"

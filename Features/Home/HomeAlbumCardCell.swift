@@ -21,7 +21,7 @@ final class HomeAlbumCardCell: UICollectionViewCell {
         titleLabel.font = .scaled(.subheadline, size: 14, weight: .semibold)
         titleLabel.numberOfLines = 1
         artistLabel.font = .scaled(.caption1, size: 12, weight: .regular)
-        artistLabel.textColor = .secondaryLabel
+        artistLabel.textColor = .flaccySecondaryLabel
         artistLabel.numberOfLines = 1
         titleLabel.adjustsFontForContentSizeCategory = true
         artistLabel.adjustsFontForContentSizeCategory = true

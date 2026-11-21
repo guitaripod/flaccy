@@ -50,11 +50,11 @@ extension LibraryViewController {
 
     func layoutToggleButton() -> UIBarButtonItem {
         let item = UIBarButtonItem(
-            image: UIImage(systemName: viewModel.layoutMode.icon),
+            image: UIImage(systemName: viewModel.currentLayoutMode.icon),
             primaryAction: UIAction { [weak self] _ in self?.toggleLayoutMode() }
         )
-        item.accessibilityLabel = viewModel.layoutMode.accessibilityLabel
-        item.accessibilityIdentifier = viewModel.layoutMode.accessibilityIdentifier
+        item.accessibilityLabel = viewModel.currentLayoutMode.accessibilityLabel
+        item.accessibilityIdentifier = viewModel.currentLayoutMode.accessibilityIdentifier
         return item
     }
 
@@ -63,6 +63,20 @@ extension LibraryViewController {
         viewModel.cycleLayoutMode()
         updateRightBarButton(for: viewModel.currentSegment)
         applyLayoutAndSnapshot(crossfade: true)
+    }
+
+    /// Lays the library out again when the look changed: Albums may have a new
+    /// view, and every row draws its cover in the theme's shape.
+    func observeTheme() {
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(themeDidChange), name: AppTheme.didChange, object: nil
+        )
+    }
+
+    @objc func themeDidChange() {
+        guard isViewLoaded else { return }
+        updateRightBarButton(for: viewModel.currentSegment)
+        applyLayoutAndSnapshot(crossfade: false)
     }
 
     func albumSortMenu() -> UIMenu {

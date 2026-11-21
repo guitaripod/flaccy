@@ -8,11 +8,8 @@ import UIKit
 extension SettingsViewController {
 
     func cell(for row: Row, at indexPath: IndexPath, in tableView: UITableView) -> UITableViewCell {
-        if case .appearance(let current) = row {
-            return appearanceCell(current: current, in: tableView, at: indexPath)
-        }
-        if case .accent(let current) = row {
-            return accentCell(current: current, in: tableView, at: indexPath)
+        if case .appearance(let current, let locked) = row {
+            return appearanceCell(current: current, locked: locked, in: tableView, at: indexPath)
         }
         if case .midgarEntry = row {
             return tableView.dequeueReusableCell(withIdentifier: MidgarEntryCell.reuseID, for: indexPath)
@@ -45,7 +42,7 @@ extension SettingsViewController {
         var content = Self.baseContent(for: row)
 
         switch row {
-        case .appearance, .accent, .midgarEntry, .plan, .signalPath, .libraryOverview:
+        case .appearance, .midgarEntry, .plan, .signalPath, .libraryOverview:
             break
 
         case .guideCard(_, let title, let symbolName):
@@ -70,6 +67,15 @@ extension SettingsViewController {
             cell.accessibilityLabel = String(localized: "Song Volumes")
             cell.accessibilityValue = content.secondaryText
             cell.accessibilityIdentifier = "settings.row.songVolumes"
+
+        case .theme(let name):
+            content.image = RowIcon.image(systemName: "paintpalette.fill", tint: .systemIndigo)
+            content.text = ThemeCopy.theme
+            content.secondaryText = name
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = ThemeCopy.theme
+            cell.accessibilityValue = name
+            cell.accessibilityIdentifier = "settings.row.theme"
 
         case .homeScreen(let visibleSections):
             content.image = RowIcon.image(systemName: "house.fill", tint: .systemOrange)
@@ -270,7 +276,7 @@ extension SettingsViewController {
             content.image = RowIcon.image(systemName: "arrow.clockwise", tint: .systemIndigo)
             if isRescanning {
                 content.text = String(localized: "Rescanning Library")
-                content.textProperties.color = .secondaryLabel
+                content.textProperties.color = .flaccySecondaryLabel
                 cell.accessoryView = makeSpinnerAccessory()
                 cell.selectionStyle = .none
                 cell.accessibilityLabel = String(localized: "Rescanning Library")
@@ -373,33 +379,25 @@ extension SettingsViewController {
         content.textProperties.font = .preferredFont(forTextStyle: .body)
         content.textProperties.adjustsFontForContentSizeCategory = true
         content.secondaryTextProperties.adjustsFontForContentSizeCategory = true
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = .flaccySecondaryLabel
         content.imageProperties.maximumSize = CGSize(width: RowIcon.side, height: RowIcon.side)
         return content
     }
 
-    func appearanceCell(current: AppAppearance, in tableView: UITableView, at indexPath: IndexPath) -> UITableViewCell {
+    /// The light and dark switch. A theme drawn for one mode shows that mode
+    /// and holds it, and the footer under the row says which theme does.
+    func appearanceCell(
+        current: AppAppearance, locked: Bool, in tableView: UITableView, at indexPath: IndexPath
+    ) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: AppearanceCell.reuseID, for: indexPath) as! AppearanceCell
-        cell.configure(selected: current)
+        let held: AppAppearance = AppTheme.shared.look.appearance == .light ? .light : .dark
+        cell.configure(selected: locked ? held : current, locked: locked)
         cell.onChange = { [weak self] appearance in
             guard let self else { return }
             self.selectionFeedback.selectionChanged()
             AppAppearance.current = appearance
             AppearanceApplier.apply(appearance, animated: true)
             MidgarLog.info("Appearance set to \(appearance.displayName)", category: .ui)
-        }
-        return cell
-    }
-
-    func accentCell(current: AccentChoice, in tableView: UITableView, at indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: AccentCell.reuseID, for: indexPath) as! AccentCell
-        cell.configure(selected: current)
-        cell.onChange = { [weak self] accent in
-            guard let self else { return }
-            self.selectionFeedback.selectionChanged()
-            AppAccent.current = accent
-            AccentApplier.apply(accent, animated: true)
-            MidgarLog.info("Accent set to \(accent.rawValue)", category: .ui)
         }
         return cell
     }

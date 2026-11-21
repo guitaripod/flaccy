@@ -38,7 +38,7 @@ final class TimingNoteViewController: UIViewController, UIPopoverPresentationCon
         title.text = LyricsTimingNoteCopy.title(for: kind)
         title.font = .preferredFont(forTextStyle: .headline)
         title.adjustsFontForContentSizeCategory = true
-        title.textColor = .label
+        title.textColor = .flaccyLabel
         title.numberOfLines = 0
         title.accessibilityTraits = .header
 
@@ -46,7 +46,7 @@ final class TimingNoteViewController: UIViewController, UIPopoverPresentationCon
         body.text = LyricsTimingNoteCopy.body(for: kind)
         body.font = .preferredFont(forTextStyle: .subheadline)
         body.adjustsFontForContentSizeCategory = true
-        body.textColor = .secondaryLabel
+        body.textColor = .flaccySecondaryLabel
         body.numberOfLines = 0
 
         let stack = UIStackView(arrangedSubviews: [title, body])

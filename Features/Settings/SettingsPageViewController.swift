@@ -23,7 +23,7 @@ final class SettingsPageViewController: UITableViewController {
         title = page.title
         navigationItem.largeTitleDisplayMode = .never
         tableView.accessibilityIdentifier = page.accessibilityIdentifier
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         guard let root else { return }
         SettingsViewController.registerCells(in: tableView)
         dataSource = root.makeDataSource(for: tableView)

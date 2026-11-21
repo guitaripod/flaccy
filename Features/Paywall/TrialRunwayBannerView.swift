@@ -29,7 +29,7 @@ final class TrialRunwayBannerView: UIView {
         card.backgroundColor = Self.accent.withAlphaComponent(
             UIAccessibility.isReduceTransparencyEnabled ? 0.22 : 0.14
         )
-        card.layer.cornerRadius = 16
+        card.layer.themedCornerRadius = 16
         card.layer.cornerCurve = .continuous
         card.layer.borderWidth = 1
         card.layer.borderColor = Self.accent.withAlphaComponent(0.4).cgColor
@@ -51,7 +51,7 @@ final class TrialRunwayBannerView: UIView {
         titleLabel.text = PaywallCopy.lastDayLine
         titleLabel.font = .scaled(.subheadline, size: 15, weight: .semibold, maxSize: 22)
         titleLabel.adjustsFontForContentSizeCategory = true
-        titleLabel.textColor = .label
+        titleLabel.textColor = .flaccyLabel
         titleLabel.numberOfLines = 2
 
         let row = UIStackView(arrangedSubviews: [symbolView, titleLabel, makeLifetimeButton(), makeCloseButton()])
@@ -103,7 +103,7 @@ final class TrialRunwayBannerView: UIView {
             systemName: "xmark",
             withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .bold)
         )
-        config.baseForegroundColor = .secondaryLabel
+        config.baseForegroundColor = .flaccySecondaryLabel
         config.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 8, bottom: 10, trailing: 8)
         let button = UIButton(configuration: config)
         button.accessibilityLabel = String(localized: "Dismiss")

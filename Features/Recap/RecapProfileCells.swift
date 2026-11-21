@@ -72,7 +72,7 @@ final class ProfileCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
 
-        avatar.layer.cornerRadius = 34
+        avatar.layer.themedCornerRadius = 34
         avatar.layer.borderWidth = 1
         avatar.layer.borderColor = UIColor.white.withAlphaComponent(0.2).cgColor
         avatar.translatesAutoresizingMaskIntoConstraints = false

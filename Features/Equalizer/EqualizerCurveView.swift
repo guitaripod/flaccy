@@ -62,7 +62,7 @@ final class EqualizerCurveView: UIView {
         pinch.delegate = self
         addGestureRecognizer(pinch)
 
-        registerForTraitChanges([UITraitAccessibilityContrast.self, UITraitUserInterfaceStyle.self]) { (self: EqualizerCurveView, _) in
+        registerForTraitChanges([UITraitAccessibilityContrast.self, UITraitUserInterfaceStyle.self, ThemeEpochTrait.self]) { (self: EqualizerCurveView, _) in
             self.setNeedsDisplay()
         }
     }

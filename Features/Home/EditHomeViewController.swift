@@ -22,7 +22,7 @@ final class EditHomeViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         let bar = makeBar()
         configureTable()
         view.addSubview(bar)
@@ -99,7 +99,7 @@ final class EditHomeViewController: UIViewController {
         label.text = HomeCopy.editIntro
         label.font = .preferredFont(forTextStyle: .subheadline)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
         label.numberOfLines = 0
         return padded(label, insets: UIEdgeInsets(top: 4, left: 36, bottom: 4, right: 36))
     }
@@ -109,7 +109,7 @@ final class EditHomeViewController: UIViewController {
         label.text = HomeCopy.editFooter
         label.font = .preferredFont(forTextStyle: .footnote)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
         label.numberOfLines = 0
 
         var configuration = UIButton.Configuration.plain()
@@ -241,7 +241,7 @@ extension EditHomeViewController: UITableViewDataSource, UITableViewDelegate {
         content.textProperties.font = .scaled(.body, size: 17, weight: .semibold)
         content.secondaryText = HomeCopy.editSubtitle(for: section)
         content.secondaryTextProperties.font = .scaled(.footnote, size: 13, weight: .regular)
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = .flaccySecondaryLabel
         cell.contentConfiguration = content
 
         let toggle = UISwitch()

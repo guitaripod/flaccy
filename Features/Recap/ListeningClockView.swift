@@ -15,7 +15,7 @@ final class ListeningClockView: UIView {
         backgroundColor = .clear
         isAccessibilityElement = true
         accessibilityTraits = .image
-        registerForTraitChanges([UITraitUserInterfaceStyle.self, UITraitAccessibilityContrast.self, UITraitPreferredContentSizeCategory.self]) { (view: ListeningClockView, _) in
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, UITraitAccessibilityContrast.self, UITraitPreferredContentSizeCategory.self, ThemeEpochTrait.self]) { (view: ListeningClockView, _) in
             view.setNeedsLayout()
         }
     }

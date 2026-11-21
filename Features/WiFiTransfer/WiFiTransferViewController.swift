@@ -12,7 +12,7 @@ final class WiFiTransferViewController: UIViewController {
     private let offersFlaccyServer: Bool
     private let session = WiFiTransferSession()
     private let scrollView = UIScrollView()
-    private let addressCaption = WiFiTransferViewController.label(WiFiTransferCopy.openThis, style: .subheadline, color: .secondaryLabel)
+    private let addressCaption = WiFiTransferViewController.label(WiFiTransferCopy.openThis, style: .subheadline, color: .flaccySecondaryLabel)
     private let addressLabel = UILabel()
     private let copyButton = UIButton(configuration: .gray())
     private let shareButton = UIButton(configuration: .gray())
@@ -20,7 +20,7 @@ final class WiFiTransferViewController: UIViewController {
     private let statusIcon = UIImageView()
     private let statusSpinner = UIActivityIndicatorView(style: .medium)
     private let statusTitle = WiFiTransferViewController.label("", style: .headline)
-    private let statusDetail = WiFiTransferViewController.label("", style: .subheadline, color: .secondaryLabel)
+    private let statusDetail = WiFiTransferViewController.label("", style: .subheadline, color: .flaccySecondaryLabel)
     private let statusProgress = UIProgressView(progressViewStyle: .default)
     private let playButton = UIButton(configuration: .filled())
     private var foregroundObserver: NSObjectProtocol?
@@ -43,7 +43,7 @@ final class WiFiTransferViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             systemItem: .done, primaryAction: UIAction { [weak self] _ in self?.doneTapped() }
@@ -111,7 +111,7 @@ final class WiFiTransferViewController: UIViewController {
         let title = Self.label(WiFiTransferCopy.title, style: .title1, weight: .bold)
         title.textAlignment = .center
         title.accessibilityTraits = .header
-        let subtitle = Self.label(WiFiTransferCopy.subtitle, style: .body, color: .secondaryLabel)
+        let subtitle = Self.label(WiFiTransferCopy.subtitle, style: .body, color: .flaccySecondaryLabel)
         subtitle.textAlignment = .center
 
         var arranged: [UIView] = [icon, title, subtitle, makeAddressCard(), makeSteps(), makeStatusCard()]
@@ -193,7 +193,7 @@ final class WiFiTransferViewController: UIViewController {
             number.textColor = .tintColor
             number.textAlignment = .center
             number.backgroundColor = .tintColor.withAlphaComponent(0.14)
-            number.layer.cornerRadius = 13
+            number.layer.themedCornerRadius = 13
             number.layer.masksToBounds = true
             number.isAccessibilityElement = false
             NSLayoutConstraint.activate([
@@ -243,7 +243,7 @@ final class WiFiTransferViewController: UIViewController {
     }
 
     private func makeServerFooter() -> UIView {
-        let prompt = Self.label(WiFiTransferCopy.serverPrompt, style: .footnote, color: .secondaryLabel)
+        let prompt = Self.label(WiFiTransferCopy.serverPrompt, style: .footnote, color: .flaccySecondaryLabel)
         prompt.textAlignment = .center
         var configuration = UIButton.Configuration.plain()
         configuration.title = WiFiTransferCopy.serverButton
@@ -281,7 +281,7 @@ final class WiFiTransferViewController: UIViewController {
         switch state.activity {
         case .idle:
             if state.isOffline {
-                showStatus(symbol: "wifi.slash", tint: .secondaryLabel, title: WiFiTransferCopy.offline, detail: nil)
+                showStatus(symbol: "wifi.slash", tint: .flaccySecondaryLabel, title: WiFiTransferCopy.offline, detail: nil)
             } else {
                 showStatus(symbol: nil, tint: nil, title: WiFiTransferCopy.waiting, detail: nil)
             }
@@ -363,8 +363,8 @@ final class WiFiTransferViewController: UIViewController {
 
     private static func card(_ content: UIView) -> UIView {
         let card = UIView()
-        card.backgroundColor = .secondarySystemGroupedBackground
-        card.layer.cornerRadius = 16
+        card.backgroundColor = .flaccySecondaryGroupedBackground
+        card.layer.themedCornerRadius = 16
         card.layer.cornerCurve = .continuous
         content.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(content)
@@ -377,7 +377,7 @@ final class WiFiTransferViewController: UIViewController {
         return card
     }
 
-    private static func label(_ text: String, style: UIFont.TextStyle, weight: UIFont.Weight? = nil, color: UIColor = .label) -> UILabel {
+    private static func label(_ text: String, style: UIFont.TextStyle, weight: UIFont.Weight? = nil, color: UIColor = .flaccyLabel) -> UILabel {
         WelcomeViewController.label(text, style: style, weight: weight, color: color)
     }
 }

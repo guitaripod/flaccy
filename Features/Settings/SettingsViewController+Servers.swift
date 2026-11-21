@@ -26,7 +26,7 @@ extension SettingsViewController {
                 configureFlaccyServerRow(flaccy, cell: cell, content: &content)
             } else {
                 content.secondaryText = RemoteCopy.detail(for: server)
-                content.secondaryTextProperties.color = server.lastFailure == nil ? .secondaryLabel : .systemRed
+                content.secondaryTextProperties.color = server.lastFailure == nil ? .flaccySecondaryLabel : .systemRed
                 cell.selectionStyle = .none
                 cell.accessoryView = makeServerMenuButton(for: server)
                 cell.accessibilityTraits = []
@@ -68,7 +68,7 @@ extension SettingsViewController {
             content = .cell()
             content.text = caption.isEmpty ? "\u{2026}" : caption
             content.textProperties.font = .preferredFont(forTextStyle: .subheadline)
-            content.textProperties.color = .secondaryLabel
+            content.textProperties.color = .flaccySecondaryLabel
             cell.selectionStyle = .none
             cell.accessibilityTraits = .staticText
             cell.accessibilityIdentifier = "settings.row.cacheUsage"
@@ -90,7 +90,7 @@ extension SettingsViewController {
         _ flaccy: FlaccyServerRowModel, cell: UITableViewCell, content: inout UIListContentConfiguration
     ) {
         content.secondaryText = flaccy.statusLine
-        content.secondaryTextProperties.color = flaccy.needsPro ? .tintColor : .secondaryLabel
+        content.secondaryTextProperties.color = flaccy.needsPro ? .tintColor : .flaccySecondaryLabel
         cell.accessoryView = makeSyncBadge()
         cell.accessibilityTraits = [.button, .updatesFrequently]
         cell.accessibilityValue = flaccy.accessibilityValue
@@ -105,11 +105,11 @@ extension SettingsViewController {
         label.adjustsFontForContentSizeCategory = true
         label.textColor = .tintColor
         label.backgroundColor = UIColor.tintColor.withAlphaComponent(0.14)
-        label.layer.cornerRadius = 9
+        label.layer.themedCornerRadius = 9
         label.layer.masksToBounds = true
         label.accessibilityIdentifier = "settings.row.flaccyServer.badge"
         let chevron = UIImageView(image: UIImage(systemName: "chevron.right"))
-        chevron.tintColor = .tertiaryLabel
+        chevron.tintColor = .flaccyTertiaryLabel
         chevron.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
         let stack = UIStackView(arrangedSubviews: [label, chevron])
         stack.spacing = 10
@@ -152,7 +152,7 @@ extension SettingsViewController {
         configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
         configuration.imagePlacement = .trailing
         configuration.imagePadding = 4
-        configuration.baseForegroundColor = .secondaryLabel
+        configuration.baseForegroundColor = .flaccySecondaryLabel
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0)
         let button = UIButton(configuration: configuration)
         button.menu = UIMenu(children: RemoteDownloadQuality.allCases.map { quality in
@@ -185,7 +185,7 @@ extension SettingsViewController {
         stepper.accessibilityValue = RemoteCopy.cacheLimit(gigabytes: gigabytes)
         let label = UILabel()
         label.font = .monospacedDigitSystemFont(ofSize: 17, weight: .regular)
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
         label.text = RemoteCopy.cacheLimit(gigabytes: gigabytes)
         label.setContentHuggingPriority(.required, for: .horizontal)
         stepper.addAction(UIAction { [weak self, weak stepper, weak label] _ in

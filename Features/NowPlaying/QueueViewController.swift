@@ -656,7 +656,7 @@ final class QueueTrackCell: UITableViewCell {
         selectionStyle = .none
 
         highlightView.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        highlightView.layer.cornerRadius = 14
+        highlightView.layer.themedCornerRadius = 14
         highlightView.layer.cornerCurve = .continuous
         highlightView.isHidden = true
         highlightView.translatesAutoresizingMaskIntoConstraints = false
@@ -664,7 +664,7 @@ final class QueueTrackCell: UITableViewCell {
 
         artworkView.contentMode = .scaleAspectFill
         artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 8
+        artworkView.shapeAsCover(radius: 8)
         artworkView.layer.cornerCurve = .continuous
         artworkView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         artworkView.tintColor = UIColor.white.withAlphaComponent(0.35)

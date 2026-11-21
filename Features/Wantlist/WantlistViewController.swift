@@ -15,7 +15,7 @@ final class WantlistRowCell: UICollectionViewCell {
         super.init(frame: frame)
         contentView.highlightsUnderPointer(cornerRadius: 12)
 
-        artwork.layer.cornerRadius = 6
+        artwork.shapeAsCover(radius: 6)
         artwork.layer.cornerCurve = .continuous
         artwork.clipsToBounds = true
         artwork.translatesAutoresizingMaskIntoConstraints = false

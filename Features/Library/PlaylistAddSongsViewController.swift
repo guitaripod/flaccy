@@ -39,7 +39,7 @@ final class PlaylistAddSongsViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .flaccyBackground
         title = String(localized: "Add to \(playlistName)")
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: .cancel, primaryAction: UIAction { [weak self] _ in
@@ -200,7 +200,7 @@ final class PlaylistPickCell: UITableViewCell {
         var content = UIListContentConfiguration.subtitleCell()
         content.text = track.title
         content.secondaryText = isHeld ? "\(track.artist) · \(PlaylistCopy.inPlaylist)" : track.artist
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = .flaccySecondaryLabel
         content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
         content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
         content.imageProperties.cornerRadius = 6
@@ -219,7 +219,7 @@ final class PlaylistPickCell: UITableViewCell {
         }
         let symbol = isHeld ? "checkmark.circle.fill" : (isPicked ? "checkmark.circle.fill" : "circle")
         let mark = UIImageView(image: UIImage(systemName: symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: 22)))
-        mark.tintColor = isHeld ? .tertiaryLabel : (isPicked ? .tintColor : .tertiaryLabel)
+        mark.tintColor = isHeld ? .flaccyTertiaryLabel : (isPicked ? .tintColor : .flaccyTertiaryLabel)
         accessoryView = mark
         contentView.alpha = isHeld ? 0.5 : 1
         accessibilityTraits = isPicked ? [.button, .selected] : .button

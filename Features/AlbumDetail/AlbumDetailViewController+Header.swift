@@ -239,7 +239,7 @@ extension AlbumDetailViewController {
 
         artworkView.contentMode = .scaleAspectFill
         artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 16
+        artworkView.shapeAsCover(radius: 16)
         artworkView.layer.cornerCurve = .continuous
         artworkView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         artworkView.tintColor = UIColor.white.withAlphaComponent(0.35)

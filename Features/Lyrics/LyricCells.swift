@@ -107,7 +107,7 @@ final class InterludeCell: UITableViewCell {
 
     let beats: [UIView] = (0..<LyricsDocument.interludeBeats).map { _ in
         let beat = UIView()
-        beat.layer.cornerRadius = 5
+        beat.layer.themedCornerRadius = 5
         beat.backgroundColor = .white
         beat.alpha = InterludeCell.unlitAlpha
         return beat

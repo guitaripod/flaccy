@@ -73,7 +73,7 @@ final class MiniPlayerView: UIView {
         blur.translatesAutoresizingMaskIntoConstraints = false
         addSubview(blur)
         stage.translatesAutoresizingMaskIntoConstraints = false
-        stage.layer.cornerRadius = 16
+        stage.layer.themedCornerRadius = 16
         stage.layer.cornerCurve = .continuous
         stage.clipsToBounds = true
         addSubview(stage)
@@ -95,7 +95,7 @@ final class MiniPlayerView: UIView {
 
         artistLabel.font = .scaled(.caption2, size: 11, weight: .medium, maxSize: 17)
         artistLabel.adjustsFontForContentSizeCategory = true
-        artistLabel.textColor = .secondaryLabel
+        artistLabel.textColor = .flaccySecondaryLabel
         artistLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         artistLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
@@ -107,7 +107,7 @@ final class MiniPlayerView: UIView {
         let buttonConfig = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
 
         playPauseButton.setImage(UIImage(systemName: "play.fill", withConfiguration: buttonConfig), for: .normal)
-        playPauseButton.tintColor = .label
+        playPauseButton.tintColor = .flaccyLabel
         playPauseButton.accessibilityLabel = String(localized: "Play")
         playPauseButton.addAction(UIAction { _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -115,7 +115,7 @@ final class MiniPlayerView: UIView {
         }, for: .touchUpInside)
 
         nextButton.setImage(UIImage(systemName: "forward.fill", withConfiguration: buttonConfig), for: .normal)
-        nextButton.tintColor = .label
+        nextButton.tintColor = .flaccyLabel
         nextButton.accessibilityLabel = String(localized: "Next track")
         nextButton.addAction(UIAction { _ in
             UISelectionFeedbackGenerator().selectionChanged()
@@ -124,7 +124,7 @@ final class MiniPlayerView: UIView {
 
         let queueConfig = UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)
         queueButton.setImage(UIImage(systemName: "list.bullet", withConfiguration: queueConfig), for: .normal)
-        queueButton.tintColor = .secondaryLabel
+        queueButton.tintColor = .flaccySecondaryLabel
         queueButton.accessibilityLabel = String(localized: "Queue")
         queueButton.addAction(UIAction { _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -133,10 +133,10 @@ final class MiniPlayerView: UIView {
 
         artworkView.contentMode = .scaleAspectFill
         artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 16
+        artworkView.shapeAsCover(radius: 16)
         artworkView.layer.cornerCurve = .continuous
-        artworkView.backgroundColor = .tertiarySystemFill
-        artworkView.tintColor = .secondaryLabel
+        artworkView.backgroundColor = .flaccyTertiaryFill
+        artworkView.tintColor = .flaccySecondaryLabel
         artworkView.image = UIImage(systemName: "music.note")
         artworkView.translatesAutoresizingMaskIntoConstraints = false
         stage.addSubview(artworkView)
@@ -190,7 +190,7 @@ final class MiniPlayerView: UIView {
         timerLabel.textColor = .white
         timerLabel.textAlignment = .center
         timerLabel.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        timerLabel.layer.cornerRadius = 8
+        timerLabel.layer.themedCornerRadius = 8
         timerLabel.layer.cornerCurve = .continuous
         timerLabel.clipsToBounds = true
         timerLabel.isHidden = true
@@ -255,7 +255,7 @@ final class MiniPlayerView: UIView {
         artworkInsets[1].constant = -inset
         artworkInsets[2].constant = -inset
         artworkInsets[3].constant = inset
-        artworkView.layer.cornerRadius = accessory ? 10 : 16
+        artworkView.shapeAsCover(radius: accessory ? 10 : 16)
         applyArtworkCorners()
         progressFill.isHidden = accessory
         setNeedsLayout()

@@ -25,10 +25,10 @@ final class TrackGridCell: UICollectionViewCell {
 
         artworkView.contentMode = .scaleAspectFill
         artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 10
+        artworkView.shapeAsCover(radius: 10)
         artworkView.layer.cornerCurve = .continuous
-        artworkView.backgroundColor = .tertiarySystemFill
-        artworkView.tintColor = .tertiaryLabel
+        artworkView.backgroundColor = .flaccyTertiaryFill
+        artworkView.tintColor = .flaccyTertiaryLabel
         artworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 28, weight: .ultraLight)
         artworkView.translatesAutoresizingMaskIntoConstraints = false
         artworkContainer.addSubview(artworkView)
@@ -57,7 +57,7 @@ final class TrackGridCell: UICollectionViewCell {
 
         artistLabel.font = .scaled(.caption1, size: 12, weight: .regular)
         artistLabel.adjustsFontForContentSizeCategory = true
-        artistLabel.textColor = .secondaryLabel
+        artistLabel.textColor = .flaccySecondaryLabel
         artistLabel.numberOfLines = 1
         artistLabel.lineBreakMode = .byTruncatingTail
 

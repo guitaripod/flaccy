@@ -55,11 +55,14 @@ final class SettingsViewController: UITableViewController {
         tableView.accessibilityIdentifier = "settings.table"
         tableView.delegate = self
         Self.registerCells(in: tableView)
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
 
         navigationItem.rightBarButtonItem = makeDoneButton()
         navigationItem.searchController = makeSearchController()
         dataSource = makeDataSource(for: tableView)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(themeDidChange), name: AppTheme.didChange, object: nil
+        )
         configureHeader()
         tableView.tableFooterView = makeVersionFooter()
         applySnapshot(animated: false)
@@ -89,7 +92,6 @@ final class SettingsViewController: UITableViewController {
     static func registerCells(in tableView: UITableView) {
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: cellReuseIdentifier)
         tableView.register(AppearanceCell.self, forCellReuseIdentifier: AppearanceCell.reuseID)
-        tableView.register(AccentCell.self, forCellReuseIdentifier: AccentCell.reuseID)
         tableView.register(MidgarEntryCell.self, forCellReuseIdentifier: MidgarEntryCell.reuseID)
         tableView.register(SettingsPlanCell.self, forCellReuseIdentifier: SettingsPlanCell.reuseID)
         tableView.register(SignalPathCell.self, forCellReuseIdentifier: SignalPathCell.reuseID)
@@ -234,7 +236,11 @@ final class SettingsViewController: UITableViewController {
             self?.cell(for: row, at: indexPath, in: tableView) ?? UITableViewCell()
         }
         source.footerForSection = { [weak self] section in
-            section == .lastFM ? self?.lastFMFooter() : nil
+            switch section {
+            case .lastFM: self?.lastFMFooter()
+            case .appearance: ThemeCopy.modeNote(for: AppTheme.shared.look)
+            default: nil
+            }
         }
         source.defaultRowAnimation = .fade
         return source
@@ -248,6 +254,11 @@ final class SettingsViewController: UITableViewController {
     /// the root itself until someone opens a page.
     var presenter: UIViewController {
         navigationController?.topViewController ?? self
+    }
+
+    /// The theme's name and whether it holds the mode are rows of Appearance.
+    @objc func themeDidChange() {
+        applySnapshot(animated: false)
     }
 
     /// Rebuilds the root and every page on screen from the current state.
@@ -276,8 +287,8 @@ final class SettingsViewController: UITableViewController {
         case .root: rootSections()
         case .plan: []
         case .appearance: [(.appearance, [
-            .appearance(AppAppearance.current),
-            .accent(AppAccent.current),
+            .appearance(AppAppearance.current, locked: AppTheme.shared.look.appearance != .any),
+            .theme(name: AppTheme.shared.look.pack.name),
             .homeScreen(visibleSections: HomeLayoutStore.shared.layout.order.filter { !HomeLayoutStore.shared.layout.hidden.contains($0) }.count),
         ])]
         case .notifications: notificationSections()
@@ -412,7 +423,8 @@ final class SettingsViewController: UITableViewController {
             Entry(planSummary.title, in: .plan),
             Entry(String(localized: "Restore Purchases"), in: .plan),
             Entry(Page.appearance.title, in: .appearance),
-            Entry(String(localized: "Accent"), in: .appearance),
+            Entry(ThemeCopy.theme, in: .appearance),
+            Entry(ThemeCopy.colors, in: .appearance),
             Entry(Page.notifications.title, in: .notifications),
             Entry(Page.sound.title, in: .sound),
             Entry(String(localized: "Listening Guide"), in: .sound),
@@ -543,7 +555,7 @@ final class SettingsViewController: UITableViewController {
 
     func isSelectable(_ row: Row) -> Bool {
         switch row {
-        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .interruptionResume, .cleanLibrary,
+        case .appearance, .trialReminders, .gaplessPlayback, .autoplaySimilar, .interruptionResume, .cleanLibrary,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
              .downloadQuality, .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
             return false
@@ -563,6 +575,7 @@ final class SettingsViewController: UITableViewController {
         case .listeningGuide: handleGuideCardTap(nil)
         case .songVolumes: handleSongVolumesTap()
         case .homeScreen: handleHomeScreenTap()
+        case .theme: handleThemeTap()
         case .playerButtons: handlePlayerButtonsTap()
         case .lastFMAccount: handleLastFMTap()
         case .pendingScrobbles: handleRetryScrobbles()
@@ -586,7 +599,7 @@ final class SettingsViewController: UITableViewController {
         case .addServer: handleAddServerTap()
         case .server(let server): handleServerTap(server)
         case .clearCache: handleClearCacheTap()
-        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .interruptionResume, .cleanLibrary,
+        case .appearance, .trialReminders, .gaplessPlayback, .autoplaySimilar, .interruptionResume, .cleanLibrary,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
              .downloadQuality, .cacheLimit, .cacheUsage, .version, .signalPath, .libraryOverview, .scrobbled:
             break

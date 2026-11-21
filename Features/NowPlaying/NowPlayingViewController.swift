@@ -353,7 +353,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         guard isMorphEmbedded else { return }
         let pill = UIView()
         pill.backgroundColor = UIColor.white.withAlphaComponent(0.35)
-        pill.layer.cornerRadius = 2.5
+        pill.layer.themedCornerRadius = 2.5
         pill.layer.cornerCurve = .continuous
         pill.isUserInteractionEnabled = false
         pill.translatesAutoresizingMaskIntoConstraints = false

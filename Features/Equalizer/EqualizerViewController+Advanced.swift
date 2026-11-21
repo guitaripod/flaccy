@@ -24,7 +24,7 @@ extension EqualizerViewController {
             button.titleLabel?.font = .equalizerRounded(.callout, size: 14, weight: .heavy)
             button.setTitleColor(.white, for: .normal)
             button.backgroundColor = color.withAlphaComponent(index == selected ? 0.38 : 0.18)
-            button.layer.cornerRadius = 18
+            button.layer.themedCornerRadius = 18
             button.layer.borderWidth = 2
             button.layer.borderColor = (index == selected ? UIColor.white : color.withAlphaComponent(0.65)).cgColor
             button.accessibilityLabel = String(localized: "Band \(index + 1), \(EqualizerCopy.hertz(band.frequency))")
@@ -45,7 +45,7 @@ extension EqualizerViewController {
         add.setImage(UIImage(systemName: "plus", withConfiguration: UIImage.SymbolConfiguration(pointSize: 14, weight: .bold)), for: .normal)
         add.tintColor = .white
         add.backgroundColor = UIColor.white.withAlphaComponent(0.08)
-        add.layer.cornerRadius = 18
+        add.layer.themedCornerRadius = 18
         add.accessibilityLabel = String(localized: "Add band")
         NSLayoutConstraint.activate([add.widthAnchor.constraint(equalToConstant: 36), add.heightAnchor.constraint(equalToConstant: 36)])
         add.addAction(UIAction { [weak self] _ in self?.addBand(frequency: 1_000, gain: 0) }, for: .touchUpInside)

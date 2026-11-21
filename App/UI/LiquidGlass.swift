@@ -166,7 +166,7 @@ final class GlassCapsule: UIView {
         control.translatesAutoresizingMaskIntoConstraints = false
 
         badgeBackground.backgroundColor = .white
-        badgeBackground.layer.cornerRadius = 8
+        badgeBackground.layer.themedCornerRadius = 8
         badgeBackground.layer.cornerCurve = .continuous
         badgeBackground.isHidden = true
         badgeBackground.isUserInteractionEnabled = false

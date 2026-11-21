@@ -449,9 +449,32 @@ final class LibraryViewModel {
         publishSnapshot()
     }
 
+    /// How Albums is laid out: the worn theme's view, or the one the person
+    /// switched that theme to, with the remembered list density.
+    var albumsLayoutMode: LibraryLayoutMode {
+        LibraryLayoutMode(albums: AppTheme.shared.look.albums, compactRows: layoutMode == .compact)
+    }
+
+    /// The layout of the segment that is showing.
+    var currentLayoutMode: LibraryLayoutMode {
+        currentSegment == .albums ? albumsLayoutMode : layoutMode
+    }
+
+    /// Steps the showing segment to its next layout. On Albums the choice is
+    /// remembered with the theme; a grid or a list is also what Songs shows,
+    /// as it was when the two shared one mode.
     func cycleLayoutMode() {
-        layoutMode = layoutMode.next
-        layoutMode.persist()
+        guard currentSegment == .albums else {
+            layoutMode = layoutMode.next(onAlbums: false)
+            layoutMode.persist()
+            return
+        }
+        let next = albumsLayoutMode.next(onAlbums: true)
+        if LibraryLayoutMode.songModes.contains(next) {
+            layoutMode = next
+            next.persist()
+        }
+        AppTheme.shared.edit { $0.show(albumsAs: next.albumsView.id) }
     }
 
     func setFilter(_ filter: LibraryFilter) {

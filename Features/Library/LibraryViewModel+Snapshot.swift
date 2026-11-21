@@ -17,7 +17,7 @@ extension LibraryViewModel {
         case .albums:
             let all = filteredAlbums(sortedAlbums)
             let filtered = matchingAlbums(all, query: query)
-            let showsRecentShelf = query.isEmpty && filter == .all && layoutMode == .grid && albumSort == .title
+            let showsRecentShelf = query.isEmpty && filter == .all && albumsLayoutMode == .grid && albumSort == .title
             let recent = showsRecentShelf ? recentlyPlayedAlbums : []
             if !recent.isEmpty {
                 snapshot.appendSections([0, 1])

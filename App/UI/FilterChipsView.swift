@@ -132,7 +132,7 @@ final class FilterChipsView: UIView {
             withConfiguration: UIImage.SymbolConfiguration(pointSize: clears ? 10 : 11, weight: clears ? .bold : .semibold)
         )
         config.imagePlacement = clears ? .trailing : .leading
-        config.baseForegroundColor = isOn ? .tintColor : .label
+        config.baseForegroundColor = isOn ? .tintColor : .flaccyLabel
         button.configuration = config
         button.isSelected = isOn
         button.accessibilityTraits = isOn ? [.button, .selected] : .button

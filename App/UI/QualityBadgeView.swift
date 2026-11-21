@@ -55,7 +55,7 @@ final class QualityBadgeView: UIView {
         isAccessibilityElement = true
         accessibilityTraits = .staticText
 
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: QualityBadgeView, _) in
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, ThemeEpochTrait.self]) { (self: QualityBadgeView, _) in
             self.applyTint()
         }
     }

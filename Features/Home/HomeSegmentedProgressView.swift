@@ -14,7 +14,7 @@ final class HomeSegmentedProgressView: UIView {
         backgroundColor = .clear
         isOpaque = false
         isAccessibilityElement = false
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: HomeSegmentedProgressView, _) in view.setNeedsDisplay() }
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, ThemeEpochTrait.self]) { (view: HomeSegmentedProgressView, _) in view.setNeedsDisplay() }
     }
 
     @available(*, unavailable)
@@ -34,8 +34,8 @@ final class HomeSegmentedProgressView: UIView {
         guard !segments.isEmpty, let context = UIGraphicsGetCurrentContext() else { return }
         let count = CGFloat(segments.count)
         let width = (bounds.width - Self.gap * (count - 1)) / count
-        let track = UIColor.label.withAlphaComponent(0.18).resolvedColor(with: traitCollection)
-        let fill = UIColor.label.resolvedColor(with: traitCollection)
+        let track = UIColor.flaccyLabel.withAlphaComponent(0.18).resolvedColor(with: traitCollection)
+        let fill = UIColor.flaccyLabel.resolvedColor(with: traitCollection)
         for (index, fraction) in segments.enumerated() {
             let frame = CGRect(x: CGFloat(index) * (width + Self.gap), y: 0, width: width, height: bounds.height)
             let radius = bounds.height / 2

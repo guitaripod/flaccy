@@ -143,12 +143,12 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let container = UIView()
 
         let imageView = emptyStateIconView
-        imageView.tintColor = .tertiaryLabel
+        imageView.tintColor = .flaccyTertiaryLabel
         imageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 56, weight: .thin)
         imageView.contentMode = .scaleAspectFit
 
         let label = emptyStateLabel
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
         label.font = .preferredFont(forTextStyle: .body)
         label.adjustsFontForContentSizeCategory = true
         label.numberOfLines = 0
@@ -163,7 +163,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         let footnote = trialStartsLabel
         footnote.text = PaywallCopy.trialStartsLine
-        footnote.textColor = .tertiaryLabel
+        footnote.textColor = .flaccyTertiaryLabel
         footnote.font = .preferredFont(forTextStyle: .footnote)
         footnote.adjustsFontForContentSizeCategory = true
         footnote.numberOfLines = 0
@@ -224,7 +224,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .flaccyBackground
 
         installDebutViewIfNeeded()
 
@@ -239,6 +239,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         configureDataSource()
         if let debutView { debutHost.bringSubviewToFront(debutView) }
         bindViewModel()
+        observeTheme()
         updateRightBarButton(for: .albums)
         updateChips(for: .albums)
         #if DEBUG
@@ -369,7 +370,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     /// snapshot, optionally under a sub-350ms crossfade unless Reduce Motion is on.
     func applyLayoutAndSnapshot(crossfade: Bool) {
         let segment = viewModel.currentSegment
-        let layout = viewModel.layoutMode
+        let layout = viewModel.currentLayoutMode
         let snapshot = viewModel.currentSnapshot()
         let apply = { [weak self] in
             guard let self else { return }
@@ -632,6 +633,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let shouldShow = viewModel.currentSegment != .playlists
             && viewModel.filter == .all
             && viewModel.isCurrentSortAlphabetical
+            && viewModel.currentLayoutMode != .carousel
         let titles = shouldShow ? viewModel.indexTitles() : []
         sectionIndexView.update(titles: titles)
         sectionIndexView.isHidden = !shouldShow || titles.count < 5

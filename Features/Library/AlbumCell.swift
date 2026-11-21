@@ -19,6 +19,18 @@ final class AlbumCell: UICollectionViewCell {
     private let lovedBadge = UIImageView()
     private var currentArtworkKey: String?
 
+    /// A tile of the wall: the cover alone, square, edge to edge, with its
+    /// title read out instead of shown.
+    var isBareCover = false {
+        didSet {
+            guard oldValue != isBareCover else { return }
+            titleLabel.isHidden = isBareCover
+            artistLabel.isHidden = isBareCover
+            qualityBadge.alpha = isBareCover ? 0 : 1
+            artworkView.coverShaper?.isBare = isBareCover
+        }
+    }
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         artworkContainer.liftsUnderPointer(cornerRadius: 10)
@@ -30,10 +42,9 @@ final class AlbumCell: UICollectionViewCell {
 
         artworkView.contentMode = .scaleAspectFill
         artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 10
-        artworkView.layer.cornerCurve = .continuous
-        artworkView.backgroundColor = .tertiarySystemFill
-        artworkView.tintColor = .tertiaryLabel
+        artworkView.shapeAsCover(radius: 10, shadowHost: artworkContainer)
+        artworkView.backgroundColor = .flaccyTertiaryFill
+        artworkView.tintColor = .flaccyTertiaryLabel
         artworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 32, weight: .ultraLight)
         artworkView.translatesAutoresizingMaskIntoConstraints = false
         artworkContainer.addSubview(artworkView)
@@ -48,13 +59,13 @@ final class AlbumCell: UICollectionViewCell {
 
         artistLabel.font = .scaled(.caption1, size: 12, weight: .regular)
         artistLabel.adjustsFontForContentSizeCategory = true
-        artistLabel.textColor = .secondaryLabel
+        artistLabel.textColor = .flaccySecondaryLabel
         artistLabel.numberOfLines = 1
         artistLabel.lineBreakMode = .byTruncatingTail
 
         metaLabel.font = .scaled(.caption2, size: 10, weight: .regular)
         metaLabel.adjustsFontForContentSizeCategory = true
-        metaLabel.textColor = .tertiaryLabel
+        metaLabel.textColor = .flaccyTertiaryLabel
         metaLabel.numberOfLines = 1
         metaLabel.lineBreakMode = .byTruncatingTail
         metaLabel.isHidden = true
@@ -97,10 +108,8 @@ final class AlbumCell: UICollectionViewCell {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        artworkContainer.layer.shadowPath = UIBezierPath(
-            roundedRect: artworkView.frame, cornerRadius: 10
-        ).cgPath
         shimmerLayer.frame = artworkView.bounds
+        shimmerLayer.cornerRadius = artworkView.layer.cornerRadius
     }
 
     func configure(with album: Album, qualityTrack: Track?, loved: Bool) {
@@ -137,7 +146,9 @@ final class AlbumCell: UICollectionViewCell {
         if let year = album.year, !year.isEmpty { metaParts.append(year) }
         if let genre = album.genre, !genre.isEmpty { metaParts.append(genre) }
         metaLabel.text = metaParts.joined(separator: " \u{00B7} ")
-        metaLabel.isHidden = metaParts.isEmpty
+        metaLabel.isHidden = metaParts.isEmpty || isBareCover
+        accessibilityLabel = isBareCover ? "\(album.title), \(album.artist)" : nil
+        isAccessibilityElement = isBareCover
     }
 
     override func prepareForReuse() {
@@ -210,8 +221,8 @@ final class AlbumCell: UICollectionViewCell {
     }
 
     private func setupShimmerLayer() {
-        let base = UIColor.tertiarySystemFill.cgColor
-        let highlight = UIColor.quaternarySystemFill.cgColor
+        let base = UIColor.flaccyTertiaryFill.cgColor
+        let highlight = UIColor.flaccyQuaternaryFill.cgColor
         shimmerLayer.colors = [base, highlight, base]
         shimmerLayer.locations = [0, 0.5, 1]
         shimmerLayer.startPoint = CGPoint(x: 0, y: 0.4)

@@ -47,7 +47,7 @@ final class WatchSyncStorageMeterView: UIView {
 
         freeLabel.font = UIFont.preferredFont(forTextStyle: .subheadline)
         freeLabel.adjustsFontForContentSizeCategory = true
-        freeLabel.textColor = .secondaryLabel
+        freeLabel.textColor = .flaccySecondaryLabel
         freeLabel.textAlignment = .right
         freeLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
@@ -104,7 +104,7 @@ final class WatchSyncStorageMeterView: UIView {
         )
         legendItems[0].apply(name: String(localized: "Flaccy"), size: SyncFormat.size(breakdown.flaccy), color: .tintColor, outlined: false)
         legendItems[1].apply(name: String(localized: "Other"), size: SyncFormat.size(breakdown.other), color: .systemGray3, outlined: false)
-        legendItems[2].apply(name: String(localized: "Free"), size: SyncFormat.size(breakdown.free), color: .tertiarySystemFill, outlined: true)
+        legendItems[2].apply(name: String(localized: "Free"), size: SyncFormat.size(breakdown.free), color: .flaccyTertiaryFill, outlined: true)
         accessibilityLabel = String(localized: "Watch Storage")
         accessibilityValue = String(
             localized: "Flaccy \(SyncFormat.size(breakdown.flaccy)), other \(SyncFormat.size(breakdown.other)), \(SyncFormat.size(breakdown.free)) free of \(SyncFormat.size(breakdown.total))"
@@ -115,7 +115,7 @@ final class WatchSyncStorageMeterView: UIView {
 private final class SegmentedBarView: UIView {
 
     private static let gap: CGFloat = 2
-    private let segments: [UIView] = [UIColor.tintColor, .systemGray3, .tertiarySystemFill].map { color in
+    private let segments: [UIView] = [UIColor.tintColor, .systemGray3, .flaccyTertiaryFill].map { color in
         let view = UIView()
         view.backgroundColor = color
         return view
@@ -172,16 +172,16 @@ private final class LegendItemView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        dot.layer.cornerRadius = 4.5
+        dot.layer.themedCornerRadius = 4.5
         dot.translatesAutoresizingMaskIntoConstraints = false
         applyBorderColor()
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: LegendItemView, _) in
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, ThemeEpochTrait.self]) { (self: LegendItemView, _) in
             self.applyBorderColor()
         }
 
         nameLabel.font = .preferredFont(forTextStyle: .caption1)
         nameLabel.adjustsFontForContentSizeCategory = true
-        nameLabel.textColor = .secondaryLabel
+        nameLabel.textColor = .flaccySecondaryLabel
         nameLabel.numberOfLines = 0
 
         sizeLabel.font = UIFont.preferredFont(forTextStyle: .footnote)
@@ -213,7 +213,7 @@ private final class LegendItemView: UIView {
     required init?(coder: NSCoder) { fatalError() }
 
     private func applyBorderColor() {
-        dot.layer.borderColor = UIColor.separator.resolvedColor(with: traitCollection).cgColor
+        dot.layer.borderColor = UIColor.flaccySeparator.resolvedColor(with: traitCollection).cgColor
     }
 
     func apply(name: String, size: String, color: UIColor, outlined: Bool) {

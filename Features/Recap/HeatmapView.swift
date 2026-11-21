@@ -18,7 +18,7 @@ final class HeatmapView: UIView {
         backgroundColor = .clear
         isAccessibilityElement = true
         accessibilityTraits = .image
-        registerForTraitChanges([UITraitUserInterfaceStyle.self, UITraitAccessibilityContrast.self, UITraitPreferredContentSizeCategory.self]) { (view: HeatmapView, _) in
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, UITraitAccessibilityContrast.self, UITraitPreferredContentSizeCategory.self, ThemeEpochTrait.self]) { (view: HeatmapView, _) in
             view.setNeedsLayout()
         }
     }

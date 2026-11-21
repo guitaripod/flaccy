@@ -108,12 +108,12 @@ extension SonglinkShareable {
         let label = UILabel()
         label.text = String(localized: "Finding links\u{2026}")
         label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
 
         let hint = UILabel()
         hint.text = String(localized: "Tap to cancel")
         hint.font = .systemFont(ofSize: 11, weight: .regular)
-        hint.textColor = .tertiaryLabel
+        hint.textColor = .flaccyTertiaryLabel
 
         let textStack = UIStackView(arrangedSubviews: [label, hint])
         textStack.axis = .vertical

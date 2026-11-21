@@ -57,7 +57,7 @@ final class SearchViewController: UIViewController, SonglinkShareable {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .flaccyBackground
         navigationItem.largeTitleDisplayMode = .always
         navigationItem.hidesSearchBarWhenScrolling = false
         searchController.searchResultsUpdater = self
@@ -117,7 +117,7 @@ final class SearchViewController: UIViewController, SonglinkShareable {
             var content = UIListContentConfiguration.prominentInsetGroupedHeader()
             content.text = section.title
             content.textProperties.font = .scaled(.title3, size: 20, weight: .bold)
-            content.textProperties.color = .label
+            content.textProperties.color = .flaccyLabel
             header.contentConfiguration = content
             header.accessibilityTraits = .header
         }

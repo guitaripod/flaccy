@@ -13,7 +13,7 @@ extension LibraryViewController {
                 guard let self else { return }
                 let segment = self.viewModel.currentSegment
                 let filter = self.viewModel.filter
-                let layout = self.viewModel.layoutMode
+                let layout = self.viewModel.currentLayoutMode
                 let segmentChanged = self.lastRenderedSegment != nil && self.lastRenderedSegment != segment
                 let filterChanged = self.lastRenderedFilter != nil && self.lastRenderedFilter != filter
                 let previousSegment = self.lastRenderedSegment

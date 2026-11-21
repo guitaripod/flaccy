@@ -207,7 +207,7 @@ final class ListeningGuideViewController: UIViewController {
         } else {
             card.backgroundColor = UIColor.white.withAlphaComponent(0.06)
         }
-        card.layer.cornerRadius = 22
+        card.layer.themedCornerRadius = 22
         card.layer.cornerCurve = .continuous
         card.layer.borderWidth = 0.5
         card.layer.borderColor = UIColor.white.withAlphaComponent(0.08).cgColor
@@ -217,7 +217,7 @@ final class ListeningGuideViewController: UIViewController {
     private func makeCardHeader(title: String, symbolName: String) -> UIView {
         let tile = UIView()
         tile.backgroundColor = Self.accent.withAlphaComponent(0.16)
-        tile.layer.cornerRadius = 12
+        tile.layer.themedCornerRadius = 12
         tile.layer.cornerCurve = .continuous
         tile.translatesAutoresizingMaskIntoConstraints = false
 
@@ -308,7 +308,7 @@ final class ListeningGuideViewController: UIViewController {
     private func makeTakeawayView(caption: String?, text: String) -> UIView {
         let box = UIView()
         box.backgroundColor = Self.accent.withAlphaComponent(0.12)
-        box.layer.cornerRadius = 14
+        box.layer.themedCornerRadius = 14
         box.layer.cornerCurve = .continuous
 
         let stack = UIStackView()

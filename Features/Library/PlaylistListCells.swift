@@ -167,10 +167,9 @@ final class StackedArtworkMosaicView: UIView {
             layer.shadowRadius = 24
         }
 
-        contentContainer.layer.cornerRadius = cornerRadius
-        contentContainer.layer.cornerCurve = .continuous
+        contentContainer.shapeAsCover(radius: cornerRadius, shadowHost: showsShadow ? self : nil)
         contentContainer.clipsToBounds = true
-        contentContainer.backgroundColor = .secondarySystemBackground
+        contentContainer.backgroundColor = .flaccySecondaryBackground
         contentContainer.isAccessibilityElement = true
         contentContainer.accessibilityTraits = .image
         contentContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -251,9 +250,9 @@ final class StackedArtworkMosaicView: UIView {
 
     private func placeholderTile() -> UIView {
         let tile = UIView()
-        tile.backgroundColor = .tertiarySystemFill
+        tile.backgroundColor = .flaccyTertiaryFill
         let symbol = UIImageView(image: UIImage(systemName: "music.note"))
-        symbol.tintColor = .secondaryLabel
+        symbol.tintColor = .flaccySecondaryLabel
         symbol.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: placeholderPointSize, weight: .thin)
         symbol.contentMode = .scaleAspectFit
         symbol.translatesAutoresizingMaskIntoConstraints = false

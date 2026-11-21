@@ -29,7 +29,7 @@ private final class ProgressRingView: UIView {
         }
         progressLayer.strokeEnd = 0
         applyColors()
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: ProgressRingView, _) in
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, ThemeEpochTrait.self]) { (self: ProgressRingView, _) in
             self.applyColors()
         }
     }
@@ -38,7 +38,7 @@ private final class ProgressRingView: UIView {
     required init?(coder: NSCoder) { fatalError() }
 
     private func applyColors() {
-        trackLayer.strokeColor = UIColor.tertiarySystemFill.resolvedColor(with: traitCollection).cgColor
+        trackLayer.strokeColor = UIColor.flaccyTertiaryFill.resolvedColor(with: traitCollection).cgColor
         progressLayer.strokeColor = tintColor.cgColor
     }
 
@@ -167,7 +167,7 @@ final class WatchSyncStatusCell: UITableViewCell {
     required init?(coder: NSCoder) { fatalError() }
 
     private func configureBadge() {
-        badge.layer.cornerRadius = 14
+        badge.layer.themedCornerRadius = 14
         badge.layer.cornerCurve = .continuous
         badge.translatesAutoresizingMaskIntoConstraints = false
         badgeIcon.contentMode = .center
@@ -195,7 +195,7 @@ final class WatchSyncStatusCell: UITableViewCell {
         titleLabel.numberOfLines = 0
         subtitleLabel.font = .preferredFont(forTextStyle: .subheadline)
         subtitleLabel.adjustsFontForContentSizeCategory = true
-        subtitleLabel.textColor = .secondaryLabel
+        subtitleLabel.textColor = .flaccySecondaryLabel
         subtitleLabel.numberOfLines = 0
     }
 
@@ -306,15 +306,15 @@ final class WatchSyncRunCell: UITableViewCell {
         header.numberOfLines = 0
 
         progress.progressTintColor = .tintColor
-        progress.trackTintColor = .tertiarySystemFill
+        progress.trackTintColor = .flaccyTertiaryFill
 
         detail.font = UIFont.monospacedDigitSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption1).pointSize, weight: .regular)
         detail.adjustsFontForContentSizeCategory = true
-        detail.textColor = .secondaryLabel
+        detail.textColor = .flaccySecondaryLabel
         detail.numberOfLines = 0
 
         percentLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
-        percentLabel.textColor = .secondaryLabel
+        percentLabel.textColor = .flaccySecondaryLabel
         percentLabel.textAlignment = .center
         percentLabel.adjustsFontSizeToFitWidth = true
         percentLabel.minimumScaleFactor = 0.6
@@ -409,7 +409,7 @@ final class WatchSyncQualityCell: UITableViewCell {
 
         formatLabel.font = .watchSyncFont(.footnote, weight: .medium)
         formatLabel.adjustsFontForContentSizeCategory = true
-        formatLabel.textColor = .secondaryLabel
+        formatLabel.textColor = .flaccySecondaryLabel
         formatLabel.numberOfLines = 0
         formatLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         titleLabel.setContentHuggingPriority(.required, for: .horizontal)
@@ -417,12 +417,12 @@ final class WatchSyncQualityCell: UITableViewCell {
 
         captionLabel.font = .preferredFont(forTextStyle: .subheadline)
         captionLabel.adjustsFontForContentSizeCategory = true
-        captionLabel.textColor = .secondaryLabel
+        captionLabel.textColor = .flaccySecondaryLabel
         captionLabel.numberOfLines = 0
 
         hintLabel.font = UIFont.monospacedDigitSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .footnote).pointSize, weight: .regular)
         hintLabel.adjustsFontForContentSizeCategory = true
-        hintLabel.textColor = .tertiaryLabel
+        hintLabel.textColor = .flaccyTertiaryLabel
         hintLabel.numberOfLines = 0
 
         titleRow.addArrangedSubview(titleLabel)
@@ -476,7 +476,7 @@ final class WatchSyncQualityCell: UITableViewCell {
         hintLabel.text = hint
         hintLabel.isHidden = hint == nil
         checkView.image = isSelected ? UIImage(systemName: "checkmark.circle.fill") : UIImage(systemName: "circle")
-        checkView.tintColor = isSelected ? .tintColor : .tertiaryLabel
+        checkView.tintColor = isSelected ? .tintColor : .flaccyTertiaryLabel
         isAccessibilityElement = true
         accessibilityLabel = "\(profile.displayName), \(profile.formatName)"
         accessibilityValue = [isSelected ? String(localized: "Selected") : nil, profile.caption, hint]
@@ -522,10 +522,10 @@ final class WatchSyncAlbumCell: UITableViewCell {
     private func setup() {
         artworkView.contentMode = .scaleAspectFill
         artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 8
+        artworkView.shapeAsCover(radius: 8)
         artworkView.layer.cornerCurve = .continuous
-        artworkView.backgroundColor = .tertiarySystemFill
-        artworkView.tintColor = .tertiaryLabel
+        artworkView.backgroundColor = .flaccyTertiaryFill
+        artworkView.tintColor = .flaccyTertiaryLabel
         artworkView.isAccessibilityElement = false
 
         titleLabel.font = .watchSyncFont(.body, weight: .medium)
@@ -534,7 +534,7 @@ final class WatchSyncAlbumCell: UITableViewCell {
 
         artistLabel.font = .preferredFont(forTextStyle: .subheadline)
         artistLabel.adjustsFontForContentSizeCategory = true
-        artistLabel.textColor = .secondaryLabel
+        artistLabel.textColor = .flaccySecondaryLabel
         artistLabel.numberOfLines = 1
 
         statusLabel.font = .preferredFont(forTextStyle: .caption1)

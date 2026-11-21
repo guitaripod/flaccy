@@ -108,7 +108,7 @@ final class PersonaCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
 
-        card.layer.cornerRadius = 22
+        card.layer.themedCornerRadius = 22
         card.layer.cornerCurve = .continuous
         card.clipsToBounds = true
         card.translatesAutoresizingMaskIntoConstraints = false

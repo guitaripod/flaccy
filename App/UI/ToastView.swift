@@ -89,7 +89,7 @@ final class ToastView {
         _ message: String, in view: UIView, style: Style, action: (title: String, action: UIAction)? = nil
     ) -> (UIView, UILabel) {
         let toast = UIView()
-        toast.layer.cornerRadius = 14
+        toast.layer.themedCornerRadius = 14
         toast.layer.cornerCurve = .continuous
         toast.layer.shadowColor = UIColor.black.cgColor
         toast.layer.shadowOpacity = 0.16
@@ -108,7 +108,7 @@ final class ToastView {
         label.text = message
         label.font = .scaled(.footnote, size: 14, weight: .medium)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .label
+        label.textColor = .flaccyLabel
         label.numberOfLines = 3
 
         let stack = UIStackView(arrangedSubviews: [icon, label])
@@ -143,7 +143,7 @@ final class ToastView {
         var config = UIButton.Configuration.plain()
         config.title = title
         config.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 10, bottom: 4, trailing: 4)
-        config.baseForegroundColor = .label
+        config.baseForegroundColor = .flaccyLabel
         config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var attributes = attributes
             attributes.font = .scaled(.footnote, size: 14, weight: .bold)
@@ -159,7 +159,7 @@ final class ToastView {
     /// Reduce Transparency) and returns the view that should host content.
     private static func makeBackground(for toast: UIView, style: Style) -> UIView {
         guard !UIAccessibility.isReduceTransparencyEnabled else {
-            toast.backgroundColor = .secondarySystemBackground
+            toast.backgroundColor = .flaccySecondaryBackground
             return toast
         }
         let glass = LiquidGlass.view(cornerRadius: 14, tint: style.accentColor.withAlphaComponent(0.25))
@@ -208,7 +208,7 @@ final class ToastView {
             switch self {
             case .success: .systemGreen
             case .error: .systemRed
-            case .info: .secondaryLabel
+            case .info: .flaccySecondaryLabel
             }
         }
 

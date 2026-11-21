@@ -119,7 +119,7 @@ extension SettingsViewController {
         configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
         configuration.imagePlacement = .trailing
         configuration.imagePadding = 4
-        configuration.baseForegroundColor = .secondaryLabel
+        configuration.baseForegroundColor = .flaccySecondaryLabel
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0)
         let button = UIButton(configuration: configuration)
         button.menu = UIMenu(children: InterruptionResume.allCases.map { choice in
@@ -155,14 +155,14 @@ extension SettingsViewController {
         nameLabel.font = UIFontMetrics(forTextStyle: .footnote)
             .scaledFont(for: .systemFont(ofSize: 13, weight: .semibold))
         nameLabel.adjustsFontForContentSizeCategory = true
-        nameLabel.textColor = .secondaryLabel
+        nameLabel.textColor = .flaccySecondaryLabel
         nameLabel.textAlignment = .center
 
         let versionLabel = UILabel()
         versionLabel.text = String(localized: "Version \(version) (\(build))")
         versionLabel.font = .preferredFont(forTextStyle: .footnote)
         versionLabel.adjustsFontForContentSizeCategory = true
-        versionLabel.textColor = .tertiaryLabel
+        versionLabel.textColor = .flaccyTertiaryLabel
         versionLabel.textAlignment = .center
 
         let stack = UIStackView(arrangedSubviews: [nameLabel, versionLabel])

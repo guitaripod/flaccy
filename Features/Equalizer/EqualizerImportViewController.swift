@@ -106,7 +106,7 @@ final class EqualizerImportViewController: UIViewController {
 
     private func makeSourceBlock() -> UIView {
         textView.backgroundColor = UIColor.white.withAlphaComponent(0.06)
-        textView.layer.cornerRadius = 18
+        textView.layer.themedCornerRadius = 18
         textView.layer.cornerCurve = .continuous
         textView.layer.borderWidth = 1
         textView.layer.borderColor = UIColor.white.withAlphaComponent(0.1).cgColor
@@ -168,7 +168,7 @@ final class EqualizerImportViewController: UIViewController {
 
     private func makePreviewCard() -> UIView {
         previewCard.backgroundColor = UIColor.white.withAlphaComponent(0.06)
-        previewCard.layer.cornerRadius = 22
+        previewCard.layer.themedCornerRadius = 22
         previewCard.layer.cornerCurve = .continuous
         previewCard.layer.borderWidth = 1
         previewCard.layer.borderColor = UIColor.white.withAlphaComponent(0.1).cgColor
@@ -179,7 +179,7 @@ final class EqualizerImportViewController: UIViewController {
         detectedLabel.numberOfLines = 0
 
         previewCurve.backgroundColor = UIColor.black.withAlphaComponent(0.22)
-        previewCurve.layer.cornerRadius = 14
+        previewCurve.layer.themedCornerRadius = 14
         previewCurve.layer.masksToBounds = true
         previewCurve.translatesAutoresizingMaskIntoConstraints = false
         previewCurve.heightAnchor.constraint(equalToConstant: 96).isActive = true
@@ -200,7 +200,7 @@ final class EqualizerImportViewController: UIViewController {
         nameField.textColor = .white
         nameField.font = .scaled(.body, size: 16, weight: .regular)
         nameField.backgroundColor = UIColor.white.withAlphaComponent(0.07)
-        nameField.layer.cornerRadius = 14
+        nameField.layer.themedCornerRadius = 14
         nameField.layer.cornerCurve = .continuous
         nameField.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 14, height: 1))
         nameField.leftViewMode = .always

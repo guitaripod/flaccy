@@ -120,7 +120,7 @@ final class LibraryDebutView: UIView {
 
         explanation.font = .preferredFont(forTextStyle: .footnote)
         explanation.adjustsFontForContentSizeCategory = true
-        explanation.textColor = .secondaryLabel
+        explanation.textColor = .flaccySecondaryLabel
         explanation.textAlignment = .center
         explanation.numberOfLines = 3
         explanation.accessibilityElementsHidden = true
@@ -506,7 +506,7 @@ private final class DebutHairlineView: UIView {
         layer.addSublayer(fill)
         fill.addSublayer(glow)
         applyColors()
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: DebutHairlineView, _) in
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, ThemeEpochTrait.self]) { (self: DebutHairlineView, _) in
             self.applyColors()
         }
     }
@@ -634,7 +634,7 @@ final class StatsRowView: UIView {
 
     private func divider() -> UIView {
         let line = UIView()
-        line.backgroundColor = .separator
+        line.backgroundColor = .flaccySeparator
         line.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             line.widthAnchor.constraint(equalToConstant: 1),
@@ -669,13 +669,13 @@ final class StatView: UIView {
         valueLabel.font = .scaled(.title3, size: 19, weight: .semibold).monospacedDigits
         valueLabel.adjustsFontForContentSizeCategory = true
         valueLabel.textAlignment = .center
-        valueLabel.textColor = .tertiaryLabel
+        valueLabel.textColor = .flaccyTertiaryLabel
         valueLabel.text = "—"
 
         titleLabel.text = title
         titleLabel.font = .scaled(.caption2, size: 11, weight: .medium)
         titleLabel.adjustsFontForContentSizeCategory = true
-        titleLabel.textColor = .secondaryLabel
+        titleLabel.textColor = .flaccySecondaryLabel
         titleLabel.textAlignment = .center
 
         let stack = UIStackView(arrangedSubviews: [valueLabel, titleLabel])
@@ -700,7 +700,7 @@ final class StatView: UIView {
         let wasEmpty = lastValue == 0
         lastValue = value
         valueLabel.text = value > 0 ? LibraryLoadPhaseCopy.number(value) : "—"
-        valueLabel.textColor = value > 0 ? .label : .tertiaryLabel
+        valueLabel.textColor = value > 0 ? .flaccyLabel : .flaccyTertiaryLabel
         guard value > 0, !UIAccessibility.isReduceMotionEnabled else { return }
         let now = Date().timeIntervalSinceReferenceDate
         guard wasEmpty || now - lastSpringAt >= Self.springInterval else { return }

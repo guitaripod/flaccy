@@ -153,7 +153,7 @@ final class FlaccyServerDetailViewController: UITableViewController {
         case .lastSynced(let line):
             content = .cell()
             content.text = line
-            content.textProperties.color = .secondaryLabel
+            content.textProperties.color = .flaccySecondaryLabel
             content.textProperties.font = .preferredFont(forTextStyle: .subheadline)
             cell.accessibilityIdentifier = "flaccyServer.lastSynced"
         case .songs(let songs):
@@ -179,7 +179,7 @@ final class FlaccyServerDetailViewController: UITableViewController {
             content = .subtitleCell()
             content.text = title
             content.secondaryText = value
-            content.secondaryTextProperties.color = .secondaryLabel
+            content.secondaryTextProperties.color = .flaccySecondaryLabel
             content.image = UIImage(systemName: isMoving ? "arrow.triangle.2.circlepath" : "arrow.down.right.and.arrow.up.left")
             content.imageProperties.tintColor = .systemIndigo
             cell.accessoryType = isMoving ? .none : .disclosureIndicator
@@ -199,7 +199,7 @@ final class FlaccyServerDetailViewController: UITableViewController {
         case .devicesLoading:
             content = .cell()
             content.text = String(localized: "Loading devices\u{2026}")
-            content.textProperties.color = .secondaryLabel
+            content.textProperties.color = .flaccySecondaryLabel
             let spinner = UIActivityIndicatorView(style: .medium)
             spinner.startAnimating()
             cell.accessoryView = spinner
@@ -207,13 +207,13 @@ final class FlaccyServerDetailViewController: UITableViewController {
             content = .cell()
             content.text = message
             content.textProperties.numberOfLines = 0
-            content.textProperties.color = .secondaryLabel
+            content.textProperties.color = .flaccySecondaryLabel
             cell.accessibilityIdentifier = "flaccyServer.devicesFailed"
         case .device(let device):
             content = .subtitleCell()
             content.text = device.name
             content.secondaryText = device.isCurrent ? model.thisDeviceLabel : device.lastSeen
-            content.secondaryTextProperties.color = .secondaryLabel
+            content.secondaryTextProperties.color = .flaccySecondaryLabel
             if device.isCurrent {
                 cell.selectionStyle = .default
                 cell.accessoryView = Self.pencil()
@@ -236,7 +236,7 @@ final class FlaccyServerDetailViewController: UITableViewController {
 
     private static func pencil() -> UIView {
         let image = UIImageView(image: UIImage(systemName: "pencil"))
-        image.tintColor = .secondaryLabel
+        image.tintColor = .flaccySecondaryLabel
         image.sizeToFit()
         return image
     }

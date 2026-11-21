@@ -46,7 +46,7 @@ final class EnrichmentReportViewController: UITableViewController {
         tableView.accessibilityIdentifier = "enrichmentReport.table"
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.summaryReuseIdentifier)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.entityReuseIdentifier)
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
 
         configureDataSource()
         viewModel.onChange = { [weak self] in
@@ -116,7 +116,7 @@ final class EnrichmentReportViewController: UITableViewController {
         content.text = EnrichmentJobCopy.tryAgain
         content.textProperties.font = .preferredFont(forTextStyle: .body)
         content.textProperties.adjustsFontForContentSizeCategory = true
-        content.textProperties.color = viewModel.canRetry ? .tintColor : .tertiaryLabel
+        content.textProperties.color = viewModel.canRetry ? .tintColor : .flaccyTertiaryLabel
         cell.contentConfiguration = content
         cell.accessoryView = isRetrying ? makeSpinnerAccessory() : nil
         cell.selectionStyle = viewModel.canRetry ? .default : .none
@@ -138,12 +138,12 @@ final class EnrichmentReportViewController: UITableViewController {
         content.textProperties.numberOfLines = 2
         content.secondaryTextProperties.font = .preferredFont(forTextStyle: .footnote)
         content.secondaryTextProperties.adjustsFontForContentSizeCategory = true
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = .flaccySecondaryLabel
         content.image = UIImage(
             systemName: entity.scope == .artist ? "person.crop.circle" : "square.stack",
             withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .regular)
         )
-        content.imageProperties.tintColor = .tertiaryLabel
+        content.imageProperties.tintColor = .flaccyTertiaryLabel
         cell.contentConfiguration = content
         cell.accessoryView = nil
         cell.selectionStyle = .none

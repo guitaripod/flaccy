@@ -68,7 +68,7 @@ final class LyricShareViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         title = LyricShareCopy.sheetTitle
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             systemItem: .close, primaryAction: UIAction { [weak self] _ in self?.close() })
@@ -117,7 +117,7 @@ final class LyricShareViewController: UIViewController {
         previewFrame.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(previewFrame)
         previewImage.contentMode = .scaleAspectFit
-        previewImage.layer.cornerRadius = 16
+        previewImage.layer.themedCornerRadius = 16
         previewImage.layer.cornerCurve = .continuous
         previewImage.clipsToBounds = true
         previewImage.translatesAutoresizingMaskIntoConstraints = false
@@ -146,7 +146,7 @@ final class LyricShareViewController: UIViewController {
 
         audioNote.font = .scaled(.footnote, size: 13, weight: .medium)
         audioNote.adjustsFontForContentSizeCategory = true
-        audioNote.textColor = .secondaryLabel
+        audioNote.textColor = .flaccySecondaryLabel
         audioNote.numberOfLines = 0
         audioNote.textAlignment = .center
         audioNote.isHidden = true
@@ -211,7 +211,7 @@ final class LyricShareViewController: UIViewController {
         label.text = title
         label.font = .scaled(.subheadline, size: 15, weight: .semibold)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
         label.accessibilityTraits = .header
         let column = UIStackView(arrangedSubviews: [label, content])
         column.axis = .vertical
@@ -289,7 +289,7 @@ final class LyricShareViewController: UIViewController {
     private func linesSection() -> UIView {
         linesHint.font = .scaled(.footnote, size: 13, weight: .regular)
         linesHint.adjustsFontForContentSizeCategory = true
-        linesHint.textColor = .secondaryLabel
+        linesHint.textColor = .flaccySecondaryLabel
         linesHint.numberOfLines = 0
         let column = UIStackView(arrangedSubviews: [linesHint])
         column.axis = .vertical
@@ -438,7 +438,7 @@ final class LyricShareViewController: UIViewController {
             config.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 6, bottom: 34, trailing: 6)
             button.configuration = config
             button.isSelected = template == style.template
-            templateLabels[template]?.textColor = button.isSelected ? .white : .label
+            templateLabels[template]?.textColor = button.isSelected ? .white : .flaccyLabel
         }
         formatControl.selectedSegmentIndex = LyricShareFormat.allCases.firstIndex(of: style.format) ?? 0
         typefaceControl.selectedSegmentIndex = LyricShareTypeface.allCases.firstIndex(of: style.typeface) ?? 0
@@ -449,7 +449,7 @@ final class LyricShareViewController: UIViewController {
             config.title = LyricShareCopy.theme(theme)
             config.imagePlacement = .top
             config.imagePadding = 6
-            config.baseForegroundColor = theme == style.theme ? .label : .secondaryLabel
+            config.baseForegroundColor = theme == style.theme ? .flaccyLabel : .flaccySecondaryLabel
             config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
                 var attributes = attributes
                 attributes.font = UIFont.scaled(.caption1, size: 12, weight: .semibold)
@@ -498,7 +498,7 @@ final class LyricShareViewController: UIViewController {
             Self.uiColor(palette.ink).setFill()
             context.cgContext.fillEllipse(in: CGRect(x: side / 2 - 5, y: side / 2 - 5, width: 10, height: 10))
             context.cgContext.resetClip()
-            let ring = selected ? UIColor.tintColor : UIColor.separator
+            let ring = selected ? UIColor.tintColor : UIColor.flaccySeparator
             ring.setStroke()
             let outline = UIBezierPath(ovalIn: rect.insetBy(dx: selected ? 0 : 0.5, dy: selected ? 0 : 0.5))
             outline.lineWidth = selected ? 3 : 1
@@ -516,7 +516,7 @@ final class LyricShareViewController: UIViewController {
             let chosen = current.contains(index) && session.isPickable(index)
             var config = button.configuration ?? .plain()
             config.background.backgroundColor = chosen ? UIColor.tintColor.withAlphaComponent(0.18) : .clear
-            config.baseForegroundColor = chosen ? .label : (session.isPickable(index) ? .secondaryLabel : .tertiaryLabel)
+            config.baseForegroundColor = chosen ? .flaccyLabel : (session.isPickable(index) ? .flaccySecondaryLabel : .flaccyTertiaryLabel)
             config.image = chosen ? UIImage(systemName: "checkmark.circle.fill") : nil
             config.imagePlacement = .trailing
             button.configuration = config

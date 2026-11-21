@@ -326,7 +326,7 @@ final class EqualizerPresetsViewController: UIViewController {
         icon.contentMode = .center
         let iconBackground = UIView()
         iconBackground.backgroundColor = accent.withAlphaComponent(0.2)
-        iconBackground.layer.cornerRadius = 26
+        iconBackground.layer.themedCornerRadius = 26
         iconBackground.translatesAutoresizingMaskIntoConstraints = false
         icon.translatesAutoresizingMaskIntoConstraints = false
         iconBackground.addSubview(icon)
@@ -504,7 +504,7 @@ final class EqualizerPresetsViewController: UIViewController {
     private func cardContainer() -> UIView {
         let card = UIView()
         card.backgroundColor = UIColor.white.withAlphaComponent(0.06)
-        card.layer.cornerRadius = 22
+        card.layer.themedCornerRadius = 22
         card.layer.cornerCurve = .continuous
         card.layer.borderWidth = 1
         card.layer.borderColor = UIColor.white.withAlphaComponent(0.1).cgColor
@@ -642,13 +642,13 @@ private final class EqualizerPresetRowCell: UITableViewCell {
         backgroundColor = .clear
         selectionStyle = .none
 
-        highlightView.layer.cornerRadius = 18
+        highlightView.layer.themedCornerRadius = 18
         highlightView.layer.cornerCurve = .continuous
         highlightView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(highlightView)
 
         thumb.backgroundColor = UIColor.white.withAlphaComponent(0.06)
-        thumb.layer.cornerRadius = 12
+        thumb.layer.themedCornerRadius = 12
         thumb.layer.cornerCurve = .continuous
         thumb.layer.borderWidth = 1
         thumb.layer.borderColor = UIColor.white.withAlphaComponent(0.08).cgColor

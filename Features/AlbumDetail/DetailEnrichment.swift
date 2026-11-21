@@ -66,7 +66,7 @@ enum DetailChip {
         }
         let solid = UIView()
         solid.backgroundColor = UIColor.white.withAlphaComponent(0.14)
-        solid.layer.cornerRadius = 15
+        solid.layer.themedCornerRadius = 15
         solid.layer.cornerCurve = .continuous
         solid.clipsToBounds = true
         return solid

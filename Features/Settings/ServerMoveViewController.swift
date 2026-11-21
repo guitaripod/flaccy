@@ -38,7 +38,7 @@ final class ServerMoveViewController: UIViewController, UIAdaptivePresentationCo
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         view.accessibilityIdentifier = "serverMove.sheet"
         layoutStack()
         observer = NotificationCenter.default.addObserver(
@@ -109,11 +109,11 @@ final class ServerMoveViewController: UIViewController, UIAdaptivePresentationCo
         case .checking:
             renderChecking()
         case .offer(let offer) where offer.songs == 0:
-            renderMessage(symbol: "checkmark.circle", tint: .secondaryLabel, text: ServerMoveCopy.nothing(server: offer.serverName))
+            renderMessage(symbol: "checkmark.circle", tint: .flaccySecondaryLabel, text: ServerMoveCopy.nothing(server: offer.serverName))
         case .offer(let offer):
             renderOffer(offer)
         case .unavailable(let reason):
-            renderMessage(symbol: "info.circle", tint: .secondaryLabel, text: reason)
+            renderMessage(symbol: "info.circle", tint: .flaccySecondaryLabel, text: reason)
         case .moving(let done, let total):
             renderMoving(done: done, total: total)
         case .finished(let summary):
@@ -174,14 +174,14 @@ final class ServerMoveViewController: UIViewController, UIAdaptivePresentationCo
         let spinner = UIActivityIndicatorView(style: .large)
         spinner.startAnimating()
         stack.addArrangedSubview(spinner)
-        stack.addArrangedSubview(label(ServerMoveCopy.checking(server: serverName), style: .body, color: .secondaryLabel, centered: true))
+        stack.addArrangedSubview(label(ServerMoveCopy.checking(server: serverName), style: .body, color: .flaccySecondaryLabel, centered: true))
     }
 
     private func renderOffer(_ offer: ServerMoveOffer) {
         stack.addArrangedSubview(badge(symbol: "server.rack", tint: .systemIndigo))
         stack.addArrangedSubview(heading(ServerMoveCopy.title(server: offer.serverName)))
         stack.addArrangedSubview(label(ServerMoveCopy.lead(songs: offer.songs, server: offer.serverName), style: .body))
-        stack.addArrangedSubview(label(ServerMoveCopy.promise(server: offer.serverName), style: .subheadline, color: .secondaryLabel))
+        stack.addArrangedSubview(label(ServerMoveCopy.promise(server: offer.serverName), style: .subheadline, color: .flaccySecondaryLabel))
         stack.setCustomSpacing(24, after: stack.arrangedSubviews.last!)
 
         let streams: Bool
@@ -216,7 +216,7 @@ final class ServerMoveViewController: UIViewController, UIAdaptivePresentationCo
         stack.addArrangedSubview(keep)
 
         if offer.staying > 0 {
-            stack.addArrangedSubview(label(ServerMoveCopy.staying(songs: offer.staying, server: offer.serverName), style: .footnote, color: .secondaryLabel))
+            stack.addArrangedSubview(label(ServerMoveCopy.staying(songs: offer.staying, server: offer.serverName), style: .footnote, color: .flaccySecondaryLabel))
         }
         stack.setCustomSpacing(28, after: stack.arrangedSubviews.last!)
         let move = filledButton(ServerMoveCopy.moveButton(songs: offer.songs, server: offer.serverName), identifier: "serverMove.move") { [weak self] in
@@ -241,7 +241,7 @@ final class ServerMoveViewController: UIViewController, UIAdaptivePresentationCo
             self?.choose(.stream(keepLoved: toggle.isOn))
         }, for: .valueChanged)
         let title = label(ServerMoveCopy.keepLovedTitle, style: .subheadline)
-        let detail = label(ServerMoveCopy.keepLovedDetail(songs: offer.lovedSongs, bytes: offer.lovedBytes), style: .footnote, color: .secondaryLabel)
+        let detail = label(ServerMoveCopy.keepLovedDetail(songs: offer.lovedSongs, bytes: offer.lovedBytes), style: .footnote, color: .flaccySecondaryLabel)
         let texts = UIStackView(arrangedSubviews: [title, detail])
         texts.axis = .vertical
         texts.spacing = 2
@@ -270,10 +270,10 @@ final class ServerMoveViewController: UIViewController, UIAdaptivePresentationCo
         bar.tag = Self.progressTag
         bar.accessibilityIdentifier = "serverMove.progress"
         stack.addArrangedSubview(bar)
-        let detail = label("", style: .subheadline, color: .secondaryLabel)
+        let detail = label("", style: .subheadline, color: .flaccySecondaryLabel)
         detail.tag = Self.progressTextTag
         stack.addArrangedSubview(detail)
-        stack.addArrangedSubview(label(ServerMoveCopy.closeHint, style: .footnote, color: .tertiaryLabel))
+        stack.addArrangedSubview(label(ServerMoveCopy.closeHint, style: .footnote, color: .flaccyTertiaryLabel))
         updateProgress(done: done, total: total)
     }
 
@@ -342,7 +342,7 @@ final class ServerMoveViewController: UIViewController, UIAdaptivePresentationCo
         image.translatesAutoresizingMaskIntoConstraints = false
         let circle = UIView()
         circle.backgroundColor = tint.withAlphaComponent(0.14)
-        circle.layer.cornerRadius = 32
+        circle.layer.themedCornerRadius = 32
         circle.translatesAutoresizingMaskIntoConstraints = false
         circle.addSubview(image)
         let holder = UIView()
@@ -373,7 +373,7 @@ final class ServerMoveViewController: UIViewController, UIAdaptivePresentationCo
     }
 
     private func label(
-        _ text: String, style: UIFont.TextStyle, color: UIColor = .label, centered: Bool = false, identifier: String? = nil
+        _ text: String, style: UIFont.TextStyle, color: UIColor = .flaccyLabel, centered: Bool = false, identifier: String? = nil
     ) -> UILabel {
         let label = UILabel()
         label.text = text
@@ -415,7 +415,7 @@ final class ServerMoveOptionCard: UIControl {
     init(title: String, detail: String, isSelected: Bool) {
         super.init(frame: .zero)
         self.isSelected = isSelected
-        backgroundColor = .secondarySystemGroupedBackground
+        backgroundColor = .flaccySecondaryGroupedBackground
         layer.cornerRadius = 16
         layer.cornerCurve = .continuous
         layer.borderWidth = isSelected ? 2 : 0
@@ -430,10 +430,10 @@ final class ServerMoveOptionCard: UIControl {
         detailLabel.text = detail
         detailLabel.font = .preferredFont(forTextStyle: .subheadline)
         detailLabel.adjustsFontForContentSizeCategory = true
-        detailLabel.textColor = .secondaryLabel
+        detailLabel.textColor = .flaccySecondaryLabel
         detailLabel.numberOfLines = 0
         let mark = UIImageView(image: UIImage(systemName: isSelected ? "checkmark.circle.fill" : "circle"))
-        mark.tintColor = isSelected ? .tintColor : .tertiaryLabel
+        mark.tintColor = isSelected ? .tintColor : .flaccyTertiaryLabel
         mark.preferredSymbolConfiguration = UIImage.SymbolConfiguration(textStyle: .title3)
         mark.setContentHuggingPriority(.required, for: .horizontal)
         let texts = UIStackView(arrangedSubviews: [titleLabel, detailLabel])
@@ -466,7 +466,7 @@ final class ServerMoveOptionCard: UIControl {
 
     func addFooter(_ footer: UIView) {
         let divider = UIView()
-        divider.backgroundColor = .separator
+        divider.backgroundColor = .flaccySeparator
         divider.heightAnchor.constraint(equalToConstant: 1 / max(traitCollection.displayScale, 1)).isActive = true
         content.addArrangedSubview(divider)
         content.addArrangedSubview(footer)

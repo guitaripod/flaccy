@@ -34,7 +34,7 @@ final class NewMixChipView: UIView {
 
         isAccessibilityElement = false
         applyTint()
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: NewMixChipView, _) in
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, ThemeEpochTrait.self]) { (self: NewMixChipView, _) in
             self.applyTint()
         }
     }

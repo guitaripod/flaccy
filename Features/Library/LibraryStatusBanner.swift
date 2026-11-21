@@ -66,7 +66,7 @@ final class LibraryStatusBanner: UIView {
 
     private func configureSubviews() {
         progressView.translatesAutoresizingMaskIntoConstraints = false
-        progressView.trackTintColor = .tertiarySystemFill
+        progressView.trackTintColor = .flaccyTertiaryFill
         progressView.progressTintColor = .tintColor
 
         spinner.hidesWhenStopped = true
@@ -75,11 +75,11 @@ final class LibraryStatusBanner: UIView {
 
         label.font = .preferredFont(forTextStyle: .caption1)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
 
         countLabel.font = .preferredFont(forTextStyle: .caption1)
         countLabel.adjustsFontForContentSizeCategory = true
-        countLabel.textColor = .tertiaryLabel
+        countLabel.textColor = .flaccyTertiaryLabel
         countLabel.textAlignment = .right
         countLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
@@ -87,7 +87,7 @@ final class LibraryStatusBanner: UIView {
             systemName: "chevron.right",
             withConfiguration: UIImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
         )
-        chevronView.tintColor = .tertiaryLabel
+        chevronView.tintColor = .flaccyTertiaryLabel
         chevronView.setContentHuggingPriority(.required, for: .horizontal)
     }
 

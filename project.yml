@@ -147,6 +147,12 @@ targets:
           - Pad/PlayerColumnSetting.swift
           - Pad/ColumnExercise.swift
           - SceneDelegate.swift
+          - Theme/AppTheme.swift
+          - Theme/ThemeColors.swift
+          - Theme/ThemeCover.swift
+          - Theme/ThemeExercise.swift
+          - Theme/ThemeHooks.swift
+          - Theme/ThemeTypography.swift
           - UI/AdaptiveLayout.swift
           - UI/AlbumContextMenu.swift
           - UI/AppAccent.swift
@@ -357,6 +363,9 @@ targets:
           - WatchSync/WatchTranscoder.swift
           - Welcome/ServerSetupGuideViewController.swift
           - Welcome/WelcomeCopy.swift
+          - Themes/ThemeCells.swift
+          - Themes/ThemePreviewView.swift
+          - Themes/ThemesViewController.swift
           - Welcome/WelcomeFlow.swift
           - Welcome/WelcomeGate.swift
           - Welcome/WelcomeViewController.swift

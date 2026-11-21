@@ -15,7 +15,7 @@ final class HomeSparkView: UIView {
         backgroundColor = .clear
         isOpaque = false
         isAccessibilityElement = false
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: HomeSparkView, _) in view.setNeedsDisplay() }
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, ThemeEpochTrait.self]) { (view: HomeSparkView, _) in view.setNeedsDisplay() }
     }
 
     @available(*, unavailable)
@@ -36,8 +36,8 @@ final class HomeSparkView: UIView {
         let peak = CGFloat(max(values.max() ?? 1, 1))
         let count = CGFloat(values.count)
         let width = min((bounds.width - Self.gap * (count - 1)) / count, Self.maximumBarWidth)
-        let others = UIColor.label.withAlphaComponent(0.24).resolvedColor(with: traitCollection)
-        let today = UIColor.label.resolvedColor(with: traitCollection)
+        let others = UIColor.flaccyLabel.withAlphaComponent(0.24).resolvedColor(with: traitCollection)
+        let today = UIColor.flaccyLabel.resolvedColor(with: traitCollection)
         for (index, value) in values.enumerated() {
             let height = max(bounds.height * CGFloat(value) / peak, Self.minimumBar)
             let bar = CGRect(

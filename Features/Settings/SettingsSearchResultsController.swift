@@ -85,7 +85,7 @@ final class SettingsSearchResultsController: UITableViewController, UISearchResu
         content.imageProperties.maximumSize = CGSize(width: SettingsViewController.RowIcon.side, height: SettingsViewController.RowIcon.side)
         content.text = entry.title
         content.secondaryText = entry.location
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = .flaccySecondaryLabel
         cell.contentConfiguration = content
         cell.accessoryType = .disclosureIndicator
         cell.accessibilityLabel = entry.title

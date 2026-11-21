@@ -46,7 +46,7 @@ final class SongVolumeViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .flaccyBackground
         configureLabels()
         configureSlider()
         configureButtons()
@@ -67,7 +67,7 @@ final class SongVolumeViewController: UIViewController {
     private func configureLabels() {
         titleLabel.text = SongVolumeCopy.title
         titleLabel.font = .scaled(.footnote, size: 13, weight: .semibold)
-        titleLabel.textColor = .secondaryLabel
+        titleLabel.textColor = .flaccySecondaryLabel
         titleLabel.textAlignment = .center
 
         songLabel.text = track.title
@@ -78,7 +78,7 @@ final class SongVolumeViewController: UIViewController {
 
         artistLabel.text = track.artist
         artistLabel.font = .scaled(.subheadline, size: 15, weight: .regular)
-        artistLabel.textColor = .secondaryLabel
+        artistLabel.textColor = .flaccySecondaryLabel
         artistLabel.textAlignment = .center
         artistLabel.adjustsFontForContentSizeCategory = true
 
@@ -91,7 +91,7 @@ final class SongVolumeViewController: UIViewController {
 
         explanation.text = SongVolumeCopy.explanation
         explanation.font = .scaled(.footnote, size: 13, weight: .regular)
-        explanation.textColor = .secondaryLabel
+        explanation.textColor = .flaccySecondaryLabel
         explanation.textAlignment = .center
         explanation.numberOfLines = 0
         explanation.adjustsFontForContentSizeCategory = true
@@ -114,7 +114,7 @@ final class SongVolumeViewController: UIViewController {
             let mark = UILabel()
             mark.text = SongVolumeCopy.level(tenths)
             mark.font = .scaled(.caption2, size: 11, weight: .medium)
-            mark.textColor = .tertiaryLabel
+            mark.textColor = .flaccyTertiaryLabel
             mark.isAccessibilityElement = false
             scaleRow.addArrangedSubview(mark)
         }
@@ -213,7 +213,7 @@ final class SongVolumeViewController: UIViewController {
         let level = session.level
         readout.text = SongVolumeCopy.level(level)
         readout.accessibilityLabel = SongVolumeCopy.accessibilityLevel(level)
-        readout.textColor = level == 0 ? .secondaryLabel : .label
+        readout.textColor = level == 0 ? .flaccySecondaryLabel : .flaccyLabel
         slider.accessibilityValue = SongVolumeCopy.level(level)
         resetButton.isEnabled = level != 0
         quieterButton.isEnabled = level > -SongGain.maxTenths

@@ -13,7 +13,7 @@ final class ServerSetupGuideViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         navigationItem.title = WelcomeCopy.guideTitle
         navigationItem.largeTitleDisplayMode = .never
         buildContent()
@@ -26,7 +26,7 @@ final class ServerSetupGuideViewController: UIViewController {
     }
 
     private func buildContent() {
-        let lead = WelcomeViewController.label(WelcomeCopy.guideLead, style: .body, color: .secondaryLabel)
+        let lead = WelcomeViewController.label(WelcomeCopy.guideLead, style: .body, color: .flaccySecondaryLabel)
 
         let tailscale = Self.button(WelcomeCopy.getTailscale, symbol: "arrow.up.forward.app", style: .gray())
         tailscale.accessibilityIdentifier = "welcome.guide.tailscale"
@@ -56,7 +56,7 @@ final class ServerSetupGuideViewController: UIViewController {
         ]
         let away = Self.optional(WelcomeCopy.awayTitle, WelcomeCopy.awayDetail, action: tailscale)
 
-        let note = WelcomeViewController.label(WelcomeCopy.proNote, style: .footnote, color: .tertiaryLabel)
+        let note = WelcomeViewController.label(WelcomeCopy.proNote, style: .footnote, color: .flaccyTertiaryLabel)
 
         let stack = UIStackView(arrangedSubviews: [lead] + steps + [away, note])
         stack.axis = .vertical
@@ -110,7 +110,7 @@ final class ServerSetupGuideViewController: UIViewController {
         badge.textColor = .white
         badge.textAlignment = .center
         badge.backgroundColor = .tintColor
-        badge.layer.cornerRadius = 14
+        badge.layer.themedCornerRadius = 14
         badge.layer.masksToBounds = true
         badge.isAccessibilityElement = false
         badge.translatesAutoresizingMaskIntoConstraints = false
@@ -122,7 +122,7 @@ final class ServerSetupGuideViewController: UIViewController {
         let titleLabel = WelcomeViewController.label(title, style: .headline)
         titleLabel.accessibilityTraits = .header
         titleLabel.accessibilityLabel = String(localized: "Step \(number): \(title)")
-        let detailLabel = WelcomeViewController.label(detail, style: .subheadline, color: .secondaryLabel)
+        let detailLabel = WelcomeViewController.label(detail, style: .subheadline, color: .flaccySecondaryLabel)
 
         let text = UIStackView(arrangedSubviews: [titleLabel, detailLabel] + actions)
         text.axis = .vertical
@@ -140,7 +140,7 @@ final class ServerSetupGuideViewController: UIViewController {
     private static func optional(_ title: String, _ detail: String, action: UIView) -> UIView {
         let titleLabel = WelcomeViewController.label(title, style: .headline)
         titleLabel.accessibilityTraits = .header
-        let detailLabel = WelcomeViewController.label(detail, style: .subheadline, color: .secondaryLabel)
+        let detailLabel = WelcomeViewController.label(detail, style: .subheadline, color: .flaccySecondaryLabel)
         let stack = UIStackView(arrangedSubviews: [titleLabel, detailLabel, action])
         stack.axis = .vertical
         stack.alignment = .fill

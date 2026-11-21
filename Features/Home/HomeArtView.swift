@@ -24,8 +24,7 @@ final class HomeArtView: UIView {
         symbolView.contentMode = .center
         symbolView.tintColor = .white
         symbolView.isHidden = true
-        symbolView.layer.cornerRadius = cornerRadius
-        symbolView.layer.cornerCurve = .continuous
+        symbolView.shapeAsCover(radius: cornerRadius)
         symbolView.clipsToBounds = true
         symbolView.backgroundColor = UIColor(red: 0.30, green: 0.27, blue: 0.62, alpha: 1)
         symbolView.translatesAutoresizingMaskIntoConstraints = false

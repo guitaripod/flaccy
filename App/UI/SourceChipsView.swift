@@ -67,7 +67,7 @@ final class SourceChipsView: UIView {
             withConfiguration: UIImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
         )
         config.imagePadding = 5
-        config.baseForegroundColor = .label
+        config.baseForegroundColor = .flaccyLabel
         config.contentInsets = NSDirectionalEdgeInsets(top: 7, leading: 14, bottom: 7, trailing: 14)
         config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming

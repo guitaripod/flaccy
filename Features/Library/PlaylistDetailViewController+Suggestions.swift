@@ -85,7 +85,7 @@ final class PlaylistSuggestionsHeaderView: UITableViewHeaderFooterView {
     override init(reuseIdentifier: String?) {
         super.init(reuseIdentifier: reuseIdentifier)
         var background = UIBackgroundConfiguration.clear()
-        background.backgroundColor = .systemBackground
+        background.backgroundColor = .flaccyBackground
         backgroundConfiguration = background
 
         let title = UILabel()
@@ -98,7 +98,7 @@ final class PlaylistSuggestionsHeaderView: UITableViewHeaderFooterView {
         subtitle.text = PlaylistCopy.suggestedSubtitle
         subtitle.font = .preferredFont(forTextStyle: .footnote)
         subtitle.adjustsFontForContentSizeCategory = true
-        subtitle.textColor = .secondaryLabel
+        subtitle.textColor = .flaccySecondaryLabel
         subtitle.numberOfLines = 0
 
         let text = UIStackView(arrangedSubviews: [title, subtitle])
@@ -157,7 +157,7 @@ final class PlaylistEmptyFooterView: UIView {
         titleLabel.numberOfLines = 0
         messageLabel.font = .preferredFont(forTextStyle: .subheadline)
         messageLabel.adjustsFontForContentSizeCategory = true
-        messageLabel.textColor = .secondaryLabel
+        messageLabel.textColor = .flaccySecondaryLabel
         messageLabel.textAlignment = .center
         messageLabel.numberOfLines = 0
 

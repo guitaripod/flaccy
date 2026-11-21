@@ -326,7 +326,7 @@ final class EqualizerRulerView: UIControl {
         ticksLayer.lineWidth = 1
         layer.addSublayer(ticksLayer)
         pointer.translatesAutoresizingMaskIntoConstraints = false
-        pointer.layer.cornerRadius = 1
+        pointer.layer.themedCornerRadius = 1
         addSubview(pointer)
         NSLayoutConstraint.activate([
             heightAnchor.constraint(equalToConstant: 30),

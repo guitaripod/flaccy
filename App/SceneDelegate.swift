@@ -36,8 +36,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.rootController = rootVC
         rootVC.onSplitChange = { [weak tabs] isSplit in tabs?.suppressesMiniPlayer = isSplit }
 
-        window.overrideUserInterfaceStyle = AppAppearance.current.userInterfaceStyle
-        window.tintColor = AppAccent.current.windowTint
+        AppTheme.shared.prepare()
+        AppTheme.shared.dress(window)
         #if DEBUG && targetEnvironment(simulator)
         window.rootViewController = DebugWindowFrame.wrapIfRequested(rootVC)
         #else
@@ -83,6 +83,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         PlaylistPageExercise.runIfRequested(window: window)
         SearchMenuExercise.runIfRequested(tabs: tabs)
         EqualizerShots.runIfRequested(in: window)
+        ThemeExercise.runIfRequested()
         #endif
         #if DEBUG && targetEnvironment(simulator)
         DemoRouter.runIfRequested(window: window, tabs: tabs, player: playerContainer)
@@ -210,6 +211,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneDidBecomeActive(_ scene: UIScene) {
         commandTarget?.becomeCurrent()
+        AppTheme.shared.reloadLibrary()
         folderPoller.start()
         TrialRunwayPresenter.refresh(in: window)
         ServerSyncLifecycle.shared.becameActive()

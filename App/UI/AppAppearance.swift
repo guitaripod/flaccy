@@ -52,21 +52,10 @@ nonisolated enum AppAppearance: Int, CaseIterable {
 @MainActor
 enum AppearanceApplier {
 
-    /// Applies the appearance to every window of every connected scene,
-    /// crossfading the trait change unless Reduce Motion is on.
+    /// Applies the light or dark choice to every window, crossfading unless
+    /// Reduce Motion is on. A theme drawn for one mode keeps that mode, which
+    /// `AppTheme` decides.
     static func apply(_ appearance: AppAppearance = .current, animated: Bool = false) {
-        let style = appearance.userInterfaceStyle
-        for scene in UIApplication.shared.connectedScenes {
-            guard let windowScene = scene as? UIWindowScene else { continue }
-            for window in windowScene.windows where window.overrideUserInterfaceStyle != style {
-                if animated && !UIAccessibility.isReduceMotionEnabled {
-                    UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve) {
-                        window.overrideUserInterfaceStyle = style
-                    }
-                } else {
-                    window.overrideUserInterfaceStyle = style
-                }
-            }
-        }
+        AppTheme.shared.apply(animated: animated)
     }
 }

@@ -318,7 +318,7 @@ final class PaywallViewController: UIViewController {
     private func makeHeaderView() -> UIView {
         let tile = UIView()
         tile.backgroundColor = Self.accent.withAlphaComponent(0.16)
-        tile.layer.cornerRadius = 16
+        tile.layer.themedCornerRadius = 16
         tile.layer.cornerCurve = .continuous
         tile.translatesAutoresizingMaskIntoConstraints = false
 
@@ -376,7 +376,7 @@ final class PaywallViewController: UIViewController {
     private func makeFeatureRow(_ feature: Feature) -> UIView {
         let tile = UIView()
         tile.backgroundColor = Self.accent.withAlphaComponent(0.14)
-        tile.layer.cornerRadius = 10
+        tile.layer.themedCornerRadius = 10
         tile.layer.cornerCurve = .continuous
         tile.translatesAutoresizingMaskIntoConstraints = false
 
@@ -845,7 +845,7 @@ private final class PlanCardControl: UIControl {
         badge.adjustsFontForContentSizeCategory = true
         badge.textColor = .black
         badge.backgroundColor = Self.accent
-        badge.layer.cornerRadius = 7
+        badge.layer.themedCornerRadius = 7
         badge.layer.cornerCurve = .continuous
         badge.layer.masksToBounds = true
         badge.textAlignment = .center

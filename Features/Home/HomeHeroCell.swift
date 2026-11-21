@@ -53,7 +53,7 @@ final class HomeHeroCell: UICollectionViewCell {
         super.init(frame: frame)
         buildHierarchy()
         applyBorder()
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (cell: HomeHeroCell, _) in cell.applyBorder() }
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, ThemeEpochTrait.self]) { (cell: HomeHeroCell, _) in cell.applyBorder() }
     }
 
     @available(*, unavailable)
@@ -64,24 +64,24 @@ final class HomeHeroCell: UICollectionViewCell {
         contentView.addSubview(glass)
 
         kickerLabel.font = .scaled(.footnote, size: 13, weight: .semibold)
-        kickerLabel.textColor = .secondaryLabel
+        kickerLabel.textColor = .flaccySecondaryLabel
         kickerLabel.numberOfLines = 2
         titleLabel.font = .scaled(.title2, size: 26, weight: .heavy, maxSize: 34)
         titleLabel.numberOfLines = 3
         titleLabel.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
         lineLabel.font = .scaled(.subheadline, size: 15, weight: .regular)
-        lineLabel.textColor = .secondaryLabel
+        lineLabel.textColor = .flaccySecondaryLabel
         lineLabel.numberOfLines = 2
         detailLabel.font = .scaled(.footnote, size: 13, weight: .regular)
-        detailLabel.textColor = .secondaryLabel
+        detailLabel.textColor = .flaccySecondaryLabel
         detailLabel.numberOfLines = 2
         startsWithLabel.font = .scaled(.footnote, size: 13, weight: .regular)
-        startsWithLabel.textColor = .secondaryLabel
+        startsWithLabel.textColor = .flaccySecondaryLabel
         startsWithLabel.numberOfLines = 3
         trackLabel.font = .scaled(.footnote, size: 13, weight: .medium)
-        trackLabel.textColor = .secondaryLabel
+        trackLabel.textColor = .flaccySecondaryLabel
         remainingLabel.font = .scaled(.footnote, size: 13, weight: .medium)
-        remainingLabel.textColor = .secondaryLabel
+        remainingLabel.textColor = .flaccySecondaryLabel
         remainingLabel.textAlignment = .right
         remainingLabel.setContentHuggingPriority(.required, for: .horizontal)
         remainingLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -165,7 +165,7 @@ final class HomeHeroCell: UICollectionViewCell {
     }
 
     private func applyBorder() {
-        let color = UIColor.label.withAlphaComponent(0.14).resolvedColor(with: traitCollection)
+        let color = UIColor.flaccyLabel.withAlphaComponent(0.14).resolvedColor(with: traitCollection)
         glass.layer.borderWidth = 1
         glass.layer.borderColor = color.cgColor
     }
@@ -267,12 +267,12 @@ final class HomeHeroCell: UICollectionViewCell {
         configuration.image = UIImage(systemName: symbol)
         configuration.imagePadding = 8
         configuration.cornerStyle = .capsule
-        configuration.baseBackgroundColor = .label
-        configuration.baseForegroundColor = .systemBackground
+        configuration.baseBackgroundColor = .flaccyLabel
+        configuration.baseForegroundColor = .flaccyBackground
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var attributes = attributes
             attributes.font = UIFont.scaled(.body, size: 17, weight: .semibold, maxSize: 22)
-            attributes.foregroundColor = UIColor.systemBackground
+            attributes.foregroundColor = UIColor.flaccyBackground
             return attributes
         }
         primaryButton.configuration = configuration
@@ -289,9 +289,9 @@ final class HomeHeroCell: UICollectionViewCell {
         configuration.image = UIImage(systemName: symbol)
         configuration.title = title
         configuration.imagePadding = 6
-        configuration.baseForegroundColor = .label
+        configuration.baseForegroundColor = .flaccyLabel
         configuration.contentInsets = title == nil ? .zero : NSDirectionalEdgeInsets(top: 0, leading: 18, bottom: 0, trailing: 18)
-        configuration.background.backgroundColor = UIColor.label.withAlphaComponent(0.12)
+        configuration.background.backgroundColor = UIColor.flaccyLabel.withAlphaComponent(0.12)
         configuration.background.cornerRadius = Self.buttonHeight / 2
         configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 17, weight: .semibold)
         button.configuration = configuration

@@ -13,8 +13,8 @@ final class HomeJumpTileCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
         contentView.highlightsUnderPointer(cornerRadius: 10)
-        contentView.backgroundColor = UIColor.label.withAlphaComponent(0.08)
-        contentView.layer.cornerRadius = 10
+        contentView.backgroundColor = UIColor.flaccyLabel.withAlphaComponent(0.08)
+        contentView.layer.themedCornerRadius = 10
         contentView.layer.cornerCurve = .continuous
         contentView.clipsToBounds = true
 

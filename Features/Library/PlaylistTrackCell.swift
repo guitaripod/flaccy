@@ -28,10 +28,10 @@ final class PlaylistTrackCell: UITableViewCell {
 
         artworkView.contentMode = .scaleAspectFill
         artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 6
+        artworkView.shapeAsCover(radius: 6)
         artworkView.layer.cornerCurve = .continuous
-        artworkView.backgroundColor = .tertiarySystemFill
-        artworkView.tintColor = .secondaryLabel
+        artworkView.backgroundColor = .flaccyTertiaryFill
+        artworkView.tintColor = .flaccySecondaryLabel
         artworkView.translatesAutoresizingMaskIntoConstraints = false
 
         barsView.tintColor = .white
@@ -48,12 +48,12 @@ final class PlaylistTrackCell: UITableViewCell {
 
         subtitleLabel.font = .preferredFont(forTextStyle: .subheadline)
         subtitleLabel.adjustsFontForContentSizeCategory = true
-        subtitleLabel.textColor = .secondaryLabel
+        subtitleLabel.textColor = .flaccySecondaryLabel
 
         durationLabel.font = UIFontMetrics(forTextStyle: .footnote)
             .scaledFont(for: .monospacedDigitSystemFont(ofSize: 13, weight: .regular))
         durationLabel.adjustsFontForContentSizeCategory = true
-        durationLabel.textColor = .tertiaryLabel
+        durationLabel.textColor = .flaccyTertiaryLabel
         durationLabel.textAlignment = .right
         durationLabel.setContentHuggingPriority(.required, for: .horizontal)
         durationLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -124,7 +124,7 @@ final class PlaylistTrackCell: UITableViewCell {
         durationLabel.isHidden = isSuggestion
         addButton.isHidden = !isSuggestion
         addButton.accessibilityLabel = PlaylistCopy.addSuggestion(track.title)
-        titleLabel.textColor = isCurrent ? .tintColor : .label
+        titleLabel.textColor = isCurrent ? .tintColor : .flaccyLabel
         barsView.isHidden = !isCurrent
         barsBackdrop.isHidden = !isCurrent
         barsView.setAnimating(isCurrent && isPlaying)
@@ -148,7 +148,7 @@ final class PlaylistTrackCell: UITableViewCell {
         durationLabel.text = nil
         durationLabel.isHidden = true
         addButton.isHidden = true
-        titleLabel.textColor = .secondaryLabel
+        titleLabel.textColor = .flaccySecondaryLabel
         barsView.isHidden = true
         barsBackdrop.isHidden = true
         barsView.setAnimating(false)

@@ -79,7 +79,7 @@ final class WatchSyncViewController: UITableViewController {
         installDemoStateIfRequested()
         title = String(localized: "Apple Watch")
         navigationItem.largeTitleDisplayMode = .never
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         tableView.register(WatchSyncStatusCell.self, forCellReuseIdentifier: WatchSyncStatusCell.reuseID)
         tableView.register(WatchSyncRunCell.self, forCellReuseIdentifier: WatchSyncRunCell.reuseID)
         tableView.register(WatchSyncQualityCell.self, forCellReuseIdentifier: WatchSyncQualityCell.reuseID)

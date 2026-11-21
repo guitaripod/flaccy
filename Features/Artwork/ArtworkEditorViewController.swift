@@ -818,13 +818,13 @@ private final class ArtworkCandidateCell: UICollectionViewCell {
 
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 12
+        imageView.layer.themedCornerRadius = 12
         imageView.layer.cornerCurve = .continuous
         imageView.backgroundColor = UIColor.white.withAlphaComponent(0.1)
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
         ring.isUserInteractionEnabled = false
-        ring.layer.cornerRadius = 12
+        ring.layer.themedCornerRadius = 12
         ring.layer.cornerCurve = .continuous
         ring.layer.borderWidth = 3
         ring.layer.borderColor = UIColor.white.cgColor

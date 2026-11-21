@@ -67,7 +67,7 @@ final class WatchSyncHelpViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .flaccyGroupedBackground
         let scroll = UIScrollView()
         scroll.alwaysBounceVertical = false
         scroll.translatesAutoresizingMaskIntoConstraints = false
@@ -105,7 +105,7 @@ final class WatchSyncHelpViewController: UIViewController {
     private func makeHeader() -> UIView {
         let badge = UIView()
         badge.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.16)
-        badge.layer.cornerRadius = 18
+        badge.layer.themedCornerRadius = 18
         badge.layer.cornerCurve = .continuous
         badge.translatesAutoresizingMaskIntoConstraints = false
         let icon = UIImageView(image: UIImage(systemName: topic.symbol))
@@ -133,7 +133,7 @@ final class WatchSyncHelpViewController: UIViewController {
         summary.text = topic.summary
         summary.font = .preferredFont(forTextStyle: .body)
         summary.adjustsFontForContentSizeCategory = true
-        summary.textColor = .secondaryLabel
+        summary.textColor = .flaccySecondaryLabel
         summary.numberOfLines = 0
         summary.textAlignment = .center
 
@@ -155,11 +155,11 @@ final class WatchSyncHelpViewController: UIViewController {
         let stack = UIStackView()
         stack.axis = .vertical
         for (index, row) in rows.enumerated() {
-            if index > 0 { stack.addArrangedSubview(HairlineView(color: .separator)) }
+            if index > 0 { stack.addArrangedSubview(HairlineView(color: .flaccySeparator)) }
             stack.addArrangedSubview(row)
         }
-        stack.backgroundColor = .secondarySystemGroupedBackground
-        stack.layer.cornerRadius = 16
+        stack.backgroundColor = .flaccySecondaryGroupedBackground
+        stack.layer.themedCornerRadius = 16
         stack.layer.cornerCurve = .continuous
         stack.clipsToBounds = true
         return stack
@@ -168,7 +168,7 @@ final class WatchSyncHelpViewController: UIViewController {
     private func configureResultLabel() {
         resultLabel.font = .preferredFont(forTextStyle: .subheadline)
         resultLabel.adjustsFontForContentSizeCategory = true
-        resultLabel.textColor = .secondaryLabel
+        resultLabel.textColor = .flaccySecondaryLabel
         resultLabel.numberOfLines = 0
         resultLabel.textAlignment = .center
         resultLabel.isHidden = true
@@ -249,7 +249,7 @@ private final class StepRow: UIView {
         badge.textColor = .white
         badge.textAlignment = .center
         badge.backgroundColor = .systemOrange
-        badge.layer.cornerRadius = 14
+        badge.layer.themedCornerRadius = 14
         badge.clipsToBounds = true
         badge.translatesAutoresizingMaskIntoConstraints = false
 

@@ -77,7 +77,7 @@ final class PlaylistMakerViewController: UIViewController, UITableViewDataSource
     override func viewDidLoad() {
         super.viewDidLoad()
         title = PlaylistMakerCopy.title
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .flaccyBackground
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             systemItem: .close,
             primaryAction: UIAction { [weak self] _ in
@@ -133,7 +133,7 @@ final class PlaylistMakerViewController: UIViewController, UITableViewDataSource
         header.addArrangedSubview(row(makeButton))
 
         spinner.startAnimating()
-        configure(statusLabel, style: .subheadline, color: .secondaryLabel)
+        configure(statusLabel, style: .subheadline, color: .flaccySecondaryLabel)
         statusRow.axis = .horizontal
         statusRow.spacing = 10
         statusRow.alignment = .center
@@ -141,7 +141,7 @@ final class PlaylistMakerViewController: UIViewController, UITableViewDataSource
         statusRow.addArrangedSubview(statusLabel)
         header.addArrangedSubview(statusRow)
 
-        configure(failureLabel, style: .callout, color: .label)
+        configure(failureLabel, style: .callout, color: .flaccyLabel)
         header.addArrangedSubview(failureLabel)
         header.addArrangedSubview(row(failureButton))
 
@@ -152,17 +152,17 @@ final class PlaylistMakerViewController: UIViewController, UITableViewDataSource
             examples.addArrangedSubview(button(example, filled: false) { [weak self] in self?.ask(example) })
         }
         header.addArrangedSubview(examples)
-        configure(explanationLabel, style: .footnote, color: .secondaryLabel)
+        configure(explanationLabel, style: .footnote, color: .flaccySecondaryLabel)
         explanationLabel.text = PlaylistMakerCopy.explanation
         header.addArrangedSubview(explanationLabel)
 
-        configure(nameLabel, style: .title2, color: .label, weight: .bold)
+        configure(nameLabel, style: .title2, color: .flaccyLabel, weight: .bold)
         nameLabel.accessibilityTraits = .header
         header.addArrangedSubview(nameLabel)
         header.setCustomSpacing(2, after: nameLabel)
-        configure(summaryLabel, style: .subheadline, color: .secondaryLabel)
+        configure(summaryLabel, style: .subheadline, color: .flaccySecondaryLabel)
         header.addArrangedSubview(summaryLabel)
-        configure(noteLabel, style: .footnote, color: .secondaryLabel)
+        configure(noteLabel, style: .footnote, color: .flaccySecondaryLabel)
         header.addArrangedSubview(noteLabel)
         actions.axis = .horizontal
         actions.spacing = 10
@@ -175,8 +175,8 @@ final class PlaylistMakerViewController: UIViewController, UITableViewDataSource
     /// languages where it runs long. The hint sits beside the text view, not inside it, so it can hold the box
     /// open to its own height.
     private func buildField() {
-        inputBox.backgroundColor = .secondarySystemBackground
-        inputBox.layer.cornerRadius = 12
+        inputBox.backgroundColor = .flaccySecondaryBackground
+        inputBox.layer.themedCornerRadius = 12
         inputBox.layer.cornerCurve = .continuous
 
         field.font = .preferredFont(forTextStyle: .body)
@@ -408,7 +408,7 @@ final class PlaylistMakerViewController: UIViewController, UITableViewDataSource
         var content = UIListContentConfiguration.subtitleCell()
         content.text = track.title
         content.secondaryText = "\(track.artist) · \(Self.clock(track.duration))"
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = .flaccySecondaryLabel
         content.imageProperties.maximumSize = Self.artworkSize
         content.imageProperties.reservedLayoutSize = Self.artworkSize
         content.imageProperties.cornerRadius = 6
@@ -418,7 +418,7 @@ final class PlaylistMakerViewController: UIViewController, UITableViewDataSource
             content.image = cached
         } else {
             content.image = UIImage(systemName: "music.note")
-            content.imageProperties.tintColor = .tertiaryLabel
+            content.imageProperties.tintColor = .flaccyTertiaryLabel
             loadArtwork(of: track, into: tableView)
         }
         cell.contentConfiguration = content

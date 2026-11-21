@@ -12,11 +12,11 @@ final class FlaccyServerNudgeView: UIView {
         label.text = FlaccyServerNudge.text
         label.font = .preferredFont(forTextStyle: .footnote)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .secondaryLabel
+        label.textColor = .flaccySecondaryLabel
         label.numberOfLines = 0
         var configuration = UIButton.Configuration.plain()
         configuration.image = UIImage(systemName: "xmark.circle.fill")
-        configuration.baseForegroundColor = .tertiaryLabel
+        configuration.baseForegroundColor = .flaccyTertiaryLabel
         let close = UIButton(configuration: configuration)
         close.accessibilityLabel = String(localized: "Close")
         close.accessibilityHint = String(localized: "Hides this suggestion for good")
