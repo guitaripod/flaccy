@@ -57,8 +57,11 @@ final class MacShowcaseViewController: NSViewController {
     private lazy var everythingButton = MacShowcaseButtons.onward(
         title: ShowcaseCopy.seeEverything, target: self, action: #selector(everythingTapped)
     )
-    private lazy var continueButton = MacShowcaseButtons.primary(target: self, action: #selector(finish))
-    private lazy var everythingContinueButton = MacShowcaseButtons.primary(target: self, action: #selector(finish))
+    private lazy var continueButton = MacShowcaseButtons.primary(target: self, action: #selector(primaryTapped))
+    private lazy var everythingContinueButton = MacShowcaseButtons.primary(target: self, action: #selector(primaryTapped))
+    private lazy var secondaryButton = MacShowcaseButtons.quiet(target: self, action: #selector(secondaryTapped))
+    private let statusLabel = NSTextField(wrappingLabelWithString: "")
+    private var footer = ShowcaseFooter.make(for: nil)
     private var hasPlayedEntrance = false
 
     override func loadView() {
@@ -77,8 +80,28 @@ final class MacShowcaseViewController: NSViewController {
                 page.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             ])
         }
+        apply(ShowcaseFooter.current)
         prepareForEntrance()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(entitlementsDidLoad), name: PurchaseManager.entitlementsDidLoad, object: nil
+        )
         MidgarLog.info("Showcase \(ShowcaseCopy.version) shown", category: .ui)
+    }
+
+    /// The store answered after the showcase opened, so the foot can now say where the person stands.
+    @objc private func entitlementsDidLoad() {
+        apply(ShowcaseFooter.current)
+    }
+
+    /// Shows a foot: the status line, the main button's title, and the second button when there is one.
+    private func apply(_ footer: ShowcaseFooter) {
+        self.footer = footer
+        statusLabel.stringValue = footer.status ?? ""
+        statusLabel.isHidden = footer.status == nil
+        continueButton.title = footer.primaryTitle
+        everythingContinueButton.title = footer.primaryTitle
+        MacShowcaseButtons.retitle(secondaryButton, footer.secondaryTitle ?? "")
+        secondaryButton.isHidden = footer.secondaryTitle == nil
     }
 
     override func viewDidAppear() {
@@ -102,9 +125,22 @@ final class MacShowcaseViewController: NSViewController {
         swap(from: everythingPage, to: firstPage, animated: true)
     }
 
-    @objc private func finish() {
-        MidgarLog.info("Showcase \(ShowcaseCopy.version) closed", category: .ui)
+    @objc private func primaryTapped() {
+        finish(with: footer.primary)
+    }
+
+    @objc private func secondaryTapped() {
+        finish(with: footer.secondary ?? .listen)
+    }
+
+    /// Closes the showcase, and opens the plans when that is what the person chose.
+    private func finish(with action: ShowcaseFooter.Action) {
+        MidgarLog.info("Showcase \(ShowcaseCopy.version) closed for \(action)", category: .ui)
         dismiss(nil)
+        guard action == .plans else { return }
+        DispatchQueue.main.async {
+            (NSApp.delegate as? MacAppDelegate)?.presentPaywall()
+        }
     }
 
     private func swap(from old: NSView, to new: NSView, animated: Bool) {
@@ -132,30 +168,34 @@ final class MacShowcaseViewController: NSViewController {
         let rowStack = NSStackView(views: rows)
         rowStack.orientation = .vertical
         rowStack.alignment = .leading
-        rowStack.spacing = 16
+        rowStack.spacing = 12
 
-        let buttons = NSStackView(views: [everythingButton, continueButton])
+        statusLabel.font = .systemFont(ofSize: 12)
+        statusLabel.textColor = .secondaryLabelColor
+        statusLabel.alignment = .center
+        let buttons = NSStackView(views: [statusLabel, everythingButton, continueButton, secondaryButton])
         buttons.orientation = .vertical
         buttons.alignment = .centerX
-        buttons.spacing = 12
+        buttons.spacing = 10
 
         let content = NSStackView(views: [hero, rowStack])
         content.orientation = .vertical
         content.alignment = .centerX
-        content.spacing = 28
+        content.spacing = 20
 
         for subview in [content, buttons] {
             subview.translatesAutoresizingMaskIntoConstraints = false
             firstPage.addSubview(subview)
         }
         NSLayoutConstraint.activate([
-            content.topAnchor.constraint(equalTo: firstPage.topAnchor, constant: 36),
+            content.topAnchor.constraint(equalTo: firstPage.topAnchor, constant: 24),
             content.leadingAnchor.constraint(equalTo: firstPage.leadingAnchor, constant: 44),
             content.trailingAnchor.constraint(equalTo: firstPage.trailingAnchor, constant: -44),
             rowStack.widthAnchor.constraint(equalTo: content.widthAnchor),
-            buttons.topAnchor.constraint(greaterThanOrEqualTo: content.bottomAnchor, constant: 20),
+            buttons.topAnchor.constraint(greaterThanOrEqualTo: content.bottomAnchor, constant: 16),
             buttons.centerXAnchor.constraint(equalTo: firstPage.centerXAnchor),
-            buttons.bottomAnchor.constraint(equalTo: firstPage.bottomAnchor, constant: -24),
+            statusLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 380),
+            buttons.bottomAnchor.constraint(equalTo: firstPage.bottomAnchor, constant: -20),
             continueButton.widthAnchor.constraint(equalToConstant: 220),
         ])
     }
@@ -217,9 +257,8 @@ final class MacShowcaseViewController: NSViewController {
 
     private func prepareForEntrance() {
         hero.prepareForEntrance()
-        (rows + [everythingButton, continueButton]).forEach { $0.alphaValue = 0 }
-        everythingButton.isEnabled = false
-        continueButton.isEnabled = false
+        (rows + [statusLabel, everythingButton, continueButton, secondaryButton]).forEach { $0.alphaValue = 0 }
+        [everythingButton, continueButton, secondaryButton].forEach { $0.isEnabled = false }
     }
 
     private func playEntrance() {
@@ -229,15 +268,15 @@ final class MacShowcaseViewController: NSViewController {
             MacShowcaseHeroView.fadeIn(row, after: gentle ? 0 : ShowcaseTiming.row(index))
         }
         let buttonsAt = gentle ? 0 : ShowcaseTiming.buttons(rowCount: rows.count)
-        MacShowcaseHeroView.fadeIn(everythingButton, after: buttonsAt)
-        MacShowcaseHeroView.fadeIn(continueButton, after: buttonsAt)
+        [statusLabel, everythingButton, continueButton, secondaryButton].forEach {
+            MacShowcaseHeroView.fadeIn($0, after: buttonsAt)
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + (gentle ? 0 : ShowcaseTiming.versionLands)) {
             NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + buttonsAt) { [weak self] in
             guard let self else { return }
-            self.everythingButton.isEnabled = true
-            self.continueButton.isEnabled = true
+            [self.everythingButton, self.continueButton, self.secondaryButton].forEach { $0.isEnabled = true }
             self.view.window?.makeFirstResponder(self.continueButton)
         }
     }
@@ -267,8 +306,8 @@ final class MacShowcaseHeroView: NSView {
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
         NSLayoutConstraint.activate([
-            icon.widthAnchor.constraint(equalToConstant: 84),
-            icon.heightAnchor.constraint(equalToConstant: 84),
+            icon.widthAnchor.constraint(equalToConstant: 64),
+            icon.heightAnchor.constraint(equalToConstant: 64),
             stack.topAnchor.constraint(equalTo: topAnchor),
             stack.leadingAnchor.constraint(equalTo: leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -317,8 +356,8 @@ final class MacShowcaseVersionView: NSView {
 
     init(text: String) {
         self.text = text
-        let base = NSFont.systemFont(ofSize: 84, weight: .heavy)
-        font = base.fontDescriptor.withDesign(.rounded).flatMap { NSFont(descriptor: $0, size: 84) } ?? base
+        let base = NSFont.systemFont(ofSize: 76, weight: .heavy)
+        font = base.fontDescriptor.withDesign(.rounded).flatMap { NSFont(descriptor: $0, size: 76) } ?? base
         super.init(frame: .zero)
         wantsLayer = true
         numerals.string = NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: NSColor.black])
@@ -538,6 +577,21 @@ enum MacShowcaseButtons {
         )
         button.setAccessibilityIdentifier("showcase.everything")
         return button
+    }
+
+    /// The small borderless button under the main one, for the other way on.
+    static func quiet(target: AnyObject, action: Selector) -> NSButton {
+        let button = NSButton(title: "", target: target, action: action)
+        button.isBordered = false
+        button.setAccessibilityIdentifier("showcase.secondary")
+        return button
+    }
+
+    /// Gives a borderless button its title in the accent colour.
+    static func retitle(_ button: NSButton, _ title: String) {
+        button.attributedTitle = NSAttributedString(
+            string: title, attributes: [.foregroundColor: NSColor.controlAccentColor, .font: NSFont.systemFont(ofSize: 13)]
+        )
     }
 
     /// The borderless button that returns to the first page.

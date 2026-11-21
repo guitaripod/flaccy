@@ -26,6 +26,8 @@ nonisolated enum ShowcaseCopy {
     static var everythingTitle: String { String(localized: "Everything Flaccy Can Do") }
     static var proceed: String { String(localized: "Start Listening") }
     static var back: String { String(localized: "Back") }
+    static var seePlans: String { String(localized: "See Plans") }
+    static var notNow: String { String(localized: "Not Now") }
 
     static var playlistDetail: String {
         String(localized: "Say what you want to hear and Flaccy builds it from the music you own.")

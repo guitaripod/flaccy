@@ -13,28 +13,35 @@ enum ShowcaseFlow {
     /// whole sheet.
     private static let cardSize = CGSize(width: 540, height: 720)
 
+    /// How a launch came out of the showcase.
+    enum Outcome: Equatable {
+        case notShown
+        case closed
+        case wantsPlans
+    }
+
     /// Shows the showcase when this launch should have it and calls `next` when it has closed, or at once when there
-    /// is none to show. `next` hears whether a showcase was shown.
-    static func presentIfNeeded(over host: UIViewController, then next: @escaping (_ followedShowcase: Bool) -> Void) {
+    /// is none to show. `next` hears how it ended.
+    static func presentIfNeeded(over host: UIViewController, then next: @escaping (Outcome) -> Void) {
         let forced = ShowcaseGate.isForced()
         guard ShowcaseGate.shouldPresent(
             seenEdition: ShowcaseGate.seenEdition, isAutomated: ShowcaseGate.isAutomatedRun(), forced: forced
         ) else {
-            next(false)
+            next(.notShown)
             return
         }
         if !forced { ShowcaseGate.markSeen() }
         Task { @MainActor in
             try? await Task.sleep(for: pause)
             guard host.presentedViewController == nil, host.view.window != nil else {
-                next(false)
+                next(.notShown)
                 return
             }
             present(over: host, opensOnEverything: forced && ShowcaseGate.opensOnEverything(), then: next)
         }
     }
 
-    private static func present(over host: UIViewController, opensOnEverything: Bool, then next: @escaping (Bool) -> Void) {
+    private static func present(over host: UIViewController, opensOnEverything: Bool, then next: @escaping (Outcome) -> Void) {
         let showcase = ShowcaseViewController()
         let navigation = UINavigationController(rootViewController: showcase)
         navigation.modalPresentationStyle = .formSheet
@@ -45,8 +52,8 @@ enum ShowcaseFlow {
             sheet.prefersGrabberVisible = false
             sheet.preferredCornerRadius = 28
         }
-        showcase.onFinish = {
-            navigation.dismiss(animated: true) { next(true) }
+        showcase.onFinish = { action in
+            navigation.dismiss(animated: true) { next(action == .plans ? .wantsPlans : .closed) }
         }
         host.present(navigation, animated: true)
         if opensOnEverything { showcase.showEverything(animated: false) }

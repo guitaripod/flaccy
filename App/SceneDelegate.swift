@@ -117,9 +117,13 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if !launchLinks.isEmpty {
             DispatchQueue.main.async { [weak self] in launchLinks.forEach { self?.openServerLink($0) } }
         } else {
-            ShowcaseFlow.presentIfNeeded(over: rootVC) { [weak rootVC, weak tabs] followedShowcase in
+            ShowcaseFlow.presentIfNeeded(over: rootVC) { [weak self, weak rootVC, weak tabs] outcome in
                 guard let rootVC, let tabs else { return }
-                WelcomeFlow.presentIfNeeded(over: rootVC, tabs: tabs, animated: followedShowcase)
+                if outcome == .wantsPlans {
+                    self?.handlePaywallRequired()
+                } else {
+                    WelcomeFlow.presentIfNeeded(over: rootVC, tabs: tabs, animated: outcome == .closed)
+                }
             }
         }
     }
