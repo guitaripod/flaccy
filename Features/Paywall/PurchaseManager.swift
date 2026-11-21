@@ -18,9 +18,10 @@ nonisolated enum EntitlementState: Equatable, Hashable {
     case trialNotStarted
     case trial(daysRemaining: Int)
     case expired
-    /// The trial ran out a month or more ago and the one second look has not
-    /// been spent: playback and AI are open again, and seven more free days
-    /// start at the next play of the person's own music.
+    /// The trial ran out a month or more ago, or had already run out when
+    /// Flaccy 2 first opened here, and the one second look has not been
+    /// spent: playback and AI are open again, and seven more free days start
+    /// at the next play of the person's own music.
     case secondLookReady
     case purchased(PurchasePlan)
 
@@ -67,7 +68,9 @@ typealias PurchaseAnchor = UIScene
 /// day it is, whether the banner is due, whether the welcome-back window is
 /// open — derives from the one stored start date through `TrialRunway`, so the
 /// clients never do their own arithmetic. A second look is a second add-only
-/// date beside it: once stamped, the runway counts from that date instead.
+/// date beside it: once stamped, the runway counts from that date instead. A
+/// third add-only date, the first launch of Flaccy 2 on the device, decides
+/// whether that look waits its month or is there at once.
 final class PurchaseManager {
 
     static let shared = PurchaseManager(store: FlaccyMidgar.shared.store)
@@ -88,6 +91,8 @@ final class PurchaseManager {
     private var trialStartIsUnreadable = false
     private var firstTrialStart = Date()
     private(set) var secondLookStart: Date?
+    private var editionTwoOpened: Date?
+    private var editionTwoOpenedIsSettled = false
     private var secondLookPlayIsWaiting = false
     private var secondLookStampFailed = false
     private(set) var hasLoadedEntitlements = false
@@ -231,6 +236,7 @@ final class PurchaseManager {
         #if DEBUG
         applyTrialDayOverride()
         #endif
+        noteEditionTwoOpenedIfNeeded()
         setState(trialState())
         FunnelSignals.shared.observeLibrary()
         listenForStoreEvents()
@@ -277,6 +283,34 @@ final class PurchaseManager {
             MidgarLog.notice("Second look start not readable from the Keychain yet (status \(status)); will retry", category: .purchases)
             return false
         }
+    }
+
+    /// Notes the first launch of Flaccy 2 on this device, add-only like every
+    /// trial date and kept where a reinstall cannot renew it. A trial that had
+    /// already run out by that date gets its second look at once
+    /// (`TrialRunway.secondLookOpens`); every other trial waits its month. A
+    /// Keychain that refuses the read is asked again at every later chance and
+    /// the month's wait applies until it answers; a date that cannot be
+    /// written is tried again at the next launch, not at every refresh. Under
+    /// `--trial-day` the date lives in memory only.
+    private func noteEditionTwoOpenedIfNeeded() {
+        guard !editionTwoOpenedIsSettled, !trialClockIsOverridden else { return }
+        switch dates.lookup(.editionTwoOpened) {
+        case .found(let opened):
+            editionTwoOpened = opened
+        case .absent:
+            dates.stampIfAbsent(now(), for: .editionTwoOpened)
+            editionTwoOpened = dates.date(for: .editionTwoOpened)
+            if editionTwoOpened == nil {
+                MidgarLog.error("Flaccy 2's first launch not noted: its date did not reach the Keychain", category: .purchases)
+            } else {
+                MidgarLog.info("Flaccy 2 opened on this device for the first time", category: .purchases)
+            }
+        case .unreadable(let status):
+            MidgarLog.notice("Flaccy 2's first launch not readable from the Keychain yet (status \(status)); will retry", category: .purchases)
+            return
+        }
+        editionTwoOpenedIsSettled = true
     }
 
     /// Starts the trial the first time the person's own music plays — not at
@@ -365,6 +399,7 @@ final class PurchaseManager {
     func refreshTrialPhase() {
         guard !state.isPurchased else { return }
         readTrialStartIfNeeded()
+        noteEditionTwoOpenedIfNeeded()
         setState(trialState())
     }
 
@@ -375,7 +410,10 @@ final class PurchaseManager {
     /// day 7 is the last trial day (banner due), day 9 opens the welcome-back
     /// window and day 38 a second look, which the next play of the person's own
     /// music then starts. `--second-look-day M` (1…20) puts the clock on day M
-    /// of a second look that has already started.
+    /// of a second look that has already started. The trial is taken to have
+    /// run on Flaccy 2 unless `--returning` is given too, which makes this the
+    /// first launch of Flaccy 2: a trial that has run out (day 8 onwards) then
+    /// finds its second look waiting at once.
     private func applyTrialDayOverride() {
         let trialDay = Self.launchDay(after: "--trial-day", in: 1...60)
         let secondLookDay = Self.launchDay(after: "--second-look-day", in: 1...20)
@@ -385,11 +423,12 @@ final class PurchaseManager {
         let day = trialDay ?? secondLookOpensOnDay + (secondLookDay ?? 1)
         firstTrialStart = now.addingTimeInterval(-TimeInterval(day - 1) * TrialRunway.day)
         secondLookStart = secondLookDay.map { now.addingTimeInterval(-TimeInterval($0 - 1) * TrialRunway.day) }
+        editionTwoOpened = CommandLine.arguments.contains("--returning") ? now : nil
         trialStart = TrialRunway.runwayStart(trialStart: firstTrialStart, secondLookStart: secondLookStart)
         trialHasStarted = true
         trialDayOverrideActive = true
         MidgarLog.info(
-            "Trial clock overridden: day \(day) (elapsed \(day - 1) d), second look day \(secondLookDay.map(String.init) ?? "none")",
+            "Trial clock overridden: day \(day) (elapsed \(day - 1) d), second look day \(secondLookDay.map(String.init) ?? "none"), Flaccy 2 first opened \(editionTwoOpened == nil ? "before the trial ended" : "now")",
             category: .purchases
         )
     }
@@ -648,6 +687,7 @@ final class PurchaseManager {
 
     private func apply(_ entitlements: [MidgarEntitlement]) {
         readTrialStartIfNeeded()
+        noteEditionTwoOpenedIfNeeded()
         if let pro = entitlements.first(where: { $0.name == FlaccyProducts.entitlement }), !purchaseIsSetAside {
             setState(.purchased(Self.plan(for: pro)))
         } else {
@@ -684,9 +724,10 @@ final class PurchaseManager {
     private func trialState() -> EntitlementState {
         guard trialHasStarted else { return .trialNotStarted }
         let now = now()
-        if TrialRunway.secondLook(trialStart: firstTrialStart, secondLookStart: secondLookStart, now: now) == .ready {
-            return .secondLookReady
-        }
+        let secondLook = TrialRunway.secondLook(
+            trialStart: firstTrialStart, secondLookStart: secondLookStart, editionTwoOpened: editionTwoOpened, now: now
+        )
+        if secondLook == .ready { return .secondLookReady }
         switch TrialRunway.phase(start: trialStart, now: now) {
         case .trial(let daysRemaining): return .trial(daysRemaining: daysRemaining)
         case .expired: return .expired
@@ -746,6 +787,7 @@ enum TrialClock {
         case trialStart
         case runwayPromptShown
         case secondLookStart
+        case editionTwoOpened
     }
 
     /// Absent and unreadable are different answers: before first unlock the
@@ -762,12 +804,20 @@ enum TrialClock {
     private static let service = "com.midgarcorp.flaccy.trial"
     #endif
 
-    static func lookup(_ account: Account) -> Lookup {
+    /// True under the DEBUG `--memory-audit` and `--skip-keychain` flags, when
+    /// a run must neither read the Keychain nor leave anything in it: an
+    /// unsigned Mac build is on no item's access list, and an item it wrote
+    /// would stop the real app on a system prompt.
+    private static var keychainIsSetAside: Bool {
         #if DEBUG
-        if CommandLine.arguments.contains("--memory-audit") || CommandLine.arguments.contains("--skip-keychain") {
-            return .absent
-        }
+        CommandLine.arguments.contains("--memory-audit") || CommandLine.arguments.contains("--skip-keychain")
+        #else
+        false
         #endif
+    }
+
+    static func lookup(_ account: Account) -> Lookup {
+        if keychainIsSetAside { return .absent }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -787,6 +837,7 @@ enum TrialClock {
     }
 
     static func stampIfAbsent(_ date: Date, for account: Account) {
+        if keychainIsSetAside { return }
         let data = Data(String(date.timeIntervalSinceReferenceDate).utf8)
         let attributes: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

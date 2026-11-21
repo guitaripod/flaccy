@@ -5,7 +5,8 @@ import XCTest
 
 /// Walks one install along the whole runway with the trial's dates held in
 /// memory and the clock moved by hand: the trial, its lapse, the second look
-/// that opens a month later, the play that starts it and everything after.
+/// that opens a month later, or at once for a trial that had run out before
+/// Flaccy 2 first opened, the play that starts it and everything after.
 /// The calendar itself is proven in `TrialRunwayTests`; this pins what
 /// `PurchaseManager` does with it, which is where a mistake costs money.
 nonisolated final class SecondLookTests: XCTestCase {
@@ -13,13 +14,19 @@ nonisolated final class SecondLookTests: XCTestCase {
     @MainActor private final class Dates: TrialDateStoring {
         var stored: [TrialClock.Account: Date] = [:]
         var refusesSecondLook = false
+        var refusesEditionTwo = false
+        var dropsEditionTwo = false
+        private(set) var stampsAsked: [TrialClock.Account: Int] = [:]
 
         func lookup(_ account: TrialClock.Account) -> TrialClock.Lookup {
             if refusesSecondLook, account == .secondLookStart { return .unreadable(errSecInteractionNotAllowed) }
+            if refusesEditionTwo, account == .editionTwoOpened { return .unreadable(errSecInteractionNotAllowed) }
             return stored[account].map(TrialClock.Lookup.found) ?? .absent
         }
 
         func stampIfAbsent(_ date: Date, for account: TrialClock.Account) {
+            stampsAsked[account, default: 0] += 1
+            if dropsEditionTwo, account == .editionTwoOpened { return }
             guard stored[account] == nil else { return }
             stored[account] = date
         }
@@ -33,9 +40,17 @@ nonisolated final class SecondLookTests: XCTestCase {
     private static let day = TrialRunway.day
     private static let trialStart = Date(timeIntervalSinceReferenceDate: 800_000_000)
 
-    @MainActor private func harness(daysAfterTrialStart days: Double, loaded: Bool = true) async -> (PurchaseManager, Dates, Clock) {
+    /// One install `days` into its runway. Flaccy 2 first opened on the day
+    /// the trial began unless `flaccyTwoOpenedOnDay` says otherwise; nil is a
+    /// device that has never run Flaccy 2, so this launch is the first.
+    @MainActor private func harness(
+        daysAfterTrialStart days: Double,
+        flaccyTwoOpenedOnDay openedOnDay: Double? = 0,
+        loaded: Bool = true
+    ) async -> (PurchaseManager, Dates, Clock) {
         let dates = Dates()
         dates.stored[.trialStart] = Self.trialStart
+        dates.stored[.editionTwoOpened] = openedOnDay.map { Self.trialStart.addingTimeInterval($0 * Self.day) }
         let clock = Clock(Self.trialStart.addingTimeInterval(days * Self.day))
         let manager = PurchaseManager(store: nil, dates: dates, now: { clock.now })
         if loaded {
@@ -175,6 +190,120 @@ nonisolated final class SecondLookTests: XCTestCase {
 
         XCTAssertEqual(manager.state, .expired)
         XCTAssertTrue(manager.isSecondLook)
+    }
+
+    @MainActor func testAReturnToFlaccyTwoAfterTheTrialEndedFindsTheSecondLookAtOnce() async {
+        for days in [7.0, 9, 20, 36.9] {
+            let (manager, dates, clock) = await harness(daysAfterTrialStart: days, flaccyTwoOpenedOnDay: nil)
+
+            XCTAssertEqual(manager.state, .secondLookReady, "day \(days)")
+            XCTAssertTrue(manager.allowsPlayback, "day \(days)")
+            XCTAssertEqual(manager.lapsedOfferState, .notYet, "day \(days)")
+            XCTAssertEqual(dates.stored[.editionTwoOpened], clock.now, "day \(days)")
+            XCTAssertNil(dates.stored[.secondLookStart], "day \(days)")
+
+            manager.noteOwnMusicPlaying(ownTrack)
+
+            XCTAssertEqual(dates.stored[.secondLookStart], clock.now, "day \(days)")
+            XCTAssertEqual(manager.state, .trial(daysRemaining: 7), "day \(days)")
+            XCTAssertEqual(manager.lapsedOfferState, .available(endsAt: clock.now.addingTimeInterval(15 * Self.day)), "day \(days)")
+        }
+    }
+
+    @MainActor func testTheReturnIsRememberedAndItsDateNeverMoves() async {
+        let (first, dates, clock) = await harness(daysAfterTrialStart: 9, flaccyTwoOpenedOnDay: nil)
+        XCTAssertEqual(first.state, .secondLookReady)
+        let returned = clock.now
+
+        clock.now = returned.addingTimeInterval(5 * Self.day)
+        let relaunched = PurchaseManager(store: nil, dates: dates, now: { clock.now })
+        await relaunched.refresh()
+
+        XCTAssertEqual(relaunched.state, .secondLookReady)
+        XCTAssertEqual(dates.stored[.editionTwoOpened], returned)
+        XCTAssertEqual(dates.stampsAsked[.editionTwoOpened], 1)
+    }
+
+    @MainActor func testATrialStillRunningWhenFlaccyTwoArrivesWaitsItsMonth() async {
+        let (manager, dates, clock) = await harness(daysAfterTrialStart: 3, flaccyTwoOpenedOnDay: nil)
+        XCTAssertEqual(manager.state, .trial(daysRemaining: 4))
+        XCTAssertEqual(dates.stored[.editionTwoOpened], clock.now)
+
+        clock.now = Self.trialStart.addingTimeInterval(9 * Self.day)
+        manager.refreshTrialPhase()
+        XCTAssertEqual(manager.state, .expired)
+        XCTAssertFalse(manager.allowsPlayback)
+
+        clock.now = Self.trialStart.addingTimeInterval(36.9 * Self.day)
+        manager.refreshTrialPhase()
+        XCTAssertEqual(manager.state, .expired)
+
+        clock.now = Self.trialStart.addingTimeInterval(37 * Self.day)
+        manager.refreshTrialPhase()
+        XCTAssertEqual(manager.state, .secondLookReady)
+    }
+
+    @MainActor func testANewInstallOfFlaccyTwoNotesItsFirstLaunchBeforeAnyTrialAndWaitsItsMonth() async {
+        let dates = Dates()
+        let clock = Clock(Self.trialStart.addingTimeInterval(-2 * Self.day))
+        let manager = PurchaseManager(store: nil, dates: dates, now: { clock.now })
+        await manager.refresh()
+        XCTAssertEqual(manager.state, .trialNotStarted)
+        XCTAssertEqual(dates.stored[.editionTwoOpened], clock.now)
+
+        dates.stored[.trialStart] = Self.trialStart
+        clock.now = Self.trialStart.addingTimeInterval(9 * Self.day)
+        let relaunched = PurchaseManager(store: nil, dates: dates, now: { clock.now })
+        await relaunched.refresh()
+
+        XCTAssertEqual(relaunched.state, .expired)
+        XCTAssertFalse(relaunched.allowsPlayback)
+    }
+
+    @MainActor func testASecondLookAlreadySpentDoesNotComeBackWithFlaccyTwo() async {
+        let dates = Dates()
+        dates.stored[.trialStart] = Self.trialStart
+        dates.stored[.secondLookStart] = Self.trialStart.addingTimeInterval(40 * Self.day)
+        let clock = Clock(Self.trialStart.addingTimeInterval(400 * Self.day))
+        let manager = PurchaseManager(store: nil, dates: dates, now: { clock.now })
+        await manager.refresh()
+
+        XCTAssertEqual(manager.state, .expired)
+        XCTAssertTrue(manager.isSecondLook)
+        XCTAssertFalse(manager.allowsPlayback)
+    }
+
+    @MainActor func testAFirstLaunchDateTheKeychainRefusesKeepsTheMonthUntilItAnswers() async {
+        let dates = Dates()
+        dates.stored[.trialStart] = Self.trialStart
+        dates.refusesEditionTwo = true
+        let clock = Clock(Self.trialStart.addingTimeInterval(9 * Self.day))
+        let manager = PurchaseManager(store: nil, dates: dates, now: { clock.now })
+        await manager.refresh()
+
+        XCTAssertEqual(manager.state, .expired)
+        XCTAssertNil(dates.stored[.editionTwoOpened])
+        XCTAssertNil(dates.stampsAsked[.editionTwoOpened])
+
+        dates.refusesEditionTwo = false
+        manager.refreshTrialPhase()
+
+        XCTAssertEqual(manager.state, .secondLookReady)
+        XCTAssertEqual(dates.stored[.editionTwoOpened], clock.now)
+    }
+
+    @MainActor func testAFirstLaunchDateThatCannotBeWrittenIsNotHammeredAtEveryRefresh() async {
+        let dates = Dates()
+        dates.stored[.trialStart] = Self.trialStart
+        dates.dropsEditionTwo = true
+        let clock = Clock(Self.trialStart.addingTimeInterval(9 * Self.day))
+        let manager = PurchaseManager(store: nil, dates: dates, now: { clock.now })
+        await manager.refresh()
+        manager.refreshTrialPhase()
+        manager.refreshTrialPhase()
+
+        XCTAssertEqual(manager.state, .expired)
+        XCTAssertEqual(dates.stampsAsked[.editionTwoOpened], 1)
     }
 
     @MainActor func testTheFirstTrialIsUntouchedByAllOfThis() async {

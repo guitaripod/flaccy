@@ -47,13 +47,15 @@ public enum TrialRunway {
     }
 
     /// The unclamped instant each reminder belongs to: start + 5 d, + 7 d, + 8 d
-    /// and, for the second look, + 37 d.
+    /// and, for the second look, + 37 d. That reminder keeps the month's wait
+    /// whatever opened the look early: a look opened by Flaccy 2 opened in
+    /// front of the person, who needs no notification to hear of it.
     public static func exactTime(of kind: Reminder.Kind, start: Date) -> Date {
         switch kind {
         case .twoDaysLeft: return start.addingTimeInterval(TimeInterval(twoDaysLeftReminderDay) * day)
         case .ended: return start.addingTimeInterval(TimeInterval(lengthDays) * day)
         case .welcomeBack: return lapsedOfferStart(start: start)
-        case .secondLook: return secondLookOpens(trialStart: start)
+        case .secondLook: return secondLookOpens(trialStart: start, editionTwoOpened: nil)
         }
     }
 
@@ -129,9 +131,11 @@ public enum TrialRunway {
     }
 
     /// Where a person stands with the one second look they ever get: seven
-    /// more free days for someone whose trial ran out a month or more ago.
+    /// more free days for someone whose trial ran out a month or more ago, or
+    /// had already run out when Flaccy 2 first opened on the device.
     public enum SecondLook: Equatable, Sendable {
-        /// The trial is still running, or ended less than thirty days ago.
+        /// The trial is still running, or ended less than thirty days ago on a
+        /// device that already had Flaccy 2.
         case notYet
         /// The free days are waiting and start at the next play of the person's own music.
         case ready
@@ -139,16 +143,29 @@ public enum TrialRunway {
         case started(Date)
     }
 
-    /// The instant a second look opens: thirty days after the trial ran out.
-    public static func secondLookOpens(trialStart: Date) -> Date {
-        trialStart.addingTimeInterval(TimeInterval(lengthDays + secondLookAfterExpiryDays) * day)
+    /// The instant a second look opens: thirty days after the trial ran out,
+    /// or the moment Flaccy 2 first opened on the device (`editionTwoOpened`,
+    /// nil while that is not known) for a trial that had already run out by
+    /// then. Everyone who left before 2.0 is therefore welcomed back with free
+    /// days the day they return, while a trial that runs out on Flaccy 2 still
+    /// waits its month, so no trial is ever simply fourteen days long.
+    public static func secondLookOpens(trialStart: Date, editionTwoOpened: Date?) -> Date {
+        let ranOut = trialStart.addingTimeInterval(TimeInterval(lengthDays) * day)
+        let afterTheWait = ranOut.addingTimeInterval(TimeInterval(secondLookAfterExpiryDays) * day)
+        guard let editionTwoOpened, ranOut <= editionTwoOpened else { return afterTheWait }
+        return min(afterTheWait, editionTwoOpened)
     }
 
     /// A stored start always wins, so a second look that has begun can never
     /// be offered again, whatever the clock says.
-    public static func secondLook(trialStart: Date, secondLookStart: Date?, now: Date) -> SecondLook {
+    public static func secondLook(
+        trialStart: Date,
+        secondLookStart: Date?,
+        editionTwoOpened: Date?,
+        now: Date
+    ) -> SecondLook {
         if let secondLookStart { return .started(secondLookStart) }
-        return now >= secondLookOpens(trialStart: trialStart) ? .ready : .notYet
+        return now >= secondLookOpens(trialStart: trialStart, editionTwoOpened: editionTwoOpened) ? .ready : .notYet
     }
 
     /// The date every day of the runway counts from: the second look's start

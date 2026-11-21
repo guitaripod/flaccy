@@ -39,7 +39,7 @@ nonisolated final class TrialReminderSchedulerTests: XCTestCase {
     }
 
     @MainActor func testTheSecondLookReminderOpensTheAppNotThePaywall() throws {
-        let fireAt = TrialRunway.deliveryTime(for: TrialRunway.secondLookOpens(trialStart: start), calendar: calendar)
+        let fireAt = TrialRunway.deliveryTime(for: TrialRunway.secondLookOpens(trialStart: start, editionTwoOpened: nil), calendar: calendar)
         let request = try XCTUnwrap(
             TrialReminderScheduler.requests(
                 for: [TrialRunway.Reminder(kind: .secondLook, fireAt: fireAt)], welcomeBackEnds: welcomeBackEnds

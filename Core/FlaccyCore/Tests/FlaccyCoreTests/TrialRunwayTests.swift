@@ -266,11 +266,62 @@ final class TrialRunwayTests: XCTestCase {
     }
 
     func testSecondLookOpensThirtyDaysAfterTheTrialRanOut() {
-        XCTAssertEqual(TrialRunway.secondLookOpens(trialStart: start), start.addingTimeInterval(37 * day))
+        XCTAssertEqual(TrialRunway.secondLookOpens(trialStart: start, editionTwoOpened: nil), start.addingTimeInterval(37 * day))
         XCTAssertEqual(TrialRunway.exactTime(of: .secondLook, start: start), start.addingTimeInterval(37 * day))
         XCTAssertEqual(
-            TrialRunway.phase(start: start, now: TrialRunway.secondLookOpens(trialStart: start)),
+            TrialRunway.phase(start: start, now: TrialRunway.secondLookOpens(trialStart: start, editionTwoOpened: nil)),
             .expired(daysSinceExpiry: TrialRunway.secondLookAfterExpiryDays)
+        )
+    }
+
+    func testFlaccyTwoOpensTheSecondLookAtOnceForATrialThatHadAlreadyRunOut() {
+        let table: [(opened: TimeInterval, opens: TimeInterval)] = [
+            (-400 * day, 37 * day),
+            (0, 37 * day),
+            (3 * day, 37 * day),
+            (7 * day - 1, 37 * day),
+            (7 * day, 7 * day),
+            (8 * day, 8 * day),
+            (20 * day, 20 * day),
+            (37 * day, 37 * day),
+            (400 * day, 37 * day),
+        ]
+        for row in table {
+            XCTAssertEqual(
+                TrialRunway.secondLookOpens(trialStart: start, editionTwoOpened: start.addingTimeInterval(row.opened)),
+                start.addingTimeInterval(row.opens),
+                "Flaccy 2 first opened \(row.opened / day) d after the trial began"
+            )
+        }
+    }
+
+    func testATrialThatRunsOutOnFlaccyTwoStillWaitsItsMonth() {
+        let opened = start.addingTimeInterval(2 * day)
+        for (elapsed, expected) in [(8.0, TrialRunway.SecondLook.notYet), (36.9, .notYet), (37, .ready)] {
+            XCTAssertEqual(
+                TrialRunway.secondLook(
+                    trialStart: start, secondLookStart: nil, editionTwoOpened: opened, now: start.addingTimeInterval(elapsed * day)
+                ),
+                expected,
+                "day \(elapsed)"
+            )
+        }
+    }
+
+    func testAReturnToFlaccyTwoIsReadyFromThatMomentAndSpentLikeAnyOther() {
+        let opened = start.addingTimeInterval(12 * day)
+        XCTAssertEqual(
+            TrialRunway.secondLook(trialStart: start, secondLookStart: nil, editionTwoOpened: opened, now: opened.addingTimeInterval(-1)),
+            .notYet
+        )
+        XCTAssertEqual(
+            TrialRunway.secondLook(trialStart: start, secondLookStart: nil, editionTwoOpened: opened, now: opened),
+            .ready
+        )
+        let began = opened.addingTimeInterval(day)
+        XCTAssertEqual(
+            TrialRunway.secondLook(trialStart: start, secondLookStart: began, editionTwoOpened: opened, now: began.addingTimeInterval(400 * day)),
+            .started(began)
         )
     }
 
@@ -287,7 +338,9 @@ final class TrialRunwayTests: XCTestCase {
         ]
         for row in table {
             XCTAssertEqual(
-                TrialRunway.secondLook(trialStart: start, secondLookStart: nil, now: start.addingTimeInterval(row.elapsed)),
+                TrialRunway.secondLook(
+                    trialStart: start, secondLookStart: nil, editionTwoOpened: nil, now: start.addingTimeInterval(row.elapsed)
+                ),
                 row.expected,
                 "elapsed \(row.elapsed / day) d"
             )
@@ -298,7 +351,10 @@ final class TrialRunwayTests: XCTestCase {
         let began = start.addingTimeInterval(50 * day)
         for elapsed in [0, 36, 37, 50, 57, 58, 65, 400, 4_000] {
             XCTAssertEqual(
-                TrialRunway.secondLook(trialStart: start, secondLookStart: began, now: start.addingTimeInterval(TimeInterval(elapsed) * day)),
+                TrialRunway.secondLook(
+                    trialStart: start, secondLookStart: began, editionTwoOpened: nil,
+                    now: start.addingTimeInterval(TimeInterval(elapsed) * day)
+                ),
                 .started(began),
                 "day \(elapsed)"
             )
@@ -307,7 +363,10 @@ final class TrialRunwayTests: XCTestCase {
 
     func testAClockWoundBackBeforeTheTrialNeverOpensASecondLook() {
         XCTAssertEqual(
-            TrialRunway.secondLook(trialStart: start, secondLookStart: nil, now: start.addingTimeInterval(-400 * day)),
+            TrialRunway.secondLook(
+                trialStart: start, secondLookStart: nil, editionTwoOpened: start.addingTimeInterval(-500 * day),
+                now: start.addingTimeInterval(-400 * day)
+            ),
             .notYet
         )
     }

@@ -1,6 +1,7 @@
 import XCTest
 
-/// The 2.0 showcase leads each person the right way on: an ended trial to the plans, a running one to the music.
+/// The 2.0 showcase leads each person the right way on: a trial that ended on Flaccy 2 to the plans, a running one
+/// and one that ended before Flaccy 2 (whose second look is waiting) to the music.
 /// The trial day is the debug clock's, so a device's real purchase state is never touched.
 final class ShowcaseUITests: XCTestCase {
 
@@ -45,9 +46,21 @@ final class ShowcaseUITests: XCTestCase {
         XCTAssertTrue(app.buttons[ID.purchase].waitForExistence(timeout: 15), "See Plans did not open the plans")
     }
 
-    @MainActor private func launch(trialDay: Int) -> XCUIApplication {
+    @MainActor func testATrialThatEndedBeforeFlaccyTwoListensFirstWithThePlansOneTapAway() throws {
+        let app = launch(trialDay: 9, returning: true)
+        let primary = app.buttons[ID.primary]
+        XCTAssertTrue(primary.waitForExistence(timeout: 20), "The showcase did not open")
+        XCTAssertTrue(waitUntilEnabled(primary), "The main button never became usable")
+        XCTAssertTrue(app.buttons[ID.secondary].exists, "A waiting second look has no way to the plans")
+        primary.tap()
+        XCTAssertTrue(waitUntilGone(primary), "Start Listening left the showcase open")
+        XCTAssertFalse(app.buttons[ID.purchase].exists, "A waiting second look was sent to the plans")
+    }
+
+    @MainActor private func launch(trialDay: Int, returning: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--show-showcase", "--trial-day", "\(trialDay)", "--unpaid"]
+        if returning { app.launchArguments.append("--returning") }
         #if targetEnvironment(simulator)
         app.launchArguments.append("--seed-screenshots")
         #endif
