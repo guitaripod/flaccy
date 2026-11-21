@@ -358,7 +358,7 @@ final class MacDeckRow: NSView {
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
         wantsLayer = true
-        layer?.cornerRadius = 11
+        layer?.themedCornerRadius = 11
         layer?.cornerCurve = .continuous
         accentBar.cornerRadius = 1.5
         accentBar.isHidden = true
@@ -542,7 +542,7 @@ final class MacDeckRow: NSView {
     }
 
     override func drawFocusRingMask() {
-        NSBezierPath(roundedRect: bounds, xRadius: 11, yRadius: 11).fill()
+        NSBezierPath(roundedRect: bounds, xRadius: ThemeShape.radius(11), yRadius: ThemeShape.radius(11)).fill()
     }
 
     override var focusRingMaskBounds: NSRect { bounds }

@@ -76,9 +76,9 @@ final class MacScrubberView: NSView {
     /// (invisible in the dark immersive player, wrong in light mode).
     private func applyTrackColors() {
         effectiveAppearance.performAsCurrentDrawingAppearance {
-            trackLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(0.28).cgColor
-            fillLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(0.9).cgColor
-            thumbLayer.backgroundColor = NSColor.labelColor.cgColor
+            trackLayer.backgroundColor = NSColor.flaccyLabel.withAlphaComponent(0.28).cgColor
+            fillLayer.backgroundColor = NSColor.flaccyLabel.withAlphaComponent(0.9).cgColor
+            thumbLayer.backgroundColor = NSColor.flaccyLabel.cgColor
         }
     }
 

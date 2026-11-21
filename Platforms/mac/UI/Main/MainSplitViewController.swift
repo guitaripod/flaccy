@@ -203,6 +203,7 @@ final class MainSplitViewController: NSSplitViewController {
         window.titlebarSeparatorStyle = titlebarSeparatorStyle
         window.toolbar = savedToolbar
         window.toolbar?.isVisible = toolbarWasVisible
+        MacTheme.shared.dress(window)
     }
 }
 

@@ -179,7 +179,7 @@ extension NowPlayingViewController {
 
     func configureArtwork() {
         artworkContainer.wantsLayer = true
-        artworkContainer.layer?.cornerRadius = 14
+        artworkContainer.shapeAsCover(radius: 14)
         artworkContainer.layer?.cornerCurve = .continuous
         artworkContainer.layer?.masksToBounds = true
         artworkContainer.layer?.addSublayer(artworkPlaceholder)

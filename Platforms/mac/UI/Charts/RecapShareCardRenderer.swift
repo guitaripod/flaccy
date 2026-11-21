@@ -129,7 +129,7 @@ enum RecapShareCardRenderer {
         let text = RecapPersona.title(for: persona) as NSString
         let textSize = text.size(withAttributes: attributes)
         let pillRect = CGRect(x: x, y: bottomY, width: textSize.width + 32, height: 34)
-        let path = NSBezierPath(roundedRect: pillRect, xRadius: 16, yRadius: 16)
+        let path = NSBezierPath(roundedRect: pillRect, xRadius: ThemeShape.radius(16), yRadius: ThemeShape.radius(16))
         NSColor.white.withAlphaComponent(0.18).setFill()
         path.fill()
         text.draw(

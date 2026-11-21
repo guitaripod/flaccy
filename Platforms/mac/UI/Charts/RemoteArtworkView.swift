@@ -15,7 +15,7 @@ final class RemoteArtworkView: NSView {
         super.init(frame: frameRect)
         artworkObserver = ArtworkChangeObserver { [weak self] in self?.reloadLocal() }
         wantsLayer = true
-        layer?.cornerRadius = 8
+        layer?.themedCornerRadius = 8
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
         layer?.addSublayer(placeholder)
@@ -33,7 +33,13 @@ final class RemoteArtworkView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     var cornerRadius: CGFloat = 8 {
-        didSet { layer?.cornerRadius = cornerRadius }
+        didSet { shapeAsCover(radius: cornerRadius) }
+    }
+
+    /// Whether the picture is a cover, which the worn theme shapes. An
+    /// artist's photo keeps the circle it was given.
+    var followsCoverShape = true {
+        didSet { macCoverShaper?.keepsOwnShape = !followsCoverShape }
     }
 
     override func layout() {

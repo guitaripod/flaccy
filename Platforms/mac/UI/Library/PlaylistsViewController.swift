@@ -364,7 +364,7 @@ final class PlaylistsViewController: NSViewController {
             systemSymbolName: "music.note.list", accessibilityDescription: nil
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 44, weight: .light)
-        icon.contentTintColor = .tertiaryLabelColor
+        icon.contentTintColor = .flaccyTertiaryLabel
         let title = NSTextField(labelWithString: String(localized: "No Playlists Yet"))
         title.font = .systemFont(ofSize: 20, weight: .semibold)
         let subtitle = NSTextField(labelWithString: String(localized: "Create one here, or right-click any song and choose Add to Playlist."))

@@ -51,7 +51,7 @@ final class MacStatusStripView: NSView {
         background.blendingMode = .withinWindow
         background.state = .active
         background.wantsLayer = true
-        background.layer?.cornerRadius = 12
+        background.layer?.themedCornerRadius = 12
         background.layer?.cornerCurve = .continuous
         addSubview(background)
 

@@ -22,6 +22,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.isReleasedWhenClosed = false
         self.init(window: window)
         window.delegate = self
+        MacTheme.shared.dress(window)
         window.center()
         window.setFrameAutosaveName("FlaccySettingsWindow")
     }
@@ -85,6 +86,7 @@ final class SettingsTabViewController: NSTabViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         addPane(GeneralSettingsPane(), title: String(localized: "General"), symbol: "gearshape.fill", tint: .systemGray)
+        addPane(AppearanceSettingsPane(), title: String(localized: "Appearance"), symbol: "paintbrush.fill", tint: .systemPurple)
         addPane(SoundSettingsPane(), title: String(localized: "Sound"), symbol: "waveform", tint: .systemPink)
         addPane(LastFMSettingsPane(), title: "Last.fm", symbol: "dot.radiowaves.left.and.right", tint: .systemRed)
         addPane(NotificationsSettingsPane(), title: String(localized: "Recap"), symbol: "bell.badge.fill", tint: .systemOrange)
@@ -185,6 +187,7 @@ final class SettingsSidebarView: NSVisualEffectView, NSSearchFieldDelegate {
         addSubview(searchField)
         addSubview(rowStack)
         addSubview(nothingLabel)
+        MacThemeFillView(.sidebar).install(behind: self)
         NSLayoutConstraint.activate([
             searchField.topAnchor.constraint(equalTo: topAnchor, constant: SettingsTabViewController.titlebarHeight),
             searchField.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
@@ -255,10 +258,22 @@ final class SettingsSidebarRow: NSControl {
     var isSelected = false {
         didSet {
             guard isSelected != oldValue else { return }
-            titleLabel.textColor = isSelected ? .alternateSelectedControlTextColor : .labelColor
+            applyTitleColor()
             needsDisplay = true
             setAccessibilityValue(isSelected)
         }
+    }
+
+    /// The selected page's name reads on the accent it lies on: the system's
+    /// white on the system's accent, the theme's own on a theme's.
+    private func applyTitleColor() {
+        let onAccent: NSColor = ThemePalettes.isPainting ? .flaccyOnAccent : .alternateSelectedControlTextColor
+        titleLabel.textColor = isSelected ? onAccent : .labelColor
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyTitleColor()
     }
 
     private let titleLabel: NSTextField
@@ -305,8 +320,8 @@ final class SettingsSidebarRow: NSControl {
 
     override func draw(_ dirtyRect: NSRect) {
         guard isSelected else { return }
-        NSColor.controlAccentColor.setFill()
-        NSBezierPath(roundedRect: bounds, xRadius: 7, yRadius: 7).fill()
+        NSColor.flaccyAccent.setFill()
+        NSBezierPath(roundedRect: bounds, xRadius: ThemeShape.radius(7), yRadius: ThemeShape.radius(7)).fill()
     }
 }
 
@@ -338,7 +353,7 @@ final class SettingsIconTile: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         tint.setFill()
-        NSBezierPath(roundedRect: bounds, xRadius: 6, yRadius: 6).fill()
+        NSBezierPath(roundedRect: bounds, xRadius: ThemeShape.radius(6), yRadius: ThemeShape.radius(6)).fill()
     }
 }
 
@@ -398,10 +413,10 @@ final class SettingsGroupBox: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        let plate = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 10, yRadius: 10)
-        NSColor.labelColor.withAlphaComponent(0.045).setFill()
+        let plate = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: ThemeShape.radius(10), yRadius: ThemeShape.radius(10))
+        NSColor.flaccyLabel.withAlphaComponent(0.045).setFill()
         plate.fill()
-        NSColor.separatorColor.setStroke()
+        NSColor.flaccySeparator.setStroke()
         plate.lineWidth = 0.5
         plate.stroke()
     }
@@ -523,12 +538,14 @@ class SettingsPane: NSViewController {
         return box
     }
 
-    func addRow(_ views: [NSView], spacing: CGFloat = 8) {
+    @discardableResult
+    func addRow(_ views: [NSView], spacing: CGFloat = 8) -> NSView {
         let row = NSStackView(views: views)
         row.orientation = .horizontal
         row.alignment = .centerY
         row.spacing = spacing
         formStack.addArrangedSubview(row)
+        return row
     }
 
     func addFullWidth(_ view: NSView) {

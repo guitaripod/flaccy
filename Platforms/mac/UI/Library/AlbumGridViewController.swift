@@ -1,11 +1,14 @@
 import AppKit
 import MidgarCore
 import Combine
+import FlaccyCore
 
-/// The album wall: a diffable NSCollectionView over the shared
-/// LibraryViewModel with its full sort/filter/search pipeline, a resizable
-/// cover zoom, type-select, context menus, and a Recently Played shelf when
-/// the default browse state is active.
+/// The Albums page: a diffable NSCollectionView over the shared
+/// LibraryViewModel with its full sort/filter/search pipeline, shown as a
+/// grid, a wall of bare covers, a list or a carousel (the worn theme's choice
+/// until the person switches it), with a resizable cover zoom, type-select,
+/// context menus, and a Recently Played shelf over the grid when the default
+/// browse state is active.
 final class AlbumGridViewController: NSViewController {
 
     var onOpenAlbum: ((Album) -> Void)?
@@ -14,9 +17,15 @@ final class AlbumGridViewController: NSViewController {
     private let scrollView = NSScrollView()
     private let collectionView = TypeSelectCollectionView()
     private let layout = NSCollectionViewFlowLayout()
+    private let carouselLayout = AlbumCarouselLayout()
     private let chipsBar = FilterChipsBar()
     private let sortPopUp = NSPopUpButton()
     private let zoomSlider = NSSlider()
+    private let viewSwitch = NSSegmentedControl()
+    private var zoomControls: [NSView] = []
+    private var shownView = WornTheme.look.albums
+    private var laidOutWidth: CGFloat = 0
+    private var settleTask: Task<Void, Never>?
     private let emptyStateView = LibraryEmptyStateView()
     private var dataSource: NSCollectionViewDiffableDataSource<Int, LibraryItem>?
     private var cancellables = Set<AnyCancellable>()
@@ -25,10 +34,29 @@ final class AlbumGridViewController: NSViewController {
     private static let zoomKey = "flaccy.mac.albumGridZoom"
     private static let zoomRange: ClosedRange<Double> = 140...260
 
+    private static let standardTileWidth = 184.0
+
+    /// Forgets the cover size the person set with the slider, so the worn
+    /// theme's own size shows again.
+    static func forgetZoom() {
+        UserDefaults.standard.removeObject(forKey: zoomKey)
+    }
+
+    /// Whether the person set a cover size of their own.
+    static var hasOwnZoom: Bool {
+        UserDefaults.standard.double(forKey: zoomKey) != 0
+    }
+
+    /// The cover size the worn theme asks for, on the Mac's scale: a theme
+    /// states it against the size Flaccy's own theme has.
+    private static var themedTileWidth: Double {
+        standardTileWidth * Double(WornTheme.look.coverSize) / Double(ThemePack.coverSizeDefault)
+    }
+
     private var tileWidth: CGFloat {
         get {
             let stored = UserDefaults.standard.double(forKey: Self.zoomKey)
-            let width = stored == 0 ? 184 : stored
+            let width = stored == 0 ? Self.themedTileWidth : stored
             return CGFloat(width.clamped(to: Self.zoomRange))
         }
         set {
@@ -50,6 +78,12 @@ final class AlbumGridViewController: NSViewController {
         collectionView.register(
             AlbumGridItem.self, forItemWithIdentifier: AlbumGridItem.identifier
         )
+        collectionView.register(
+            AlbumListItem.self, forItemWithIdentifier: AlbumListItem.identifier
+        )
+        collectionView.delegate = self
+        collectionView.onSidewaysWheel = { [weak self] in self?.settleCarouselSoon() }
+        collectionView.onStep = { [weak self] step in self?.stepCarousel(by: step) }
         collectionView.register(
             GridSectionHeaderView.self,
             forSupplementaryViewOfKind: NSCollectionView.elementKindSectionHeader,
@@ -105,7 +139,7 @@ final class AlbumGridViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         configureDataSource()
-        applyTileSize()
+        showAlbums(as: shownView)
         chipsBar.configure(filters: viewModel.availableFilters(), selected: viewModel.filter)
         selectSortItem(viewModel.albumSort)
 
@@ -131,6 +165,12 @@ final class AlbumGridViewController: NSViewController {
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(lovedDidChange), name: LovedTracksService.didChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(themeDidChange), name: WornTheme.didChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(scrollDidEnd), name: NSScrollView.didEndLiveScrollNotification, object: scrollView
         )
 
         if !LibrarySearchState.query.isEmpty {
@@ -173,12 +213,12 @@ final class AlbumGridViewController: NSViewController {
             systemSymbolName: "square.grid.3x3", accessibilityDescription: String(localized: "Smaller covers")
         ) ?? NSImage())
         zoomOut.symbolConfiguration = .init(pointSize: 10, weight: .medium)
-        zoomOut.contentTintColor = .secondaryLabelColor
+        zoomOut.contentTintColor = .flaccySecondaryLabel
         let zoomIn = NSImageView(image: NSImage(
             systemSymbolName: "square.grid.2x2", accessibilityDescription: String(localized: "Larger covers")
         ) ?? NSImage())
         zoomIn.symbolConfiguration = .init(pointSize: 13, weight: .medium)
-        zoomIn.contentTintColor = .secondaryLabelColor
+        zoomIn.contentTintColor = .flaccySecondaryLabel
 
         zoomSlider.minValue = Self.zoomRange.lowerBound
         zoomSlider.maxValue = Self.zoomRange.upperBound
@@ -188,8 +228,10 @@ final class AlbumGridViewController: NSViewController {
         zoomSlider.action = #selector(zoomChanged(_:))
         zoomSlider.toolTip = String(localized: "Cover size")
         zoomSlider.widthAnchor.constraint(equalToConstant: 110).isActive = true
+        zoomControls = [zoomOut, zoomSlider, zoomIn]
+        buildViewSwitch()
 
-        let bar = NSStackView(views: [chipsBar, sortLabel, sortPopUp, zoomOut, zoomSlider, zoomIn])
+        let bar = NSStackView(views: [chipsBar, viewSwitch, sortLabel, sortPopUp, zoomOut, zoomSlider, zoomIn])
         bar.orientation = .horizontal
         bar.spacing = 8
         bar.alignment = .centerY
@@ -203,10 +245,12 @@ final class AlbumGridViewController: NSViewController {
             collectionView: collectionView
         ) { [weak self] collectionView, indexPath, item in
             let cell = collectionView.makeItem(
-                withIdentifier: AlbumGridItem.identifier, for: indexPath
+                withIdentifier: self?.shownView == .list ? AlbumListItem.identifier : AlbumGridItem.identifier,
+                for: indexPath
             )
-            guard let self, let gridItem = cell as? AlbumGridItem,
+            guard let self, let gridItem = cell as? AlbumCollectionItem,
                   let album = Self.album(from: item) else { return cell }
+            (gridItem as? AlbumGridItem)?.isBare = self.shownView == .wall
             gridItem.configure(with: album, loved: self.viewModel.isLovedAlbum(album))
             gridItem.onDoubleClick = { [weak self] in self?.play(album) }
             gridItem.onOpen = { [weak self] in
@@ -250,7 +294,7 @@ final class AlbumGridViewController: NSViewController {
     private func apply(_ snapshot: LibraryViewModel.Snapshot, animated: Bool) {
         guard viewModel.currentSegment == .albums else { return }
         hasMultipleSections = snapshot.sectionIdentifiers.count > 1
-        layout.headerReferenceSize = hasMultipleSections ? NSSize(width: 0, height: 34) : .zero
+        layout.headerReferenceSize = hasMultipleSections && shownView == .grid ? NSSize(width: 0, height: 34) : .zero
         let swapsList = viewModel.snapshotIntent == .replaceList
         dataSource?.apply(
             snapshot,
@@ -292,7 +336,7 @@ final class AlbumGridViewController: NSViewController {
     }
 
     @objc private func lovedDidChange() {
-        for case let item as AlbumGridItem in collectionView.visibleItems() {
+        for case let item as AlbumCollectionItem in collectionView.visibleItems() {
             guard let indexPath = collectionView.indexPath(for: item),
                   let libraryItem = dataSource?.itemIdentifier(for: indexPath),
                   let album = Self.album(from: libraryItem) else { continue }
@@ -309,7 +353,7 @@ final class AlbumGridViewController: NSViewController {
     }
 
     private func setDropTarget(_ indexPath: IndexPath?, _ targeted: Bool) {
-        guard let indexPath, let item = collectionView.item(at: indexPath) as? AlbumGridItem else { return }
+        guard let indexPath, let item = collectionView.item(at: indexPath) as? AlbumCollectionItem else { return }
         item.setDropTargeted(targeted)
     }
 
@@ -321,9 +365,149 @@ final class AlbumGridViewController: NSViewController {
         applyTileSize()
     }
 
+    private static let viewSymbols: [(view: ThemePack.AlbumsView, symbol: String)] = [
+        (.grid, "square.grid.2x2"), (.wall, "square.grid.3x3.fill"), (.list, "list.bullet"),
+        (.carousel, "rectangle.split.3x1"),
+    ]
+
+    private func buildViewSwitch() {
+        viewSwitch.segmentCount = Self.viewSymbols.count
+        viewSwitch.trackingMode = .selectOne
+        viewSwitch.controlSize = .small
+        viewSwitch.segmentStyle = .automatic
+        for (index, entry) in Self.viewSymbols.enumerated() {
+            let name = ThemeCopy.name(of: entry.view)
+            viewSwitch.setImage(NSImage(systemSymbolName: entry.symbol, accessibilityDescription: name), forSegment: index)
+            viewSwitch.setToolTip(name, forSegment: index)
+            viewSwitch.setWidth(30, forSegment: index)
+        }
+        viewSwitch.target = self
+        viewSwitch.action = #selector(viewSwitched(_:))
+        viewSwitch.setAccessibilityLabel(ThemeCopy.albumsView)
+        viewSwitch.setAccessibilityIdentifier("albums.viewSwitch")
+    }
+
+    @objc private func viewSwitched(_ sender: NSSegmentedControl) {
+        guard Self.viewSymbols.indices.contains(sender.selectedSegment) else { return }
+        let view = Self.viewSymbols[sender.selectedSegment].view
+        MidgarLog.info("Albums shown as \(view.id)", category: .ui)
+        WornTheme.showAlbums(as: view)
+    }
+
+    /// The look changed: the theme may show Albums another way, at another
+    /// cover size.
+    @objc private func themeDidChange() {
+        let view = WornTheme.look.albums
+        guard view != shownView else {
+            applyTileSize()
+            zoomSlider.doubleValue = Double(tileWidth)
+            return
+        }
+        showAlbums(as: view)
+        viewModel.refilter()
+    }
+
+    /// Lays the page out as `view`: its layout, which controls it offers and
+    /// which kind of item shows an album.
+    private func showAlbums(as view: ThemePack.AlbumsView) {
+        shownView = view
+        let carousel = view == .carousel
+        viewSwitch.selectedSegment = Self.viewSymbols.firstIndex { $0.view == view } ?? 0
+        zoomControls.forEach { $0.isHidden = view == .list || carousel }
+        zoomSlider.doubleValue = Double(tileWidth)
+        scrollView.hasVerticalScroller = !carousel
+        collectionView.scrollsSideways = carousel
+        collectionView.allowsMultipleSelection = !carousel
+        collectionView.deselectAll(nil)
+        let wanted: NSCollectionViewLayout = carousel ? carouselLayout : layout
+        if collectionView.collectionViewLayout !== wanted { collectionView.collectionViewLayout = wanted }
+        applyTileSize()
+        collectionView.reloadData()
+        scrollView.contentView.setBoundsOrigin(NSPoint(x: 0, y: -scrollView.contentInsets.top))
+        scrollView.reflectScrolledClipView(scrollView.contentView)
+    }
+
     private func applyTileSize() {
-        layout.itemSize = NSSize(width: tileWidth, height: tileWidth + 46)
+        let width = scrollView.contentView.bounds.width
+        laidOutWidth = width
+        switch shownView {
+        case .grid:
+            layout.minimumInteritemSpacing = 20
+            layout.minimumLineSpacing = 24
+            layout.sectionInset = NSEdgeInsets(top: 16, left: 28, bottom: 24, right: 28)
+            layout.itemSize = NSSize(width: tileWidth, height: tileWidth + 46)
+        case .wall:
+            let columns = max(2, (width / tileWidth).rounded())
+            let side = max((width / columns) - 0.01, 1)
+            layout.minimumInteritemSpacing = 0
+            layout.minimumLineSpacing = 0
+            layout.sectionInset = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+            layout.itemSize = NSSize(width: side, height: side)
+        case .list:
+            layout.minimumInteritemSpacing = 0
+            layout.minimumLineSpacing = 2
+            layout.sectionInset = NSEdgeInsets(top: 8, left: 20, bottom: 24, right: 20)
+            layout.itemSize = NSSize(width: max(width - 40, 1), height: AlbumListItem.rowHeight)
+        case .carousel:
+            carouselLayout.invalidateLayout()
+            return
+        }
         layout.invalidateLayout()
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        guard abs(scrollView.contentView.bounds.width - laidOutWidth) > 0.5, shownView != .grid else { return }
+        applyTileSize()
+    }
+
+    /// The cover the carousel rests on, or is nearest to while it moves.
+    private var carouselPlace: Int {
+        Int(carouselLayout.position.rounded())
+    }
+
+    private func scrollCarousel(to index: Int, animated: Bool) {
+        let clip = scrollView.contentView
+        var origin = clip.bounds.origin
+        origin.x = carouselLayout.offset(restingAt: index)
+        guard abs(origin.x - clip.bounds.minX) > 0.5 else { return }
+        if animated, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.28
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                clip.animator().setBoundsOrigin(origin)
+            }
+        } else {
+            clip.setBoundsOrigin(origin)
+        }
+        scrollView.reflectScrolledClipView(clip)
+    }
+
+    /// Brings the carousel to rest on a cover once a scroll has stopped.
+    @objc private func scrollDidEnd() {
+        guard shownView == .carousel else { return }
+        scrollCarousel(to: carouselPlace, animated: true)
+    }
+
+    /// A mouse wheel moves the carousel in steps with no end of its own, so
+    /// it settles a moment after the last one.
+    private func settleCarouselSoon() {
+        settleTask?.cancel()
+        settleTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(160))
+            guard !Task.isCancelled else { return }
+            self?.scrollDidEnd()
+        }
+    }
+
+    private func stepCarousel(by step: Int) {
+        guard shownView == .carousel, let dataSource else { return }
+        let count = dataSource.snapshot().numberOfItems
+        let place = min(max(carouselPlace + step, 0), max(count - 1, 0))
+        let indexPath = IndexPath(item: place, section: 0)
+        collectionView.deselectAll(nil)
+        collectionView.selectItems(at: [indexPath], scrollPosition: [])
+        scrollCarousel(to: place, animated: true)
     }
 
     private func selectSortItem(_ sort: LibraryViewModel.AlbumSort) {
@@ -343,7 +527,12 @@ final class AlbumGridViewController: NSViewController {
                 if key.lowercased().hasPrefix(prefix.lowercased()) {
                     let indexPath = IndexPath(item: row, section: section)
                     collectionView.deselectItems(at: collectionView.selectionIndexPaths)
-                    collectionView.selectItems(at: [indexPath], scrollPosition: .top)
+                    if shownView == .carousel {
+                        collectionView.selectItems(at: [indexPath], scrollPosition: [])
+                        scrollCarousel(to: row, animated: true)
+                    } else {
+                        collectionView.selectItems(at: [indexPath], scrollPosition: .top)
+                    }
                     return
                 }
             }
@@ -352,8 +541,9 @@ final class AlbumGridViewController: NSViewController {
 
     override func keyDown(with event: NSEvent) {
         let isReturn = event.keyCode == 36 || event.keyCode == 76
+        let resting = shownView == .carousel ? IndexPath(item: carouselPlace, section: 0) : nil
         if isReturn,
-           let indexPath = collectionView.selectionIndexPaths.first,
+           let indexPath = collectionView.selectionIndexPaths.first ?? resting,
            let item = dataSource?.itemIdentifier(for: indexPath),
            let album = Self.album(from: item) {
             play(album)
@@ -405,12 +595,48 @@ final class AlbumGridViewController: NSViewController {
     }
 }
 
+extension AlbumGridViewController: NSCollectionViewDelegate {
+
+    /// A cover picked in the carousel comes to the middle.
+    func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
+        guard shownView == .carousel, let picked = indexPaths.first else { return }
+        scrollCarousel(to: picked.item, animated: true)
+    }
+}
+
 /// Collection view adding type-select and pinch-zoom hooks over the diffable
 /// grid; unhandled keys still bubble to the controller for Return-to-play.
 final class TypeSelectCollectionView: NSCollectionView {
 
     var onTypeAhead: ((String) -> Void)?
     var onMagnify: ((CGFloat) -> Void)?
+
+    /// Set while the view is a carousel: the wheel and the arrow keys move it
+    /// sideways.
+    var scrollsSideways = false
+    var onSidewaysWheel: (() -> Void)?
+    var onStep: ((Int) -> Void)?
+
+    private static let leftArrow: UInt16 = 123
+    private static let rightArrow: UInt16 = 124
+
+    /// Turns an up and down wheel into the carousel's sideways travel. A
+    /// trackpad swiping sideways already scrolls it and is left alone.
+    override func scrollWheel(with event: NSEvent) {
+        guard scrollsSideways, abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX),
+              let scroll = enclosingScrollView else {
+            super.scrollWheel(with: event)
+            return
+        }
+        let clip = scroll.contentView
+        let step = event.hasPreciseScrollingDeltas ? event.scrollingDeltaY : event.scrollingDeltaY * 16
+        let limit = max(frame.width - clip.bounds.width, 0)
+        var origin = clip.bounds.origin
+        origin.x = min(max(origin.x - step, 0), limit)
+        clip.setBoundsOrigin(origin)
+        scroll.reflectScrolledClipView(clip)
+        onSidewaysWheel?()
+    }
     var onPictureDrop: ((IndexPath, ArtworkInput) -> Void)?
     var onDropTargetChange: ((IndexPath?, IndexPath?) -> Void)?
 
@@ -425,6 +651,10 @@ final class TypeSelectCollectionView: NSCollectionView {
     }
 
     override func keyDown(with event: NSEvent) {
+        if scrollsSideways, event.keyCode == Self.leftArrow || event.keyCode == Self.rightArrow {
+            onStep?(event.keyCode == Self.leftArrow ? -1 : 1)
+            return
+        }
         if let characters = event.charactersIgnoringModifiers,
            !characters.isEmpty,
            event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
@@ -538,7 +768,7 @@ final class LibraryEmptyStateView: NSView {
         super.init(frame: frameRect)
 
         icon.symbolConfiguration = .init(pointSize: 46, weight: .light)
-        icon.contentTintColor = .tertiaryLabelColor
+        icon.contentTintColor = .flaccyTertiaryLabel
 
         title.font = .systemFont(ofSize: 22, weight: .semibold)
         subtitle.font = .systemFont(ofSize: 13)

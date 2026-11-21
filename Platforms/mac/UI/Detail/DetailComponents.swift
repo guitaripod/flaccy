@@ -15,7 +15,7 @@ enum MacDetailChip {
                 systemSymbolName: systemImage, accessibilityDescription: nil
             ) ?? NSImage())
             icon.symbolConfiguration = .init(pointSize: 10, weight: .semibold)
-            icon.contentTintColor = MacColors.primaryLabel
+            icon.contentTintColor = NSColor.flaccyLabel
             views.append(icon)
         }
         views.append(label)
@@ -61,7 +61,7 @@ final class DetailTrackRowView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.cornerRadius = 8
+        layer?.themedCornerRadius = 8
         layer?.cornerCurve = .continuous
 
         numberLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
@@ -70,7 +70,7 @@ final class DetailTrackRowView: NSView {
 
         playingIcon.image = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: String(localized: "Now playing"))
         playingIcon.symbolConfiguration = .init(pointSize: 10, weight: .semibold)
-        playingIcon.contentTintColor = MacColors.primaryLabel
+        playingIcon.contentTintColor = NSColor.flaccyLabel
         playingIcon.isHidden = true
 
         titleLabel.font = .systemFont(ofSize: 13)
@@ -232,11 +232,11 @@ final class DiscHeaderView: NSView {
             systemSymbolName: "opticaldisc", accessibilityDescription: nil
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 11, weight: .semibold)
-        icon.contentTintColor = .controlAccentColor
+        icon.contentTintColor = .flaccyAccent
 
         let name = NSTextField(labelWithString: label.uppercased())
         name.font = .systemFont(ofSize: 11, weight: .bold)
-        name.textColor = .controlAccentColor
+        name.textColor = .flaccyAccent
 
         let minutes = max(Int((duration / 60).rounded()), 1)
         let meta = NSTextField(labelWithString: count == 1
@@ -274,7 +274,7 @@ final class RoundedRowsView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.cornerRadius = 12
+        layer?.themedCornerRadius = 12
         layer?.cornerCurve = .continuous
         stack.orientation = .vertical
         stack.spacing = 0
@@ -387,6 +387,7 @@ private final class ArtistBubbleView: NSView {
     init(name: String) {
         super.init(frame: .zero)
 
+        tile.followsCoverShape = false
         tile.cornerRadius = 32
         tile.translatesAutoresizingMaskIntoConstraints = false
         tile.showPlaceholder(seed: name, shimmering: false)

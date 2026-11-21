@@ -64,7 +64,8 @@ final class AmbientBackdropView: NSView {
         CATransaction.setAnimationDuration(animated ? Self.crossfadeDuration : 0)
         CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
         if !animated { CATransaction.setDisableActions(true) }
-        layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        layer?.backgroundColor = NSColor.flaccyWindowBackground.cgColor
+        dressForTheme()
         gradientLayer.colors = fieldColors(from: currentPalette, dark: dark)
         scrimLayer.colors = scrimColors(dark: dark)
         if vivid {
@@ -78,6 +79,16 @@ final class AmbientBackdropView: NSView {
             glowLayer.locations = [0, 0.45, 1]
         }
         CATransaction.commit()
+    }
+
+    /// Under a theme the window is the theme's own color: the cover's field
+    /// of color and its veil go, and the glow rising from the transport bar
+    /// stays only where the theme asks for one.
+    private func dressForTheme() {
+        let painted = ThemePalettes.isPainting
+        gradientLayer.isHidden = painted
+        scrimLayer.isHidden = painted
+        glowLayer.isHidden = painted && !WornTheme.look.glow
     }
 
     override func layout() {

@@ -49,6 +49,7 @@ final class ArtistDetailViewController: NSViewController {
         let document = DetailDocumentView()
         document.translatesAutoresizingMaskIntoConstraints = false
 
+        photoTile.followsCoverShape = false
         photoTile.cornerRadius = 80
         photoTile.translatesAutoresizingMaskIntoConstraints = false
 

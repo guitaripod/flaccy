@@ -487,13 +487,13 @@ final class QueueTrackCellView: NSView {
         artworkObserver = ArtworkChangeObserver { [weak self] in self?.reloadArtwork() }
 
         card.wantsLayer = true
-        card.layer?.cornerRadius = 10
+        card.layer?.themedCornerRadius = 10
         card.layer?.cornerCurve = .continuous
         card.translatesAutoresizingMaskIntoConstraints = false
         addSubview(card)
 
         artworkContainer.wantsLayer = true
-        artworkContainer.layer?.cornerRadius = 6
+        artworkContainer.shapeAsCover(radius: 6)
         artworkContainer.layer?.masksToBounds = true
         artworkContainer.layer?.addSublayer(placeholder)
         artworkView.imageScaling = .scaleProportionallyUpOrDown
@@ -562,7 +562,7 @@ final class QueueTrackCellView: NSView {
         let isHistory = group == .history
         alphaValue = isHistory || track.isUnavailableOffline ? 0.45 : 1
         card.layer?.backgroundColor = isCurrent
-            ? NSColor.labelColor.withAlphaComponent(0.1).cgColor
+            ? NSColor.flaccyLabel.withAlphaComponent(0.1).cgColor
             : NSColor.clear.cgColor
         bars.isHidden = !isCurrent
         titleLabel.font = .systemFont(ofSize: 12, weight: isCurrent ? .semibold : .medium)

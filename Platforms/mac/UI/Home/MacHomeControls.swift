@@ -298,7 +298,7 @@ final class MacHomeLinkButton: MacHomeInteractiveView {
 
     private let label: NSTextField
 
-    init(title: String, size: CGFloat = 13, weight: NSFont.Weight = .semibold, color: NSColor = .controlAccentColor) {
+    init(title: String, size: CGFloat = 13, weight: NSFont.Weight = .semibold, color: NSColor = .flaccyAccent) {
         label = NSTextField(labelWithString: title)
         super.init(frame: .zero)
         label.font = .systemFont(ofSize: size, weight: weight)
@@ -385,7 +385,7 @@ final class MacHomeSegmentedBar: NSView {
             let clamped = min(max(fraction, 0), 1)
             guard clamped > 0 else { continue }
             let filled = NSRect(x: x, y: 0, width: max(width * clamped, Self.height), height: Self.height)
-            NSColor.labelColor.setFill()
+            NSColor.flaccyLabel.setFill()
             NSBezierPath(roundedRect: filled, xRadius: Self.height / 2, yRadius: Self.height / 2).fill()
         }
     }
@@ -420,8 +420,8 @@ final class MacHomeSparkView: NSView {
                 height: barHeight
             )
             let isToday = index == daily.count - 1
-            (isToday ? NSColor.controlAccentColor : MacColors.fill(0.28, light: 0.22)).setFill()
-            NSBezierPath(roundedRect: rect, xRadius: 2, yRadius: 2).fill()
+            (isToday ? NSColor.flaccyAccent : MacColors.fill(0.28, light: 0.22)).setFill()
+            NSBezierPath(roundedRect: rect, xRadius: ThemeShape.radius(2), yRadius: ThemeShape.radius(2)).fill()
         }
     }
 }

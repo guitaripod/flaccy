@@ -334,6 +334,7 @@ final class ArtistGridItem: NSCollectionViewItem {
 
     override func viewDidLayout() {
         super.viewDidLayout()
+        artworkTile.followsCoverShape = false
         artworkTile.cornerRadius = artworkTile.bounds.width / 2
     }
 
@@ -389,7 +390,7 @@ final class ArtistGridItem: NSCollectionViewItem {
     override var isSelected: Bool {
         didSet {
             artworkTile.layer?.borderWidth = isSelected ? 2.5 : 0
-            artworkTile.layer?.borderColor = NSColor.controlAccentColor.cgColor
+            artworkTile.layer?.borderColor = NSColor.flaccyAccent.cgColor
         }
     }
 

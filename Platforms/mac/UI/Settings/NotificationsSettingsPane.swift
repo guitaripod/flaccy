@@ -75,7 +75,7 @@ final class NotificationsSettingsPane: SettingsPane {
         deniedBanner.spacing = 10
         deniedBanner.wantsLayer = true
         deniedBanner.layer?.backgroundColor = NSColor.systemRed.withAlphaComponent(0.15).cgColor
-        deniedBanner.layer?.cornerRadius = 10
+        deniedBanner.layer?.themedCornerRadius = 10
         deniedBanner.edgeInsets = NSEdgeInsets(top: 10, left: 12, bottom: 10, right: 12)
         let icon = NSImageView(image: NSImage(
             systemSymbolName: "bell.slash.fill", accessibilityDescription: nil

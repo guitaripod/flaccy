@@ -173,7 +173,7 @@ final class WantlistViewController: NSViewController {
             systemSymbolName: "sparkles.rectangle.stack", accessibilityDescription: nil
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 40, weight: .light)
-        icon.contentTintColor = MacColors.tertiaryLabel
+        icon.contentTintColor = NSColor.flaccyTertiaryLabel
         let title = NSTextField(labelWithString: String(localized: "Nothing on the wantlist yet"))
         title.font = .systemFont(ofSize: 17, weight: .semibold)
         title.textColor = MacColors.primaryLabel
@@ -535,10 +535,10 @@ final class HoverActionButton: NSControl {
     init(symbolName: String, tooltip: String) {
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.cornerRadius = 12
+        layer?.themedCornerRadius = 12
         icon.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: tooltip)
         icon.symbolConfiguration = .init(pointSize: 13, weight: .medium)
-        icon.contentTintColor = MacColors.secondaryLabel
+        icon.contentTintColor = NSColor.flaccySecondaryLabel
         icon.translatesAutoresizingMaskIntoConstraints = false
         addSubview(icon)
         toolTip = tooltip
@@ -568,13 +568,13 @@ final class HoverActionButton: NSControl {
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = MacColors.fill(0.14).cgColor
         }
-        icon.contentTintColor = MacColors.primaryLabel
+        icon.contentTintColor = NSColor.flaccyLabel
     }
 
     override func mouseExited(with event: NSEvent) {
         isHovered = false
         layer?.backgroundColor = NSColor.clear.cgColor
-        icon.contentTintColor = MacColors.secondaryLabel
+        icon.contentTintColor = NSColor.flaccySecondaryLabel
     }
 
     override func mouseDown(with event: NSEvent) {

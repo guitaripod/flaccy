@@ -15,7 +15,7 @@ final class TrialStatusAccessoryController: NSTitlebarAccessoryViewController {
         layoutAttribute = .trailing
 
         pill.wantsLayer = true
-        pill.layer?.cornerRadius = 10
+        pill.layer?.themedCornerRadius = 10
         pill.layer?.cornerCurve = .continuous
         pill.translatesAutoresizingMaskIntoConstraints = false
 
@@ -77,7 +77,7 @@ final class TrialStatusAccessoryController: NSTitlebarAccessoryViewController {
     }
 
     private func applyTint(urgent: Bool) {
-        let tint: NSColor = urgent ? .systemOrange : .controlAccentColor
+        let tint: NSColor = urgent ? .systemOrange : .flaccyAccent
         pill.layer?.backgroundColor = tint.withAlphaComponent(urgent ? 0.22 : 0.14).cgColor
         label.textColor = urgent ? .systemOrange : .secondaryLabelColor
     }

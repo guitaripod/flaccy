@@ -110,7 +110,7 @@ final class OnboardingPanelView: NSView {
         notNowButton.action = #selector(notNow)
 
         scrim.wantsLayer = true
-        scrim.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.78).cgColor
+        scrim.layer?.backgroundColor = NSColor.flaccyWindowBackground.withAlphaComponent(0.78).cgColor
         scrim.alphaValue = 0
         scrim.isHidden = true
         scrim.translatesAutoresizingMaskIntoConstraints = false
@@ -336,7 +336,7 @@ final class OnboardingPanelView: NSView {
             systemSymbolName: "square.and.arrow.down.on.square", accessibilityDescription: nil
         ) ?? NSImage())
         hintIcon.symbolConfiguration = .init(pointSize: 12, weight: .medium)
-        hintIcon.contentTintColor = MacColors.tertiaryLabel
+        hintIcon.contentTintColor = NSColor.flaccyTertiaryLabel
         let hintLabel = NSTextField(labelWithString: String(localized: "Or drop audio files and folders anywhere in this window."))
         hintLabel.font = .systemFont(ofSize: 12)
         hintLabel.textColor = MacColors.tertiaryLabel
@@ -352,13 +352,13 @@ final class OnboardingPanelView: NSView {
         serverButton.bezelStyle = .accessoryBarAction
         serverButton.isBordered = false
         serverButton.font = .systemFont(ofSize: 12, weight: .medium)
-        serverButton.contentTintColor = .controlAccentColor
+        serverButton.contentTintColor = .flaccyAccent
         serverButton.setAccessibilityIdentifier("onboarding.connectServer")
 
         notNowButton.bezelStyle = .accessoryBarAction
         notNowButton.isBordered = false
         notNowButton.font = .systemFont(ofSize: 12)
-        notNowButton.contentTintColor = MacColors.secondaryLabel
+        notNowButton.contentTintColor = NSColor.flaccySecondaryLabel
         notNowButton.setAccessibilityIdentifier("onboarding.notNow")
 
         let content = NSStackView(

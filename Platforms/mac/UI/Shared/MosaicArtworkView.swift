@@ -32,7 +32,7 @@ final class MosaicArtworkView: NSView {
         super.init(frame: frameRect)
         artworkObserver = ArtworkChangeObserver { [weak self] in self?.artworkDidChange() }
         wantsLayer = true
-        layer?.cornerRadius = 8
+        shapeAsCover(radius: 8)
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
         layer?.backgroundColor = NSColor.quaternarySystemFill.cgColor
@@ -40,7 +40,7 @@ final class MosaicArtworkView: NSView {
         customLayer.masksToBounds = true
         customLayer.opacity = 0
         layer?.addSublayer(customLayer)
-        dropRing.borderColor = NSColor.controlAccentColor.cgColor
+        dropRing.borderColor = NSColor.flaccyAccent.cgColor
         dropRing.borderWidth = 3
         dropRing.cornerRadius = 8
         dropRing.cornerCurve = .continuous

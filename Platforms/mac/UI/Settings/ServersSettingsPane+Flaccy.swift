@@ -54,7 +54,7 @@ extension ServersSettingsPane {
         }
         close.image = MacSymbolImage.image("xmark.circle.fill")
         close.isBordered = false
-        close.contentTintColor = .tertiaryLabelColor
+        close.contentTintColor = .flaccyTertiaryLabel
         close.setAccessibilityLabel(String(localized: "Close"))
         close.setAccessibilityHelp(String(localized: "Hides this suggestion for good"))
         close.setAccessibilityIdentifier("settings.serversNudge.close")
@@ -66,7 +66,7 @@ extension ServersSettingsPane {
     func makeFlaccyRow(for server: RemoteServerRow, flaccy: FlaccyServerRowModel) -> NSView {
         let icon = NSImageView(image: NSImage(systemSymbolName: "server.rack", accessibilityDescription: nil) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 16, weight: .regular)
-        icon.contentTintColor = .secondaryLabelColor
+        icon.contentTintColor = .flaccySecondaryLabel
         icon.setContentHuggingPriority(.required, for: .horizontal)
 
         let name = NSTextField(labelWithString: server.name)
@@ -76,7 +76,7 @@ extension ServersSettingsPane {
         title.spacing = 8
         let status = NSTextField(wrappingLabelWithString: flaccy.statusLine)
         status.font = .systemFont(ofSize: 11)
-        status.textColor = flaccy.needsPro ? .controlAccentColor : .secondaryLabelColor
+        status.textColor = flaccy.needsPro ? .flaccyAccent : .secondaryLabelColor
         status.setAccessibilityIdentifier("settings.flaccyServer.status")
         let counts = [flaccy.songs, flaccy.deviceCount.map(FlaccyServerRowModel.devices)].compactMap { $0 }.joined(separator: " \u{00B7} ")
         let detail = NSTextField(wrappingLabelWithString: counts)
@@ -105,11 +105,11 @@ extension ServersSettingsPane {
     private func syncBadge(_ title: String) -> NSView {
         let label = NSTextField(labelWithString: title)
         label.font = .systemFont(ofSize: 10, weight: .semibold)
-        label.textColor = .controlAccentColor
+        label.textColor = .flaccyAccent
         let badge = NSView()
         badge.wantsLayer = true
-        badge.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.14).cgColor
-        badge.layer?.cornerRadius = 7
+        badge.layer?.backgroundColor = NSColor.flaccyAccent.withAlphaComponent(0.14).cgColor
+        badge.layer?.themedCornerRadius = 7
         label.translatesAutoresizingMaskIntoConstraints = false
         badge.addSubview(label)
         NSLayoutConstraint.activate([

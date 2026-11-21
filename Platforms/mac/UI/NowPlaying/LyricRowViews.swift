@@ -170,8 +170,8 @@ final class InterludeLineView: NSView, LyricRowView {
     private let beats: [NSView] = (0..<LyricsDocument.interludeBeats).map { _ in
         let beat = NSView()
         beat.wantsLayer = true
-        beat.layer?.cornerRadius = 4
-        beat.layer?.backgroundColor = NSColor.labelColor.cgColor
+        beat.layer?.themedCornerRadius = 4
+        beat.layer?.backgroundColor = NSColor.flaccyLabel.cgColor
         beat.alphaValue = InterludeLineView.unlitAlpha
         return beat
     }

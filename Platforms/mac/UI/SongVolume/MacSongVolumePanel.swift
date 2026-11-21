@@ -246,7 +246,7 @@ final class MacSongVolumePill: NSButton {
         bezelStyle = .push
         isBordered = false
         wantsLayer = true
-        layer?.cornerRadius = 9
+        layer?.themedCornerRadius = 9
         layer?.borderWidth = 1
         font = .monospacedDigitSystemFont(ofSize: 10.5, weight: .bold)
         target = self
@@ -276,7 +276,7 @@ final class MacSongVolumePill: NSButton {
         isHidden = level == 0
         attributedTitle = NSAttributedString(
             string: SongVolumeCopy.level(level),
-            attributes: [.font: font ?? .systemFont(ofSize: 10.5, weight: .bold), .foregroundColor: NSColor.controlAccentColor]
+            attributes: [.font: font ?? .systemFont(ofSize: 10.5, weight: .bold), .foregroundColor: NSColor.flaccyAccent]
         )
         toolTip = SongVolumeCopy.accessibilityLevel(level)
         setAccessibilityLabel(SongVolumeCopy.accessibilityLevel(level))
@@ -286,8 +286,8 @@ final class MacSongVolumePill: NSButton {
 
     private func applyColors() {
         effectiveAppearance.performAsCurrentDrawingAppearance {
-            layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.14).cgColor
-            layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.35).cgColor
+            layer?.backgroundColor = NSColor.flaccyAccent.withAlphaComponent(0.14).cgColor
+            layer?.borderColor = NSColor.flaccyAccent.withAlphaComponent(0.35).cgColor
         }
     }
 

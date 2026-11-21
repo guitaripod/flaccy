@@ -65,7 +65,7 @@ final class AlbumDetailViewController: NSViewController {
         titleLabel.maximumNumberOfLines = 2
 
         artistButton.isBordered = false
-        artistButton.contentTintColor = MacColors.primaryLabel
+        artistButton.contentTintColor = NSColor.flaccyLabel
         artistButton.font = .systemFont(ofSize: 16, weight: .medium)
         artistButton.target = self
         artistButton.action = #selector(artistClicked)

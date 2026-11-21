@@ -17,7 +17,7 @@ final class MacQualityBadgeView: NSView {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.borderWidth = 1
-        layer?.cornerRadius = 7
+        layer?.themedCornerRadius = 7
         layer?.cornerCurve = .continuous
         translatesAutoresizingMaskIntoConstraints = false
         label.translatesAutoresizingMaskIntoConstraints = false

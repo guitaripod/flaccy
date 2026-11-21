@@ -24,14 +24,14 @@ final class SyncTitlebarAccessoryController: NSTitlebarAccessoryViewController {
         layoutAttribute = .trailing
 
         pill.wantsLayer = true
-        pill.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.14).cgColor
-        pill.layer?.cornerRadius = 10
+        pill.layer?.backgroundColor = NSColor.flaccyAccent.withAlphaComponent(0.14).cgColor
+        pill.layer?.themedCornerRadius = 10
         pill.layer?.cornerCurve = .continuous
         pill.translatesAutoresizingMaskIntoConstraints = false
 
         icon.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         icon.symbolConfiguration = .init(pointSize: 10.5, weight: .semibold)
-        icon.contentTintColor = .controlAccentColor
+        icon.contentTintColor = .flaccyAccent
         icon.translatesAutoresizingMaskIntoConstraints = false
 
         label.font = .monospacedDigitSystemFont(ofSize: 10.5, weight: .semibold)

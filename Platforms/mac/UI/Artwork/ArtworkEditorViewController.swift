@@ -195,7 +195,7 @@ final class ArtworkEditorViewController: NSViewController {
         resetButton.bezelStyle = .rounded
         cancelButton.bezelStyle = .rounded
         saveButton.bezelStyle = .rounded
-        saveButton.bezelColor = .controlAccentColor
+        saveButton.bezelColor = .flaccyAccent
         saveButton.isEnabled = false
         saveButton.toolTip = String(localized: "Save (⌘↩)")
         cancelButton.toolTip = String(localized: "Cancel (Esc)")
@@ -894,9 +894,9 @@ final class ArtworkEditorRootView: NSView {
         super.init(frame: frameRect)
         registerForDraggedTypes(ArtworkInputReader.pasteboardTypes)
         highlight.wantsLayer = true
-        highlight.layer?.borderColor = NSColor.controlAccentColor.cgColor
+        highlight.layer?.borderColor = NSColor.flaccyAccent.cgColor
         highlight.layer?.borderWidth = 3
-        highlight.layer?.cornerRadius = 12
+        highlight.layer?.themedCornerRadius = 12
         highlight.layer?.cornerCurve = .continuous
         highlight.isHidden = true
         highlight.translatesAutoresizingMaskIntoConstraints = false

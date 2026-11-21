@@ -82,7 +82,7 @@ final class TransportBarViewController: NSViewController {
             systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: String(localized: "Volume")
         ) ?? NSImage())
         volumeIcon.symbolConfiguration = .init(pointSize: 11, weight: .medium)
-        volumeIcon.contentTintColor = .secondaryLabelColor
+        volumeIcon.contentTintColor = .flaccySecondaryLabel
 
         sleepCountdownLabel.font = .monospacedDigitSystemFont(ofSize: 10, weight: .semibold)
         sleepCountdownLabel.textColor = .secondaryLabelColor
@@ -95,6 +95,10 @@ final class TransportBarViewController: NSViewController {
         rightCluster.orientation = .horizontal
         rightCluster.spacing = 6
         rightCluster.alignment = .centerY
+
+        transportCluster.setHuggingPriority(.defaultHigh, for: .horizontal)
+        rightCluster.setHuggingPriority(.defaultHigh, for: .horizontal)
+        card.setHuggingPriority(.defaultLow, for: .horizontal)
 
         let bar = NSStackView(views: [transportCluster, card, rightCluster])
         bar.orientation = .horizontal
@@ -188,7 +192,7 @@ final class TransportBarViewController: NSViewController {
 
     private func configureArtwork() {
         artworkContainer.wantsLayer = true
-        artworkContainer.layer?.cornerRadius = 8
+        artworkContainer.shapeAsCover(radius: 8)
         artworkContainer.layer?.cornerCurve = .continuous
         artworkContainer.layer?.masksToBounds = true
         artworkContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -218,9 +222,9 @@ final class TransportBarViewController: NSViewController {
         badgeLabel.font = .systemFont(ofSize: 9, weight: .semibold)
         badgeLabel.textColor = .secondaryLabelColor
         badgeContainer.wantsLayer = true
-        badgeContainer.layer?.borderColor = NSColor.tertiaryLabelColor.cgColor
+        badgeContainer.layer?.borderColor = NSColor.flaccyTertiaryLabel.cgColor
         badgeContainer.layer?.borderWidth = 1
-        badgeContainer.layer?.cornerRadius = 6
+        badgeContainer.layer?.themedCornerRadius = 6
         badgeContainer.translatesAutoresizingMaskIntoConstraints = false
         badgeLabel.translatesAutoresizingMaskIntoConstraints = false
         badgeContainer.addSubview(badgeLabel)

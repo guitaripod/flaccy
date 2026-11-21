@@ -15,7 +15,7 @@ extension NowPlayingViewController {
         titleLabel.setContentCompressionResistancePriority(.required, for: .vertical)
 
         artistButton.font = .systemFont(ofSize: 15, weight: .medium)
-        artistButton.contentTintColor = MacColors.primaryLabel
+        artistButton.contentTintColor = NSColor.flaccyLabel
         artistButton.target = self
         artistButton.action = #selector(artistTapped)
         artistButton.setContentCompressionResistancePriority(.required, for: .vertical)

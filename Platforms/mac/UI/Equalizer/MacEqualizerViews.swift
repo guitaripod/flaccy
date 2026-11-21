@@ -23,7 +23,7 @@ final class MacBandCell: NSStackView, NSTextFieldDelegate {
         alignment = .centerX
         edgeInsets = NSEdgeInsets(top: 8, left: 2, bottom: 8, right: 2)
         wantsLayer = true
-        layer?.cornerRadius = 12
+        layer?.themedCornerRadius = 12
         layer?.cornerCurve = .continuous
 
         frequencyButton.isBordered = false
@@ -123,10 +123,10 @@ final class MacMeterBar: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.white.withAlphaComponent(0.1).setFill()
-        NSBezierPath(roundedRect: bounds, xRadius: 3, yRadius: 3).fill()
+        NSBezierPath(roundedRect: bounds, xRadius: ThemeShape.radius(3), yRadius: ThemeShape.radius(3)).fill()
         color.setFill()
         let height = bounds.height * fraction
-        NSBezierPath(roundedRect: NSRect(x: 0, y: bounds.height - height, width: bounds.width, height: height), xRadius: 3, yRadius: 3).fill()
+        NSBezierPath(roundedRect: NSRect(x: 0, y: bounds.height - height, width: bounds.width, height: height), xRadius: ThemeShape.radius(3), yRadius: ThemeShape.radius(3)).fill()
     }
 }
 

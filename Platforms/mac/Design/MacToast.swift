@@ -214,7 +214,7 @@ enum MacToast {
             action = #selector(pressed)
             isBordered = false
             font = .systemFont(ofSize: 13, weight: .bold)
-            contentTintColor = .labelColor
+            contentTintColor = .flaccyLabel
         }
 
         @objc private func pressed() {

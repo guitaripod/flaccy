@@ -178,7 +178,7 @@ final class MacHomePromoCard: MacHomeSurfaceView {
 
     private func checkRow(_ text: String) -> NSView {
         let icon = NSImageView(image: MacSymbolImage.configured("checkmark.circle.fill", pointSize: 13, weight: .semibold) ?? NSImage())
-        icon.contentTintColor = .controlAccentColor
+        icon.contentTintColor = .flaccyAccent
         icon.setContentHuggingPriority(.required, for: .horizontal)
         let line = label(text, size: 13, weight: .regular, color: .labelColor)
         line.maximumNumberOfLines = 2

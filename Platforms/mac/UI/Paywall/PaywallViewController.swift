@@ -102,7 +102,7 @@ final class PaywallViewController: NSViewController {
             target: self, action: #selector(closeTapped)
         )
         closeButton.isBordered = false
-        closeButton.contentTintColor = MacColors.tertiaryLabel
+        closeButton.contentTintColor = NSColor.flaccyTertiaryLabel
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(closeButton)
 
@@ -189,7 +189,7 @@ final class PaywallViewController: NSViewController {
         let tile = NSView()
         tile.wantsLayer = true
         tile.layer?.backgroundColor = Self.accent.withAlphaComponent(0.16).cgColor
-        tile.layer?.cornerRadius = 16
+        tile.layer?.themedCornerRadius = 16
         tile.layer?.cornerCurve = .continuous
         tile.translatesAutoresizingMaskIntoConstraints = false
         let symbol = NSImageView(image: NSImage(systemSymbolName: "waveform", accessibilityDescription: nil) ?? NSImage())
@@ -229,11 +229,11 @@ final class PaywallViewController: NSViewController {
 
         let privacy = NSButton(title: String(localized: "Privacy Policy"), target: self, action: #selector(openPrivacy))
         privacy.isBordered = false
-        privacy.contentTintColor = MacColors.tertiaryLabel
+        privacy.contentTintColor = NSColor.flaccyTertiaryLabel
         privacy.font = .systemFont(ofSize: 11)
         let terms = NSButton(title: String(localized: "Terms of Use"), target: self, action: #selector(openTerms))
         terms.isBordered = false
-        terms.contentTintColor = MacColors.tertiaryLabel
+        terms.contentTintColor = NSColor.flaccyTertiaryLabel
         terms.font = .systemFont(ofSize: 11)
         let legalRow = NSStackView(views: [privacy, terms])
         legalRow.orientation = .horizontal
@@ -282,7 +282,7 @@ final class PaywallViewController: NSViewController {
         purchaseSubline.textColor = MacColors.secondaryLabel
 
         restoreButton.isBordered = false
-        restoreButton.contentTintColor = MacColors.secondaryLabel
+        restoreButton.contentTintColor = NSColor.flaccySecondaryLabel
         restoreButton.font = .systemFont(ofSize: 12, weight: .medium)
         restoreButton.target = self
         restoreButton.action = #selector(restoreTapped)
@@ -355,7 +355,7 @@ final class PaywallViewController: NSViewController {
         let tile = NSView()
         tile.wantsLayer = true
         tile.layer?.backgroundColor = Self.accent.withAlphaComponent(0.14).cgColor
-        tile.layer?.cornerRadius = 9
+        tile.layer?.themedCornerRadius = 9
         tile.layer?.cornerCurve = .continuous
         tile.translatesAutoresizingMaskIntoConstraints = false
         let symbol = NSImageView(image: NSImage(systemSymbolName: feature.symbolName, accessibilityDescription: nil) ?? NSImage())
@@ -614,7 +614,7 @@ private final class MacPlanCard: NSControl {
         self.onSelect = onSelect
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.cornerRadius = 14
+        layer?.themedCornerRadius = 14
         layer?.cornerCurve = .continuous
         layer?.borderWidth = 1.5
         setAccessibilityRole(.radioButton)
@@ -633,7 +633,7 @@ private final class MacPlanCard: NSControl {
         badge.textColor = .black
         badge.wantsLayer = true
         badge.layer?.backgroundColor = Self.accent.cgColor
-        badge.layer?.cornerRadius = 6
+        badge.layer?.themedCornerRadius = 6
         badge.layer?.cornerCurve = .continuous
         badge.alignment = .center
         badge.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -703,7 +703,7 @@ private final class MacPlanCard: NSControl {
             systemSymbolName: isSelectedPlan ? "checkmark.circle.fill" : "circle",
             accessibilityDescription: nil
         )
-        radio.contentTintColor = isSelectedPlan ? Self.accent : MacColors.tertiaryLabel
+        radio.contentTintColor = isSelectedPlan ? Self.accent : NSColor.flaccyTertiaryLabel
         layer?.backgroundColor = (isSelectedPlan
             ? Self.accent.withAlphaComponent(0.14)
             : NSColor.white.withAlphaComponent(0.06)).cgColor

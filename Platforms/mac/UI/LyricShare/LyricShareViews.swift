@@ -117,7 +117,7 @@ final class LyricShareChipButton: NSButton {
         imageHugsTitle = true
         setButtonType(.momentaryChange)
         wantsLayer = true
-        layer?.cornerRadius = 10
+        layer?.themedCornerRadius = 10
         layer?.cornerCurve = .continuous
         layer?.borderWidth = 1.5
         applyColors()
@@ -157,13 +157,13 @@ final class LyricShareChipButton: NSButton {
                 .foregroundColor: ink,
                 .paragraphStyle: paragraph,
             ])
-        contentTintColor = isChosen ? .controlAccentColor : .secondaryLabelColor
+        contentTintColor = isChosen ? .flaccyAccent : .flaccySecondaryLabel
         effectiveAppearance.performAsCurrentDrawingAppearance {
             let filled = isChosen && showsChosenBackground
             layer?.backgroundColor = (filled
-                ? NSColor.controlAccentColor.withAlphaComponent(0.16)
-                : NSColor.labelColor.withAlphaComponent(showsChosenBackground ? 0.06 : 0)).cgColor
-            layer?.borderColor = (filled ? NSColor.controlAccentColor : NSColor.clear).cgColor
+                ? NSColor.flaccyAccent.withAlphaComponent(0.16)
+                : NSColor.flaccyLabel.withAlphaComponent(showsChosenBackground ? 0.06 : 0)).cgColor
+            layer?.borderColor = (filled ? NSColor.flaccyAccent : NSColor.clear).cgColor
         }
     }
 }
@@ -186,7 +186,7 @@ final class LyricShareLineRow: NSView {
         isPickable = pickable
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.cornerRadius = 8
+        layer?.themedCornerRadius = 8
         layer?.cornerCurve = .continuous
         label.stringValue = text
         label.font = .systemFont(ofSize: 14, weight: .semibold)
@@ -194,7 +194,7 @@ final class LyricShareLineRow: NSView {
         label.translatesAutoresizingMaskIntoConstraints = false
         label.setContentCompressionResistancePriority(NSLayoutConstraint.Priority(250), for: .horizontal)
         check.image = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: nil)
-        check.contentTintColor = .controlAccentColor
+        check.contentTintColor = .flaccyAccent
         check.translatesAutoresizingMaskIntoConstraints = false
         addSubview(label)
         addSubview(check)
@@ -252,7 +252,7 @@ final class LyricShareLineRow: NSView {
     private func applyState() {
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = (isChosen
-                ? NSColor.controlAccentColor.withAlphaComponent(0.18) : NSColor.clear).cgColor
+                ? NSColor.flaccyAccent.withAlphaComponent(0.18) : NSColor.clear).cgColor
         }
         label.textColor = isChosen ? .labelColor : (isPickable ? .secondaryLabelColor : .tertiaryLabelColor)
         check.isHidden = !isChosen

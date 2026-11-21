@@ -111,9 +111,9 @@ final class ArtworkEditOverlayView: NSView {
         registerForDraggedTypes(ArtworkInputReader.pasteboardTypes)
 
         dropRing.wantsLayer = true
-        dropRing.layer?.borderColor = NSColor.controlAccentColor.cgColor
+        dropRing.layer?.borderColor = NSColor.flaccyAccent.cgColor
         dropRing.layer?.borderWidth = 3
-        dropRing.layer?.cornerRadius = 14
+        dropRing.layer?.themedCornerRadius = 14
         dropRing.layer?.cornerCurve = .continuous
         dropRing.isHidden = true
         dropRing.translatesAutoresizingMaskIntoConstraints = false
@@ -127,7 +127,7 @@ final class ArtworkEditOverlayView: NSView {
         pencil.contentTintColor = MacColors.onArtwork()
         pencil.wantsLayer = true
         pencil.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.55).cgColor
-        pencil.layer?.cornerRadius = 15
+        pencil.layer?.themedCornerRadius = 15
         pencil.focusRingType = .exterior
         pencil.toolTip = label
         pencil.setAccessibilityLabel(label)

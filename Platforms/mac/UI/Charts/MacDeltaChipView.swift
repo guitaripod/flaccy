@@ -12,7 +12,7 @@ final class MacDeltaChipView: NSView {
         super.init(frame: .zero)
         let color = Self.color(for: delta, accent: accent)
         wantsLayer = true
-        layer?.cornerRadius = 8
+        layer?.themedCornerRadius = 8
         layer?.cornerCurve = .continuous
         layer?.backgroundColor = color.withAlphaComponent(0.22).cgColor
 

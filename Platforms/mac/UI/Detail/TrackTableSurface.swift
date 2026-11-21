@@ -338,7 +338,7 @@ final class TrackTableCell: NSTableCellView {
         heart.translatesAutoresizingMaskIntoConstraints = false
 
         bars.isHidden = true
-        bars.tint = .controlAccentColor
+        bars.tint = .flaccyAccent
         bars.translatesAutoresizingMaskIntoConstraints = false
 
         var constraints = [label.centerYAnchor.constraint(equalTo: centerYAnchor)]
@@ -428,7 +428,7 @@ final class TrackTableCell: NSTableCellView {
     private func applyColors() {
         let emphasized = backgroundStyle == .emphasized
         let dimmed = column != .title && column != .artist && column != .album
-        let playingInk: NSColor = emphasized ? .alternateSelectedControlTextColor : .controlAccentColor
+        let playingInk: NSColor = emphasized ? .alternateSelectedControlTextColor : .flaccyAccent
         label.textColor = isPlaying ? playingInk : (dimmed ? .secondaryLabelColor : .labelColor)
         bars.tint = playingInk
         heart.contentTintColor = emphasized ? .alternateSelectedControlTextColor : Self.loveInk

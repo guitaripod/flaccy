@@ -114,7 +114,7 @@ final class MacHomeCard: MacHomeInteractiveView {
         let scrim = NSView()
         scrim.wantsLayer = true
         scrim.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.35).cgColor
-        scrim.layer?.cornerRadius = cover.cornerRadius
+        scrim.shapeAsCover(radius: cover.cornerRadius)
         scrim.layer?.cornerCurve = .continuous
         scrim.translatesAutoresizingMaskIntoConstraints = false
         let icon = NSImageView(image: MacSymbolImage.configured(symbol, pointSize: 38, weight: .light) ?? NSImage())
@@ -165,7 +165,7 @@ final class MacHomePlaceholderCard: NSView {
         layer?.addSublayer(outline)
 
         let icon = NSImageView(image: MacSymbolImage.configured("sparkles", pointSize: 24, weight: .light) ?? NSImage())
-        icon.contentTintColor = .tertiaryLabelColor
+        icon.contentTintColor = .flaccyTertiaryLabel
         let label = NSTextField(wrappingLabelWithString: text)
         label.font = .systemFont(ofSize: 12, weight: .medium)
         label.textColor = .secondaryLabelColor

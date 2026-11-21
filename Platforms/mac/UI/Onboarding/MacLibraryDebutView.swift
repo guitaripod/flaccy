@@ -52,8 +52,8 @@ final class MacLibraryDebutView: NSView {
         headline.textColor = MacColors.primaryLabel
 
         chip.wantsLayer = true
-        chip.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.14).cgColor
-        chip.layer?.cornerRadius = 9
+        chip.layer?.backgroundColor = NSColor.flaccyAccent.withAlphaComponent(0.14).cgColor
+        chip.layer?.themedCornerRadius = 9
         chip.layer?.cornerCurve = .continuous
         chipLabel.font = .systemFont(ofSize: 10.5, weight: .semibold)
         chipLabel.textColor = MacColors.secondaryLabel
@@ -686,7 +686,7 @@ private final class HairlineProgressView: NSView {
         super.init(frame: frameRect)
         wantsLayer = true
         track.backgroundColor = MacColors.fill(0.12, light: 0.10).cgColor
-        fill.backgroundColor = NSColor.controlAccentColor.cgColor
+        fill.backgroundColor = NSColor.flaccyAccent.cgColor
         layer?.addSublayer(track)
         layer?.addSublayer(fill)
     }

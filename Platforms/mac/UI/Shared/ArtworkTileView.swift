@@ -10,15 +10,31 @@ final class ArtworkTileView: NSView {
     private let imageLayer = CALayer()
 
     var cornerRadius: CGFloat = 10 {
-        didSet { layer?.cornerRadius = cornerRadius }
+        didSet { shapeAsCover(radius: cornerRadius) }
+    }
+
+    /// Whether the tile shows a cover, which the worn theme shapes. An
+    /// artist's photo keeps the circle it was given.
+    var followsCoverShape = true {
+        didSet { macCoverShaper?.keepsOwnShape = !followsCoverShape }
+    }
+
+    /// A cover drawn bare, edge to edge, as in a wall of covers.
+    var isBare = false {
+        didSet { macCoverShaper?.isBare = isBare }
+    }
+
+    /// The radius the tile is drawn with, for a shadow that follows it.
+    var shownCornerRadius: CGFloat {
+        macCoverShaper?.shownRadius ?? cornerRadius
     }
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.cornerRadius = cornerRadius
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
+        shapeAsCover(radius: cornerRadius)
 
         gradientLayer.startPoint = CGPoint(x: 0, y: 1)
         gradientLayer.endPoint = CGPoint(x: 1, y: 0)

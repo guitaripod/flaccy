@@ -77,7 +77,7 @@ final class MacPlaylistSuggestionsView: NSView {
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
         button.isBordered = false
         button.bezelStyle = .regularSquare
-        button.contentTintColor = .controlAccentColor
+        button.contentTintColor = .flaccyAccent
         button.toolTip = label
         button.setAccessibilityLabel(label)
         button.widthAnchor.constraint(equalToConstant: 28).isActive = true
@@ -99,10 +99,10 @@ private final class MacSuggestionRow: NSView {
         super.init(frame: .zero)
         cover.imageScaling = .scaleProportionallyUpOrDown
         cover.wantsLayer = true
-        cover.layer?.cornerRadius = 4
+        cover.shapeAsCover(radius: 4)
         cover.layer?.masksToBounds = true
         cover.image = NSImage(systemSymbolName: "music.note", accessibilityDescription: nil)
-        cover.contentTintColor = MacColors.tertiaryLabel
+        cover.contentTintColor = NSColor.flaccyTertiaryLabel
         cover.translatesAutoresizingMaskIntoConstraints = false
 
         let title = NSTextField(labelWithString: track.title)
@@ -123,7 +123,7 @@ private final class MacSuggestionRow: NSView {
         add.image = NSImage(systemSymbolName: "plus.circle", accessibilityDescription: PlaylistCopy.addSuggestion(track.title))
         add.isBordered = false
         add.bezelStyle = .regularSquare
-        add.contentTintColor = .controlAccentColor
+        add.contentTintColor = .flaccyAccent
         add.toolTip = PlaylistCopy.addSuggestion(track.title)
         add.setAccessibilityLabel(PlaylistCopy.addSuggestion(track.title))
 

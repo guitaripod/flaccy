@@ -238,7 +238,7 @@ final class MacHomeBadge: NSView {
         label = NSTextField(labelWithString: text)
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.cornerRadius = 7
+        layer?.themedCornerRadius = 7
         layer?.cornerCurve = .continuous
         label.font = .systemFont(ofSize: 11, weight: .semibold)
         label.translatesAutoresizingMaskIntoConstraints = false

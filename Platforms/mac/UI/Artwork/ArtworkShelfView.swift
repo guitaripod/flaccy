@@ -30,7 +30,7 @@ final class ArtworkShelfTile: NSView {
         translatesAutoresizingMaskIntoConstraints = false
 
         imageHost.wantsLayer = true
-        imageHost.layer?.cornerRadius = 12
+        imageHost.shapeAsCover(radius: 12)
         imageHost.layer?.cornerCurve = .continuous
         imageHost.layer?.masksToBounds = true
         imageHost.layer?.backgroundColor = MacColors.onArtwork(0.1).cgColor

@@ -618,7 +618,7 @@ final class PlayingTitleCellView: NSTableCellView {
 
         speaker.image = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: String(localized: "Now playing"))
         speaker.symbolConfiguration = .init(pointSize: 9, weight: .semibold)
-        speaker.contentTintColor = .controlAccentColor
+        speaker.contentTintColor = .flaccyAccent
         speaker.translatesAutoresizingMaskIntoConstraints = false
 
         label.font = .systemFont(ofSize: 12)
@@ -685,7 +685,7 @@ final class PlayingTitleCellView: NSTableCellView {
 
     private func applyTint() {
         let emphasized = backgroundStyle == .emphasized
-        speaker.contentTintColor = emphasized ? .alternateSelectedControlTextColor : .controlAccentColor
+        speaker.contentTintColor = emphasized ? .alternateSelectedControlTextColor : .flaccyAccent
         label.textColor = emphasized ? .alternateSelectedControlTextColor : .labelColor
     }
 }

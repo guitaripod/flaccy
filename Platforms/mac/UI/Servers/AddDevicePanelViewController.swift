@@ -42,7 +42,7 @@ final class AddDevicePanelViewController: NSViewController {
 
         qrCard.wantsLayer = true
         qrCard.layer?.backgroundColor = NSColor.white.cgColor
-        qrCard.layer?.cornerRadius = 12
+        qrCard.layer?.themedCornerRadius = 12
         qrView.translatesAutoresizingMaskIntoConstraints = false
         qrView.setAccessibilityLabel(String(localized: "QR code that adds a device to this Mac's library"))
         qrView.setAccessibilityIdentifier("addDevice.qr")

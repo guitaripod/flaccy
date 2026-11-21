@@ -196,7 +196,7 @@ final class ListeningGuideViewController: NSViewController {
             let link = NSButton(title: sourceLabel, target: self, action: #selector(openSource(_:)))
             link.bezelStyle = .inline
             link.font = .systemFont(ofSize: 11, weight: .medium)
-            link.contentTintColor = MacColors.secondaryLabel
+            link.contentTintColor = NSColor.flaccySecondaryLabel
             objc_setAssociatedObject(link, &Self.sourceURLKey, sourceURL, .OBJC_ASSOCIATION_RETAIN)
             stack.addArrangedSubview(link)
         }

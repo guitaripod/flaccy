@@ -39,6 +39,7 @@ final class MainWindowController: NSWindowController {
         window.toolbar = toolbar
 
         contentViewController = RootContainerViewController()
+        MacTheme.shared.dress(window)
         sectionDidChange()
         if let size = Self.debugWindowSize() {
             window.setContentSize(size)
@@ -330,9 +331,9 @@ final class AudioDropView: NSView {
         registerForDraggedTypes([.fileURL])
 
         highlight.wantsLayer = true
-        highlight.layer?.borderColor = NSColor.controlAccentColor.cgColor
+        highlight.layer?.borderColor = NSColor.flaccyAccent.cgColor
         highlight.layer?.borderWidth = 3
-        highlight.layer?.cornerRadius = 14
+        highlight.layer?.themedCornerRadius = 14
         highlight.layer?.cornerCurve = .continuous
         highlight.isHidden = true
         highlight.translatesAutoresizingMaskIntoConstraints = false

@@ -246,7 +246,7 @@ extension MacLyricShareViewController {
             ink.setFill()
             NSBezierPath(ovalIn: NSRect(x: side / 2 - 5, y: side / 2 - 5, width: 10, height: 10)).fill()
             NSGraphicsContext.restoreGraphicsState()
-            let ring = selected ? NSColor.controlAccentColor : NSColor.separatorColor
+            let ring = selected ? NSColor.flaccyAccent : NSColor.separatorColor
             ring.setStroke()
             let outline = NSBezierPath(ovalIn: rect.insetBy(dx: selected ? 0 : 0.5, dy: selected ? 0 : 0.5))
             outline.lineWidth = selected ? 3 : 1

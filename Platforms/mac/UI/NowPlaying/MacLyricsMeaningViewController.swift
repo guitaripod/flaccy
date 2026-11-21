@@ -263,8 +263,8 @@ final class MacLyricsMeaningViewController: NSViewController {
     private func quote(_ line: String) -> NSView {
         let bar = NSView()
         bar.wantsLayer = true
-        bar.layer?.backgroundColor = NSColor.controlAccentColor.cgColor
-        bar.layer?.cornerRadius = 1.5
+        bar.layer?.backgroundColor = NSColor.flaccyAccent.cgColor
+        bar.layer?.themedCornerRadius = 1.5
         bar.translatesAutoresizingMaskIntoConstraints = false
         bar.widthAnchor.constraint(equalToConstant: 3).isActive = true
         let label = text(line, size: 15, weight: .semibold, color: .labelColor)

@@ -177,7 +177,7 @@ final class FlaccyServerDetailPanelViewController: NSViewController {
     private func proRow() -> NSView {
         let button = PanelButton(title: model.proRowTitle) { [weak self] in self?.openPaywall() }
         button.isBordered = false
-        button.contentTintColor = .controlAccentColor
+        button.contentTintColor = .flaccyAccent
         button.image = MacSymbolImage.image("chevron.right")
         button.imagePosition = .imageTrailing
         button.setAccessibilityHelp(String(localized: "Opens Flaccy Pro"))

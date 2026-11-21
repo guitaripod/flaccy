@@ -34,6 +34,7 @@ final class SidebarViewController: NSViewController {
         scrollView.drawsBackground = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
+        MacThemeFillView(.sidebar).install(behind: view)
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -180,6 +181,6 @@ final class SidebarRowCellView: NSTableCellView {
 
     /// White on the emphasized selection, the label colour otherwise.
     private func applyTint() {
-        icon.contentTintColor = backgroundStyle == .emphasized ? .alternateSelectedControlTextColor : .labelColor
+        icon.contentTintColor = backgroundStyle == .emphasized ? .alternateSelectedControlTextColor : .flaccyLabel
     }
 }

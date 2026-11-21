@@ -128,7 +128,7 @@ private final class MacPresetRow: NSView {
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
         wantsLayer = true
-        layer?.cornerRadius = 9
+        layer?.themedCornerRadius = 9
         layer?.backgroundColor = isCurrent ? accent.withAlphaComponent(0.16).cgColor : NSColor.clear.cgColor
 
         let thumb = MacCurveThumbnailView()
@@ -213,7 +213,7 @@ final class MacCurveThumbnailView: NSView {
         let rect = bounds.insetBy(dx: showsGrid ? 0 : 1, dy: showsGrid ? 8 : 2)
         if showsGrid {
             NSColor.white.withAlphaComponent(0.06).setFill()
-            NSBezierPath(roundedRect: bounds, xRadius: 12, yRadius: 12).fill()
+            NSBezierPath(roundedRect: bounds, xRadius: ThemeShape.radius(12), yRadius: ThemeShape.radius(12)).fill()
             NSColor.white.withAlphaComponent(0.16).setStroke()
             let zero = NSBezierPath()
             zero.move(to: NSPoint(x: 0, y: rect.midY))

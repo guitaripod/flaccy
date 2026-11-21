@@ -26,7 +26,7 @@ final class TransportButton: NSButton {
         self.target = target
         self.action = action
         wantsLayer = true
-        highlightLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(0.12).cgColor
+        highlightLayer.backgroundColor = NSColor.flaccyLabel.withAlphaComponent(0.12).cgColor
         highlightLayer.opacity = 0
         layer?.insertSublayer(highlightLayer, at: 0)
         setSymbol(symbolName, pointSize: pointSize)
@@ -99,11 +99,11 @@ final class TransportButton: NSButton {
 
     private func refreshTint() {
         if isActiveToggle {
-            contentTintColor = .controlAccentColor
+            contentTintColor = .flaccyAccent
         } else if isProminent {
-            contentTintColor = .labelColor
+            contentTintColor = .flaccyLabel
         } else {
-            contentTintColor = .secondaryLabelColor
+            contentTintColor = .flaccySecondaryLabel
         }
     }
 }

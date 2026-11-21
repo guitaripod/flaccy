@@ -54,10 +54,10 @@ final class MacHomeCustomizeViewController: NSViewController {
         scroll.drawsBackground = false
         scroll.borderType = .noBorder
         scroll.wantsLayer = true
-        scroll.layer?.cornerRadius = 12
+        scroll.layer?.themedCornerRadius = 12
         scroll.layer?.cornerCurve = .continuous
         scroll.layer?.borderWidth = 1
-        scroll.layer?.borderColor = NSColor.separatorColor.cgColor
+        scroll.layer?.borderColor = NSColor.flaccySeparator.cgColor
         scroll.translatesAutoresizingMaskIntoConstraints = false
 
         let footer = NSTextField(wrappingLabelWithString: HomeCopy.editFooter)
@@ -206,7 +206,7 @@ final class MacHomeCustomizeRow: NSView {
         text.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         let grip = NSImageView(image: MacSymbolImage.configured("line.3.horizontal", pointSize: 13, weight: .regular) ?? NSImage())
-        grip.contentTintColor = .tertiaryLabelColor
+        grip.contentTintColor = .flaccyTertiaryLabel
         grip.translatesAutoresizingMaskIntoConstraints = false
 
         let separator = NSBox()

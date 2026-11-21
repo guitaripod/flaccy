@@ -102,7 +102,7 @@ final class LyricsPanelViewController: NSViewController {
         view.addSubview(scrollView)
 
         stateIcon.symbolConfiguration = .init(pointSize: 28, weight: .light)
-        stateIcon.contentTintColor = .tertiaryLabelColor
+        stateIcon.contentTintColor = .flaccyTertiaryLabel
         stateTitle.font = .systemFont(ofSize: 15, weight: .semibold)
         stateTitle.textColor = .labelColor
         stateTitle.alignment = .center
@@ -127,7 +127,7 @@ final class LyricsPanelViewController: NSViewController {
         timingButton.image = NSImage(systemSymbolName: "clock", accessibilityDescription: String(localized: "Lyrics timing"))
         timingButton.imagePosition = .imageOnly
         timingButton.isBordered = false
-        timingButton.contentTintColor = .tertiaryLabelColor
+        timingButton.contentTintColor = .flaccyTertiaryLabel
         timingButton.toolTip = String(localized: "Lyrics timing")
         timingButton.isHidden = true
         timingButton.target = self
@@ -137,7 +137,7 @@ final class LyricsPanelViewController: NSViewController {
         timingNoteChip.imagePosition = .imageLeading
         timingNoteChip.bezelStyle = .accessoryBarAction
         timingNoteChip.controlSize = .small
-        timingNoteChip.contentTintColor = .secondaryLabelColor
+        timingNoteChip.contentTintColor = .flaccySecondaryLabel
         timingNoteChip.isHidden = true
         timingNoteChip.target = self
         timingNoteChip.action = #selector(toggleTimingNote(_:))
@@ -145,7 +145,7 @@ final class LyricsPanelViewController: NSViewController {
         shareButton.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: LyricShareCopy.sheetTitle)
         shareButton.imagePosition = .imageOnly
         shareButton.isBordered = false
-        shareButton.contentTintColor = .tertiaryLabelColor
+        shareButton.contentTintColor = .flaccyTertiaryLabel
         shareButton.toolTip = LyricShareCopy.sheetTitle
         shareButton.isHidden = true
         shareButton.target = self
@@ -154,7 +154,7 @@ final class LyricsPanelViewController: NSViewController {
         meaningButton.image = NSImage(systemSymbolName: "text.book.closed", accessibilityDescription: LyricsMeaningCopy.buttonTitle)
         meaningButton.imagePosition = .imageOnly
         meaningButton.isBordered = false
-        meaningButton.contentTintColor = .tertiaryLabelColor
+        meaningButton.contentTintColor = .flaccyTertiaryLabel
         meaningButton.toolTip = LyricsMeaningCopy.buttonTitle
         meaningButton.isHidden = true
         meaningButton.target = self

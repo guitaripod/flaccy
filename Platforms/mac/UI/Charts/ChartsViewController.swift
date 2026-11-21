@@ -217,14 +217,14 @@ final class ChartsViewController: NSViewController {
     private func buildSyncBanner() {
         syncBanner.wantsLayer = true
         syncBanner.layer?.backgroundColor = MacColors.fill(0.08).cgColor
-        syncBanner.layer?.cornerRadius = 14
+        syncBanner.layer?.themedCornerRadius = 14
         syncBanner.layer?.cornerCurve = .continuous
 
         let icon = NSImageView(image: NSImage(
             systemSymbolName: "square.and.arrow.down.on.square", accessibilityDescription: nil
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 16, weight: .medium)
-        icon.contentTintColor = MacColors.primaryLabel
+        icon.contentTintColor = NSColor.flaccyLabel
 
         syncLabel.font = .systemFont(ofSize: 12, weight: .medium)
         syncLabel.textColor = MacColors.primaryLabel
@@ -283,7 +283,7 @@ final class ChartsViewController: NSViewController {
             systemSymbolName: "chart.bar.xaxis", accessibilityDescription: nil
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 40, weight: .light)
-        icon.contentTintColor = MacColors.tertiaryLabel
+        icon.contentTintColor = NSColor.flaccyTertiaryLabel
         let title = NSTextField(labelWithString: String(localized: "No listening history yet"))
         title.font = .systemFont(ofSize: 18, weight: .semibold)
         title.textColor = MacColors.primaryLabel
@@ -642,6 +642,7 @@ final class ChartsViewController: NSViewController {
         artwork.widthAnchor.constraint(equalToConstant: 36).isActive = true
         artwork.heightAnchor.constraint(equalToConstant: 36).isActive = true
         artwork.cornerRadius = circular ? 18 : 6
+        artwork.followsCoverShape = !circular
         artwork.configure(
             localAlbum: localAlbum, localArtist: localArtist, remoteURL: remoteURL, placeholderSeed: seed
         )

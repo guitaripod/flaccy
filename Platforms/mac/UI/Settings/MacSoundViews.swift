@@ -33,7 +33,7 @@ final class MacSignalPathView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        layer?.cornerRadius = 10
+        layer?.themedCornerRadius = 10
         layer?.borderWidth = 1
         setAccessibilityIdentifier("settings.signalPath")
 
@@ -73,8 +73,8 @@ final class MacSignalPathView: NSView {
 
     override func updateLayer() {
         super.updateLayer()
-        layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-        layer?.borderColor = NSColor.separatorColor.cgColor
+        layer?.backgroundColor = NSColor.flaccyControlBackground.cgColor
+        layer?.borderColor = NSColor.flaccySeparator.cgColor
     }
 
     override var wantsUpdateLayer: Bool { true }
@@ -327,7 +327,7 @@ final class MacLibraryOverviewView: NSView {
         override func draw(_ dirtyRect: NSRect) {
             let clip = NSBezierPath(roundedRect: bounds, xRadius: bounds.height / 2, yRadius: bounds.height / 2)
             clip.addClip()
-            NSColor.quaternaryLabelColor.setFill()
+            NSColor.flaccyQuaternaryLabel.setFill()
             bounds.fill()
             var x: CGFloat = 0
             for segment in segments {

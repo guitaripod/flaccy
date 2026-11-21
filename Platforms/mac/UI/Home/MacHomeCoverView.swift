@@ -20,7 +20,12 @@ final class MacHomeCoverView: NSView {
     }
 
     var cornerRadius: CGFloat {
-        didSet { clip.cornerRadius = cornerRadius }
+        didSet { needsLayout = true }
+    }
+
+    /// The radius the worn theme gives a cover of this size.
+    private var shownCornerRadius: CGFloat {
+        ThemeShape.coverRadius(cornerRadius, side: min(bounds.width, bounds.height))
     }
 
     private let tier: Tier
@@ -38,7 +43,6 @@ final class MacHomeCoverView: NSView {
         wantsLayer = true
         layer?.masksToBounds = false
 
-        clip.cornerRadius = cornerRadius
         clip.cornerCurve = .continuous
         clip.masksToBounds = true
         layer?.addSublayer(clip)
@@ -64,10 +68,11 @@ final class MacHomeCoverView: NSView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         clip.frame = bounds
+        clip.cornerRadius = shownCornerRadius
         customLayer.frame = bounds
         layoutTiles()
         layer?.shadowPath = CGPath(
-            roundedRect: bounds, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil
+            roundedRect: bounds, cornerWidth: clip.cornerRadius, cornerHeight: clip.cornerRadius, transform: nil
         )
         CATransaction.commit()
     }
@@ -252,8 +257,11 @@ final class MacHomeBackdropView: NSView {
         restyle()
     }
 
+    /// The wash is the cover's glow over the page, which a theme may ask to
+    /// go without.
     private func restyle() {
-        imageLayer.opacity = effectiveAppearance.isDark ? 0.5 : 0.4
+        let washes = !ThemePalettes.isPainting || WornTheme.look.glow
+        imageLayer.opacity = washes ? (effectiveAppearance.isDark ? 0.5 : 0.4) : 0
     }
 
     func show(_ album: Album?) {

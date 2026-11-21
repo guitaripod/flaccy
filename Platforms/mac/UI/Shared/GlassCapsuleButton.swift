@@ -34,7 +34,7 @@ final class GlassCapsuleButton: NSControl {
         if let symbolName {
             iconView.image = MacSymbolImage.image(symbolName, accessibilityDescription: title)
             iconView.symbolConfiguration = .init(pointSize: 12, weight: .semibold)
-            iconView.contentTintColor = .labelColor
+            iconView.contentTintColor = .flaccyLabel
             views.append(iconView)
         }
         if !(iconOnly && symbolName != nil) {
@@ -54,7 +54,7 @@ final class GlassCapsuleButton: NSControl {
 
         highlightView.wantsLayer = true
         highlightView.layer?.backgroundColor = MacColors.fill(0.12).cgColor
-        highlightView.layer?.cornerRadius = 16
+        highlightView.layer?.themedCornerRadius = 16
         highlightView.layer?.cornerCurve = .continuous
         highlightView.alphaValue = 0
         highlightView.translatesAutoresizingMaskIntoConstraints = false

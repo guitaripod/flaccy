@@ -186,7 +186,7 @@ final class YearInMusicViewController: NSViewController {
             systemSymbolName: "calendar.badge.clock", accessibilityDescription: nil
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 40, weight: .light)
-        icon.contentTintColor = MacColors.tertiaryLabel
+        icon.contentTintColor = NSColor.flaccyTertiaryLabel
         let title = NSTextField(labelWithString: String(localized: "No listening history for this year"))
         title.font = .systemFont(ofSize: 17, weight: .semibold)
         title.textColor = MacColors.primaryLabel
@@ -430,7 +430,7 @@ final class ThemeSwatchButton: NSButton {
 
     private func applyBorderColor() {
         gradient.borderColor = isSelectedSwatch
-            ? MacColors.primaryLabel.cgColor
+            ? NSColor.flaccyLabel.cgColor
             : MacColors.fill(0.3).cgColor
     }
 

@@ -121,7 +121,7 @@ final class ServersSettingsPane: SettingsPane {
         if let flaccy = server.flaccy { return makeFlaccyRow(for: server, flaccy: flaccy) }
         let icon = NSImageView(image: NSImage(systemSymbolName: "server.rack", accessibilityDescription: nil) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 16, weight: .regular)
-        icon.contentTintColor = .secondaryLabelColor
+        icon.contentTintColor = .flaccySecondaryLabel
         icon.setContentHuggingPriority(.required, for: .horizontal)
 
         let name = NSTextField(labelWithString: server.name)

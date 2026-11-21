@@ -38,9 +38,11 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         ScreenshotSeeder.seedIfRequested()
         DebugLayoutFixtures.seedIfRequested()
         DebugHomeDrive.seedIfRequested()
+        DebugThemeDrive.prepareIfRequested()
         #endif
 
         NSApp.mainMenu = MainMenu.build()
+        MacTheme.shared.start()
         PurchaseManager.shared.start()
         EqualizerEngine.shared.start()
         #if DEBUG
@@ -90,6 +92,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         MacTrialRunwayPresenter.refresh(in: windowController.window)
         #if DEBUG
         DebugDrive.runIfRequested(window: windowController.window)
+        DebugThemeDrive.runIfRequested(window: windowController.window)
         runStageBDriveIfRequested()
         ReexportExercise.runIfRequested()
         HandoffExercise.runIfRequested(window: windowController.window)
@@ -216,6 +219,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func appDidBecomeActive() {
+        MacTheme.shared.reloadLibrary()
         RemoteLaunch.becameActive()
         LibraryRoot.shared.retryFallbackResolutionIfNeeded()
         Task { await FlaccyModelRegion.refresh() }
@@ -763,7 +767,7 @@ extension MacAppDelegate {
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = context
         view.effectiveAppearance.performAsCurrentDrawingAppearance {
-            NSColor.windowBackgroundColor.setFill()
+            NSColor.flaccyWindowBackground.setFill()
             view.bounds.fill()
         }
         NSGraphicsContext.restoreGraphicsState()

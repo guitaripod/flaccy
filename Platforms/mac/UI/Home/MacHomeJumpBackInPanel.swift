@@ -75,7 +75,7 @@ final class MacHomeJumpRow: MacHomeInteractiveView {
         more = MacHomeCircleButton(symbol: "ellipsis", label: HomeCopy.more, style: .plain, diameter: 26, pointSize: 13)
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.cornerRadius = 8
+        layer?.themedCornerRadius = 8
         layer?.cornerCurve = .continuous
 
         cover.translatesAutoresizingMaskIntoConstraints = false
@@ -88,7 +88,7 @@ final class MacHomeJumpRow: MacHomeInteractiveView {
 
         playOverlay.wantsLayer = true
         playOverlay.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.5).cgColor
-        playOverlay.layer?.cornerRadius = 6
+        playOverlay.layer?.themedCornerRadius = 6
         playOverlay.layer?.cornerCurve = .continuous
         playOverlay.alphaValue = 0
         playOverlay.translatesAutoresizingMaskIntoConstraints = false

@@ -10,8 +10,8 @@ final class LinkDropView: NSView {
         didSet {
             guard isTargeted != oldValue else { return }
             layer?.borderWidth = isTargeted ? 2 : 0
-            layer?.borderColor = NSColor.controlAccentColor.cgColor
-            layer?.cornerRadius = 10
+            layer?.borderColor = NSColor.flaccyAccent.cgColor
+            layer?.themedCornerRadius = 10
         }
     }
 

@@ -3,7 +3,7 @@ import AppKit
 /// One album tile: shimmering artwork (or the family-wide FNV-1a placeholder
 /// gradient), quality pill and loved-heart overlays, hover lift and press
 /// states, title/artist labels, double-click to play and a context menu.
-final class AlbumGridItem: NSCollectionViewItem {
+final class AlbumGridItem: NSCollectionViewItem, AlbumCollectionItem {
 
     static let identifier = NSUserInterfaceItemIdentifier("AlbumGridItem")
 
@@ -23,6 +23,53 @@ final class AlbumGridItem: NSCollectionViewItem {
     private var artworkObserver: ArtworkChangeObserver?
     private var isHovering = false
     private var isDropTargeted = false
+    private let labels = NSStackView()
+    private var cornerOverlays: [NSLayoutConstraint] = []
+    private var middleOverlays: [NSLayoutConstraint] = []
+
+    /// A cover drawn bare, edge to edge, as in a wall of covers: no title, no
+    /// badge, no shadow and no rounding.
+    var isBare = false {
+        didSet {
+            guard isBare != oldValue else { return }
+            applyBareness()
+        }
+    }
+
+    private static let restingShadow: Float = 0.22
+    private static let hoverShadow: Float = 0.38
+
+    /// The shadow under the cover: none in a wall or under a theme without
+    /// shadows.
+    private func shadowOpacity(hovering: Bool) -> Float {
+        guard !isBare, ThemeShape.shadows else { return 0 }
+        return hovering ? Self.hoverShadow : Self.restingShadow
+    }
+
+    private func applyBareness() {
+        labels.isHidden = isBare
+        artworkTile.isBare = isBare
+        badgeContainer.alphaValue = isBare ? 0 : 1
+        shadowWrap.layer?.shadowOpacity = shadowOpacity(hovering: isHovering)
+        placeOverlays()
+    }
+
+    /// Keeps the quality badge and the heart on the cover: in its bottom
+    /// corners, or in the middle of its bottom and top edges when the theme
+    /// draws covers round and there are no corners to sit in.
+    private func placeOverlays() {
+        let round = ThemeShape.covers == .circle && !isBare
+        NSLayoutConstraint.deactivate(round ? cornerOverlays : middleOverlays)
+        NSLayoutConstraint.activate(round ? middleOverlays : cornerOverlays)
+    }
+
+    /// Follows a theme that takes the shadows away or gives them back.
+    fileprivate func themeDidChange() {
+        shadowWrap.layer?.shadowOpacity = shadowOpacity(hovering: isHovering)
+        placeOverlays()
+        applyBorder()
+        updateShadowPath()
+    }
 
     override func viewWillLayout() {
         super.viewWillLayout()
@@ -35,7 +82,7 @@ final class AlbumGridItem: NSCollectionViewItem {
 
         shadowWrap.wantsLayer = true
         shadowWrap.layer?.shadowColor = NSColor.black.cgColor
-        shadowWrap.layer?.shadowOpacity = 0.22
+        shadowWrap.layer?.shadowOpacity = shadowOpacity(hovering: false)
         shadowWrap.layer?.shadowRadius = 6
         shadowWrap.layer?.shadowOffset = CGSize(width: 0, height: -3)
         shadowWrap.translatesAutoresizingMaskIntoConstraints = false
@@ -47,7 +94,7 @@ final class AlbumGridItem: NSCollectionViewItem {
         badgeLabel.textColor = MacColors.onArtwork()
         badgeContainer.wantsLayer = true
         badgeContainer.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.55).cgColor
-        badgeContainer.layer?.cornerRadius = 7
+        badgeContainer.layer?.themedCornerRadius = 7
         badgeContainer.layer?.cornerCurve = .continuous
         badgeContainer.translatesAutoresizingMaskIntoConstraints = false
         badgeLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -75,7 +122,8 @@ final class AlbumGridItem: NSCollectionViewItem {
         artistLabel.lineBreakMode = .byTruncatingTail
         artistLabel.maximumNumberOfLines = 1
 
-        let labels = NSStackView(views: [titleLabel, artistLabel])
+        labels.addArrangedSubview(titleLabel)
+        labels.addArrangedSubview(artistLabel)
         labels.orientation = .vertical
         labels.alignment = .leading
         labels.spacing = 1
@@ -95,20 +143,28 @@ final class AlbumGridItem: NSCollectionViewItem {
             artworkTile.trailingAnchor.constraint(equalTo: shadowWrap.trailingAnchor),
             artworkTile.bottomAnchor.constraint(equalTo: shadowWrap.bottomAnchor),
 
-            badgeContainer.leadingAnchor.constraint(equalTo: artworkTile.leadingAnchor, constant: 8),
             badgeContainer.bottomAnchor.constraint(equalTo: artworkTile.bottomAnchor, constant: -8),
             badgeLabel.leadingAnchor.constraint(equalTo: badgeContainer.leadingAnchor, constant: 6),
             badgeLabel.trailingAnchor.constraint(equalTo: badgeContainer.trailingAnchor, constant: -6),
             badgeLabel.topAnchor.constraint(equalTo: badgeContainer.topAnchor, constant: 3),
             badgeLabel.bottomAnchor.constraint(equalTo: badgeContainer.bottomAnchor, constant: -3),
 
-            lovedHeart.trailingAnchor.constraint(equalTo: artworkTile.trailingAnchor, constant: -8),
-            lovedHeart.bottomAnchor.constraint(equalTo: artworkTile.bottomAnchor, constant: -8),
 
             labels.topAnchor.constraint(equalTo: shadowWrap.bottomAnchor, constant: 8),
             labels.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
             labels.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
         ])
+        cornerOverlays = [
+            badgeContainer.leadingAnchor.constraint(equalTo: artworkTile.leadingAnchor, constant: 8),
+            lovedHeart.trailingAnchor.constraint(equalTo: artworkTile.trailingAnchor, constant: -8),
+            lovedHeart.bottomAnchor.constraint(equalTo: artworkTile.bottomAnchor, constant: -8),
+        ]
+        middleOverlays = [
+            badgeContainer.centerXAnchor.constraint(equalTo: artworkTile.centerXAnchor),
+            lovedHeart.centerXAnchor.constraint(equalTo: artworkTile.centerXAnchor),
+            lovedHeart.topAnchor.constraint(equalTo: artworkTile.topAnchor, constant: 10),
+        ]
+        placeOverlays()
     }
 
     func configure(with album: Album, loved: Bool) {
@@ -170,7 +226,7 @@ final class AlbumGridItem: NSCollectionViewItem {
 
     private func applyBorder() {
         artworkTile.layer?.borderWidth = isSelected || isDropTargeted ? 2.5 : 0
-        artworkTile.layer?.borderColor = NSColor.controlAccentColor.cgColor
+        artworkTile.layer?.borderColor = NSColor.flaccyAccent.cgColor
     }
 
     func setLoved(_ loved: Bool) {
@@ -200,12 +256,13 @@ final class AlbumGridItem: NSCollectionViewItem {
     fileprivate func handleHover(_ hovering: Bool) {
         isHovering = hovering
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        guard !isBare else { return }
         applyScale(hovering ? 1.03 : 1)
-        shadowWrap.layer?.shadowOpacity = hovering ? 0.38 : 0.22
+        shadowWrap.layer?.shadowOpacity = shadowOpacity(hovering: hovering)
     }
 
     fileprivate func handlePress(_ pressed: Bool) {
-        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        guard !isBare, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
         applyScale(pressed ? 0.97 : (isHovering ? 1.03 : 1))
     }
 
@@ -213,8 +270,8 @@ final class AlbumGridItem: NSCollectionViewItem {
         guard let layer = shadowWrap.layer, !shadowWrap.bounds.isEmpty else { return }
         layer.shadowPath = CGPath(
             roundedRect: shadowWrap.bounds,
-            cornerWidth: artworkTile.cornerRadius,
-            cornerHeight: artworkTile.cornerRadius,
+            cornerWidth: artworkTile.shownCornerRadius,
+            cornerHeight: artworkTile.shownCornerRadius,
             transform: nil
         )
     }
@@ -254,6 +311,11 @@ private final class AlbumGridItemView: NSView {
         owner?.updateShadowPath()
     }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        owner?.themeDidChange()
+    }
+
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
@@ -288,7 +350,7 @@ private final class AlbumGridItemView: NSView {
 }
 
 /// Label that opens its album on click, signalled with a pointing-hand cursor.
-private final class ClickableLabel: NSTextField {
+final class ClickableLabel: NSTextField {
 
     var onClick: (() -> Void)?
 

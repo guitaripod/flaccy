@@ -95,7 +95,7 @@ final class MacDebutSummaryCard: NSView {
         )
         secondary.bezelStyle = .accessoryBarAction
         secondary.isBordered = false
-        secondary.contentTintColor = MacColors.secondaryLabel
+        secondary.contentTintColor = NSColor.flaccySecondaryLabel
 
         let share = NSButton(
             title: String(localized: "Listen on Your iPhone…"), target: self, action: #selector(shareWithIPhone)
@@ -104,7 +104,7 @@ final class MacDebutSummaryCard: NSView {
         share.imagePosition = .imageLeading
         share.bezelStyle = .accessoryBarAction
         share.isBordered = false
-        share.contentTintColor = .controlAccentColor
+        share.contentTintColor = .flaccyAccent
         share.setAccessibilityIdentifier("debut.shareWithIPhone")
         share.isHidden = MacLibrarySharing.shared.isEnabled
 

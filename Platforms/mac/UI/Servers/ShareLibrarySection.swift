@@ -86,7 +86,7 @@ final class ShareLibrarySection {
         tailscale.bezelStyle = .rounded
         tailscale.setAccessibilityIdentifier("settings.shareLibrary.tailscale")
         proSync.isBordered = false
-        proSync.contentTintColor = .controlAccentColor
+        proSync.contentTintColor = .flaccyAccent
         proSync.setAccessibilityHelp(String(localized: "Opens Flaccy Pro"))
         proSync.setAccessibilityIdentifier("settings.shareLibrary.pro")
         buttons.orientation = .horizontal

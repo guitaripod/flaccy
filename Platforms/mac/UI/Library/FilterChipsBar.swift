@@ -165,7 +165,7 @@ private final class ChipButton: NSControl {
         self.chip = chip
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.cornerRadius = 13
+        layer?.themedCornerRadius = 13
         layer?.cornerCurve = .continuous
 
         iconView.symbolConfiguration = .init(pointSize: 10, weight: .semibold)
@@ -254,16 +254,16 @@ private final class ChipButton: NSControl {
     private func applyColors() {
         effectiveAppearance.performAsCurrentDrawingAppearance { [self] in
             if isChosen {
-                layer?.backgroundColor = NSColor.labelColor.cgColor
-                label.textColor = .windowBackgroundColor
-                iconView.contentTintColor = .windowBackgroundColor
-                chevron.contentTintColor = .windowBackgroundColor
+                layer?.backgroundColor = NSColor.flaccyLabel.cgColor
+                label.textColor = .flaccyWindowBackground
+                iconView.contentTintColor = .flaccyWindowBackground
+                chevron.contentTintColor = .flaccyWindowBackground
             } else {
                 let base = NSColor.labelColor.withAlphaComponent(isHovered ? 0.16 : 0.09)
                 layer?.backgroundColor = base.cgColor
                 label.textColor = .labelColor
-                iconView.contentTintColor = .secondaryLabelColor
-                chevron.contentTintColor = .secondaryLabelColor
+                iconView.contentTintColor = .flaccySecondaryLabel
+                chevron.contentTintColor = .flaccySecondaryLabel
             }
         }
     }

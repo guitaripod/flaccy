@@ -82,7 +82,7 @@ final class CapsuleButton: NSControl {
         wantsLayer = true
 
         background.wantsLayer = true
-        background.layer?.cornerRadius = 15
+        background.layer?.themedCornerRadius = 15
         background.layer?.cornerCurve = .continuous
         background.layer?.backgroundColor = MacColors.fill(0.1).cgColor
         background.translatesAutoresizingMaskIntoConstraints = false
@@ -90,7 +90,7 @@ final class CapsuleButton: NSControl {
 
         icon.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: title)
         icon.symbolConfiguration = .init(pointSize: 11, weight: .semibold)
-        icon.contentTintColor = .labelColor
+        icon.contentTintColor = .flaccyLabel
         label.stringValue = title
         label.font = .systemFont(ofSize: 11, weight: .semibold)
         label.textColor = .labelColor
