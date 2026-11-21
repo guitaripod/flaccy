@@ -129,6 +129,17 @@ public struct ThemeWardrobe: Equatable, Sendable, Codable {
         rememberWorn()
     }
 
+    /// Puts on the copy of the worn theme that was just made under this id,
+    /// worn the way the original is: the same colors, variant and view.
+    public mutating func wear(copyOfWorn id: String) {
+        let worn = remembered(wornPackID)
+        wear(pack: id)
+        scheme = worn.scheme
+        variant = worn.variant
+        albumsView = worn.view
+        rememberWorn()
+    }
+
     public mutating func wear(scheme id: String) {
         scheme = id
         rememberWorn()
@@ -158,6 +169,14 @@ public struct ThemeWardrobe: Equatable, Sendable, Codable {
         font = ""
         glow = ""
         rememberWorn()
+    }
+
+    /// The look `pack` would have if it were put on now: as it was last
+    /// worn, under the person's own choices. What a gallery draws a theme as.
+    public func look(wearing pack: ThemePack, in library: ThemeLibrary) -> ThemeLook {
+        var tried = self
+        tried.wear(pack: pack.id)
+        return tried.look(in: library)
     }
 
     /// The look this wardrobe resolves to in `library`.
