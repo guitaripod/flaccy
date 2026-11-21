@@ -62,13 +62,15 @@ enum ThemeHooks {
         return ThemedColor.replacing(color) ?? color
     }
 
-    /// Whether a label sits in the tab bar, whose items the system sizes for
-    /// its own face: a wider one there cuts "Library" short.
+    /// Whether a label sits where the system sizes things for its own face:
+    /// the tab bar, a navigation bar's buttons, a text field's placeholder.
+    /// A wider face there cut "Library" and "Edit" short and ran a search
+    /// field's prompt out of room, so those keep the system's.
     private static func keepsSystemFace(_ label: UILabel) -> Bool {
         var ancestor = label.superview
         var steps = 0
         while let view = ancestor, steps < 8 {
-            if view is UITabBar { return true }
+            if view is UITabBar || view is UINavigationBar || view is UITextField { return true }
             ancestor = view.superview
             steps += 1
         }
