@@ -1,5 +1,3 @@
-DRAFT: version not bumped yet; delete this line when 1.3.1 is cut (docs/server/RELEASING.md).
-
 # Flaccy Server 1.3.1
 
 New music on your server now reaches your other devices within minutes.
