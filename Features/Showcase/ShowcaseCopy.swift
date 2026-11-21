@@ -26,8 +26,6 @@ nonisolated enum ShowcaseCopy {
     static var everythingTitle: String { String(localized: "Everything Flaccy Can Do") }
     static var proceed: String { String(localized: "Start Listening") }
     static var back: String { String(localized: "Back") }
-    static var seePlans: String { String(localized: "See Plans") }
-    static var notNow: String { String(localized: "Not Now") }
 
     static var playlistDetail: String {
         String(localized: "Say what you want to hear and Flaccy builds it from the music you own.")
@@ -104,6 +102,12 @@ nonisolated enum ShowcaseCopy {
                 symbol: "square.stack.fill",
                 title: String(localized: "Organized for You"),
                 detail: String(localized: "Albums, artists and playlists with fast search, large artwork and duplicate songs listed once.")
+            ),
+            ShowcaseFeature(
+                id: "themes",
+                symbol: "paintpalette.fill",
+                title: String(localized: "Themes"),
+                detail: String(localized: "Six themes that change the colors, type and cover shapes, and four ways to see your albums: grid, wall, list or carousel.")
             ),
             ShowcaseFeature(
                 id: "makePlaylist",
