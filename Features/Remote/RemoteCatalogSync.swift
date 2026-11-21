@@ -19,6 +19,8 @@ actor RemoteCatalogSync {
     static let shared = RemoteCatalogSync()
 
     static let staleAfter: TimeInterval = 6 * 3_600
+    static let changeProbeGap: TimeInterval = 30
+    private static let markersKey = "remoteCatalogMarkers"
     static let pageSize = 500
     static let albumParallelism = 4
     static let coverSize = 600
@@ -36,6 +38,40 @@ actor RemoteCatalogSync {
             _ = try? await sync(serverID: server.id)
         }
         await RemoteServerReports.flushPendingStars()
+    }
+
+    /// Asks each shown server with one `getScanStatus` whether its library changed since its last sync, and syncs
+    /// those that say so, so music added on a server appears when the app comes to the front instead of at the
+    /// six-hourly sync. Asks again only after `changeProbeGap`; a server that does not answer is left alone.
+    func syncChangedServers(now: Date = Date()) async {
+        if let lastProbe, now.timeIntervalSince(lastProbe) < Self.changeProbeGap { return }
+        lastProbe = now
+        let servers = (try? await RemoteServers.shared.list()) ?? []
+        for server in servers where RemoteLibraryVisibility.isShown(serverID: server.id) && running[server.id] == nil {
+            guard let client = try? await RemoteServers.shared.client(for: server.id),
+                  let status = try? await client.scanStatus() else { continue }
+            let current = RemoteCatalogMarker(status: status)
+            guard RemoteCatalogMarker.changed(remembered: Self.marker(serverID: server.id), current: current) else { continue }
+            RemoteLog.info("Library on \(client.host) changed since the last sync; syncing")
+            _ = try? await sync(serverID: server.id)
+        }
+    }
+
+    private var lastProbe: Date?
+
+    nonisolated private static func marker(serverID: String) -> RemoteCatalogMarker? {
+        (UserDefaults.standard.dictionary(forKey: markersKey)?[serverID] as? String).flatMap(RemoteCatalogMarker.init(encoded:))
+    }
+
+    nonisolated private static func remember(_ marker: RemoteCatalogMarker?, serverID: String) {
+        var all = UserDefaults.standard.dictionary(forKey: markersKey) ?? [:]
+        all[serverID] = marker?.encoded
+        UserDefaults.standard.set(all, forKey: markersKey)
+    }
+
+    /// Drops what the last sync of a removed server remembered about its library.
+    nonisolated static func forgetMarker(serverID: String) {
+        remember(nil, serverID: serverID)
     }
 
     static func isStale(_ lastSyncedAt: Date?, now: Date) -> Bool {
@@ -122,6 +158,7 @@ actor RemoteCatalogSync {
             listed[serverID] = nil
             shownEarly[serverID] = nil
         }
+        let marker = (try? await client.scanStatus()).map(RemoteCatalogMarker.init(status:))
         let songs = try await fetchAllSongs(client, serverID: serverID, now: started)
         try Task.checkCancellation()
         let server = songs.map(Self.item(from:))
@@ -149,6 +186,7 @@ actor RemoteCatalogSync {
         RemoteAvailability.shared.forget(paths: removedSongs.map(\.path))
         await RemoteStreamCache.shared.replaceFilesOfNewVersions(dropped)
         try database.markRemoteServerSynced(id: serverID, at: Date())
+        Self.remember(marker, serverID: serverID)
         let coversAdded = await fetchMissingCovers(client: client, songs: songs.map(Self.facts(from:)))
         await publishLibraryChange(covers: coversAdded)
         if !diff.newVersions.isEmpty {

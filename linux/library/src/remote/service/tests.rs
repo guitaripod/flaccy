@@ -314,3 +314,24 @@ fn a_server_that_refuses_the_key_is_unreachable_and_asked_again_only_now_and_the
     rig.remote.ping_all(REFUSED_PING_EVERY);
     assert!(!rig.remote.manager().is_reachable(&id));
 }
+
+#[test]
+fn the_change_probe_names_a_server_only_after_songs_arrive_there() {
+    let rig = rig("change-probe");
+    seed_songs(&rig, 2);
+    let id = add_fixture_server(&rig);
+    assert_eq!(rig.remote.changed_servers().len(), 1, "a server never synced in this run counts as changed");
+
+    rig.remote.sync(&id, &|_| {}).unwrap();
+    assert!(rig.remote.changed_servers().is_empty(), "nothing moved since the sync");
+
+    rig.fixture.put("song-new", song_bytes(1_300_000, 9));
+    rig.fixture.add_child(child_json("song-new", "Arrived Later", "Album", 3, 1_300_000));
+    let changed = rig.remote.changed_servers();
+    assert_eq!(changed.iter().map(|server| server.id.as_str()).collect::<Vec<_>>(), vec![id.as_str()]);
+
+    assert_eq!(rig.remote.sync(&id, &|_| {}).unwrap().applied.inserted, 1);
+    assert!(rig.remote.changed_servers().is_empty());
+    rig.fixture.go_offline();
+    assert!(rig.remote.changed_servers().is_empty(), "a server that does not answer is left to the periodic sync");
+}

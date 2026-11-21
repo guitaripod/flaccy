@@ -222,6 +222,7 @@ actor RemoteServers {
         credentialStore.removeSecret(for: id)
         clients[id] = nil
         RemoteSyncStatus.shared.forget(serverID: id)
+        RemoteCatalogSync.forgetMarker(serverID: id)
         RemoteSongDirectory.shared.invalidate(paths: paths)
         RemoteLog.info("Removed server \(id) with \(paths.count) songs")
         await RemoteCatalogSync.shared.publishRemoval(paths: paths)

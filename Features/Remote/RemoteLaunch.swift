@@ -18,8 +18,11 @@ enum RemoteLaunch {
         }
     }
 
-    /// Asks every server again whether it answers, when the app comes back to the front.
+    /// Asks every server again whether it answers, and syncs those whose library changed, when the app comes back to the front.
     static func becameActive() {
-        Task { await RemoteServers.shared.refreshReachability() }
+        Task {
+            await RemoteServers.shared.refreshReachability()
+            await RemoteCatalogSync.shared.syncChangedServers()
+        }
     }
 }

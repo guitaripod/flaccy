@@ -14,6 +14,7 @@ use super::servers::{Server, ServerStore};
 use super::sync::{self, SyncReport};
 use crate::db::Db;
 use flaccy_shared::remote::remote_path;
+use flaccy_shared::remote::catalog_marker::CatalogMarker;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
@@ -81,6 +82,8 @@ pub struct Remote {
     proxy: Proxy,
     listener: RwLock<Option<RemoteListener>>,
     syncing: Mutex<HashSet<String>>,
+    /// Per server, what `getScanStatus` said just before the last sync that finished listed its songs.
+    markers: Mutex<HashMap<String, CatalogMarker>>,
     refused: Mutex<HashSet<String>>,
 }
 
@@ -121,6 +124,7 @@ impl Remote {
             proxy,
             listener: RwLock::new(None),
             syncing: Mutex::new(HashSet::new()),
+            markers: Mutex::new(HashMap::new()),
             refused: Mutex::new(HashSet::new()),
         });
         remote.wire_cache_events();
@@ -288,6 +292,7 @@ impl Remote {
 
     fn sync_locked(&self, server: &Server, on_progress: sync::Progress<'_>) -> Result<SyncReport, SyncFailure> {
         let client = self.client(&server.id).ok_or(SyncFailure::UnknownServer)?;
+        let marker = client.scan_status().ok().map(|status| CatalogMarker::from_status(&status));
         let children = sync::fetch_catalog(&client, on_progress).map_err(|error| {
             if error.is_unusable() {
                 self.manager.set_reachable(&server.id, false);
@@ -324,7 +329,36 @@ impl Remote {
             ));
         }
         self.fetch_missing_covers(&client, &server.id);
+        self.remember_marker(&server.id, marker);
         Ok(report)
+    }
+
+    fn remember_marker(&self, id: &str, marker: Option<CatalogMarker>) {
+        let mut markers = self.markers.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        match marker {
+            Some(marker) => markers.insert(id.to_string(), marker),
+            None => markers.remove(id),
+        };
+    }
+
+    /// The servers whose library changed since this run last synced them, asked with one `getScanStatus` each.
+    /// A server that does not answer, or reports nothing to compare, is left to the periodic sync. Blocks on the
+    /// network, so call it off the main thread.
+    pub fn changed_servers(&self) -> Vec<Server> {
+        self.servers()
+            .into_iter()
+            .filter(|server| {
+                let Some(client) = self.client(&server.id) else {
+                    return false;
+                };
+                let Ok(status) = client.scan_status() else {
+                    return false;
+                };
+                let current = CatalogMarker::from_status(&status);
+                let markers = self.markers.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+                CatalogMarker::changed(markers.get(&server.id), &current)
+            })
+            .collect()
     }
 
     /// Syncs on a worker thread and reports through the listener; used when the

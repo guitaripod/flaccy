@@ -120,6 +120,11 @@ actor SubsonicClient {
         }
     }
 
+    /// What `getScanStatus` says about the library: whether a scan runs, how many songs it holds and when it last changed.
+    func scanStatus() async throws -> SubsonicResponse.ScanStatus {
+        try await call("getScanStatus", []).scanStatus ?? SubsonicResponse.ScanStatus()
+    }
+
     func songsPage(offset: Int, size: Int) async throws -> [SubsonicResponse.Child] {
         let parameters = Self.songPageParameters + [("songCount", String(size)), ("songOffset", String(offset))]
         return try await call("search3", parameters).searchResult3?.song ?? []

@@ -9,7 +9,7 @@ use super::servers::Server;
 use flaccy_shared::remote::download_quality;
 use flaccy_shared::remote::server_address;
 use flaccy_shared::remote::subsonic_request::{self, Credentials};
-use flaccy_shared::remote::subsonic_response::{Child, Envelope, Root, SubsonicFailure};
+use flaccy_shared::remote::subsonic_response::{Child, Envelope, Root, ScanStatus, SubsonicFailure};
 use md5::{Digest, Md5};
 use std::io::Read;
 use std::ops::Range;
@@ -297,6 +297,15 @@ impl Client {
             server_version: ping.server_version.unwrap_or_default(),
             extensions,
         })
+    }
+
+    /// What `getScanStatus` says about the library: whether a scan runs, how many songs it holds and when it last
+    /// changed. A server that answers without a status reads as an empty one.
+    pub fn scan_status(&self) -> Result<ScanStatus, RemoteError> {
+        Ok(self
+            .call("getScanStatus", &[])?
+            .scan_status
+            .unwrap_or(ScanStatus { scanning: false, count: None, last_scan: None }))
     }
 
     /// One page of every song, using `search3` with an empty query.

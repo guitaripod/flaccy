@@ -118,6 +118,7 @@ pub struct AppCore {
 /// How long after launch the servers are refreshed first, and how often after.
 const REMOTE_FIRST_REFRESH_DELAY: Duration = Duration::from_millis(800);
 const REMOTE_REFRESH_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
+const REMOTE_CHANGE_PROBE_INTERVAL: Duration = Duration::from_secs(2 * 60);
 /// Below this the volume counts as muted.
 const MUTE_FLOOR: f64 = 0.005;
 /// Where unmuting lands when there is no earlier level to return to.
@@ -1309,10 +1310,43 @@ impl AppCore {
     /// library when anything changed. `announce` is true when the person asked,
     /// so a failure is a toast; a refresh nobody asked for only writes the log.
     pub fn sync_remote_servers(self: &Rc<Self>, announce: bool) {
+        let Some(remote) = crate::remote::handle() else {
+            return;
+        };
+        self.sync_servers(remote.servers(), announce);
+    }
+
+    /// Asks each server off the main thread whether its library changed since it was last synced, and syncs those
+    /// that say so, so music added on a server appears within minutes instead of at the six-hourly refresh.
+    fn sync_changed_remote_servers(self: &Rc<Self>) {
         let Some(remote) = crate::remote::handle().cloned() else {
             return;
         };
-        let servers = remote.servers();
+        if remote.servers().is_empty() || self.remote_syncing.get() {
+            return;
+        }
+        let (tx, rx) = async_channel::bounded::<Vec<flaccy_library::remote::servers::Server>>(1);
+        std::thread::Builder::new()
+            .name("flaccy-remote-probe".into())
+            .spawn(move || {
+                let _ = tx.send_blocking(remote.changed_servers());
+            })
+            .ok();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let Ok(changed) = rx.recv().await else { return };
+            let Some(core) = weak.upgrade() else { return };
+            if !changed.is_empty() {
+                crate::logger::info("remote", &format!("{} server libraries changed; syncing them", changed.len()));
+                core.sync_servers(changed, false);
+            }
+        });
+    }
+
+    fn sync_servers(self: &Rc<Self>, servers: Vec<flaccy_library::remote::servers::Server>, announce: bool) {
+        let Some(remote) = crate::remote::handle().cloned() else {
+            return;
+        };
         if servers.is_empty() || self.remote_syncing.replace(true) {
             return;
         }
@@ -1424,8 +1458,8 @@ impl AppCore {
         }
     }
 
-    /// Refreshes the servers a moment after launch and every six hours after,
-    /// and finishes any download an earlier run left half done.
+    /// Refreshes the servers a moment after launch and every six hours after, syncs one sooner whenever its
+    /// library changed, and finishes any download an earlier run left half done.
     fn start_remote(self: &Rc<Self>) {
         let Some(remote) = crate::remote::handle() else {
             return;
@@ -1438,6 +1472,11 @@ impl AppCore {
         let core = Rc::clone(self);
         glib::timeout_add_local(REMOTE_REFRESH_INTERVAL, move || {
             core.sync_remote_servers(false);
+            glib::ControlFlow::Continue
+        });
+        let core = Rc::clone(self);
+        glib::timeout_add_local(REMOTE_CHANGE_PROBE_INTERVAL, move || {
+            core.sync_changed_remote_servers();
             glib::ControlFlow::Continue
         });
     }

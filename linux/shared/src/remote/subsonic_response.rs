@@ -49,6 +49,8 @@ pub struct Envelope {
     pub playlists: Option<Playlists>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub playlist: Option<PlaylistWithEntries>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scan_status: Option<ScanStatus>,
 }
 
 impl Envelope {
@@ -123,6 +125,19 @@ pub struct Extension {
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub versions: Option<Vec<i64>>,
+}
+
+/// `getScanStatus`: whether the server is scanning, how many songs it holds and, on OpenSubsonic servers, when its
+/// library last changed.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScanStatus {
+    #[serde(default)]
+    pub scanning: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_scan: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]

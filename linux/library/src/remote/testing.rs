@@ -277,6 +277,7 @@ fn json_answer(state: &Arc<State>, method: &str, params: &HashMap<String, String
     let children = state.children.lock().unwrap().clone();
     match method {
         "ping" => ok(json!({})),
+        "getScanStatus" => ok(json!({"scanStatus":{"scanning":false,"count":children.len()}})),
         "getOpenSubsonicExtensions" => {
             ok(json!({"openSubsonicExtensions":[{"name":"songLyrics","versions":[1]},{"name":"apiKeyAuthentication","versions":[1]}]}))
         }

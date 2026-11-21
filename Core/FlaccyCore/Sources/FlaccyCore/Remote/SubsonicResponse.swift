@@ -27,6 +27,7 @@ public enum SubsonicResponse {
         public let searchResult3: SearchResult3?
         public let playlists: PlaylistsPayload?
         public let playlist: PlaylistWithEntries?
+        public let scanStatus: ScanStatus?
 
         /// The typed failure when the server answered `failed`; nil for a successful answer.
         public var failure: SubsonicFailure? {
@@ -48,6 +49,20 @@ public enum SubsonicResponse {
     public struct OpenSubsonicExtension: Decodable, Equatable, Sendable {
         public let name: String
         public let versions: [Int]?
+    }
+
+    /// `getScanStatus`: whether the server is scanning, how many songs it holds and, on OpenSubsonic servers, when
+    /// its library last changed.
+    public struct ScanStatus: Decodable, Equatable, Sendable {
+        public let scanning: Bool?
+        public let count: Int64?
+        public let lastScan: String?
+
+        public init(scanning: Bool? = nil, count: Int64? = nil, lastScan: String? = nil) {
+            self.scanning = scanning
+            self.count = count
+            self.lastScan = lastScan
+        }
     }
 
     public struct MusicFolders: Decodable, Equatable, Sendable {
