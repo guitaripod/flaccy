@@ -112,6 +112,14 @@ final class CollapsingHeaderView: UIView {
         if animated { applyAnimated() } else { apply() }
     }
 
+    #if DEBUG
+    /// Tucks the header away as a long scroll down would, for `LibraryHeaderShot`.
+    func collapseForCapture() {
+        collapse.follow(delta: fullHeight, distanceFromTop: .greatestFiniteMagnitude, height: fullHeight)
+        apply()
+    }
+    #endif
+
     @objc private func voiceOverDidChange() {
         guard UIAccessibility.isVoiceOverRunning else { return }
         reveal(animated: false)

@@ -71,6 +71,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         LibraryWalkExercise.runIfRequested(window: window, tabs: tabs, player: playerContainer)
         RecapOpenExercise.runIfRequested(tabs: tabs)
         ColumnExercise.runIfRequested(tabs: tabs, player: playerContainer)
+        LibraryHeaderShot.runIfRequested(tabs: tabs)
         WatchRemoteExercise.runIfRequested()
         EqualizerExercise.runIfRequested()
         SongVolumeExercise.runIfRequested()

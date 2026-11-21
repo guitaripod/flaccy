@@ -582,6 +582,23 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                   itemIndex < self.collectionView.numberOfItems(inSection: section) else { return }
             let indexPath = IndexPath(item: itemIndex, section: section)
             self.collectionView.scrollToItem(at: indexPath, at: .top, animated: false)
+            self.settleJump(to: indexPath)
+        }
+    }
+
+    /// Makes an index jump a second time once the list has laid out. A jump
+    /// made while the search bar is showing collapses the bar, and the list's
+    /// next layout pass then puts the list back at its top (iOS 18 and 27
+    /// alike); and a far jump over rows whose heights are still estimates lands
+    /// a row off, with the wanted row under the header. The second jump starts
+    /// from a collapsed bar and measured rows, so it stays and lands exactly.
+    func settleJump(to indexPath: IndexPath) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self,
+                  indexPath.section < self.collectionView.numberOfSections,
+                  indexPath.item < self.collectionView.numberOfItems(inSection: indexPath.section) else { return }
+            self.collectionView.layoutIfNeeded()
+            self.collectionView.scrollToItem(at: indexPath, at: .top, animated: false)
         }
     }
 

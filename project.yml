@@ -245,6 +245,7 @@ targets:
           - Library/LibraryViewController+Drag.swift
           - Library/LibraryViewController+Delegates.swift
           - Library/LibraryViewController+Layout.swift
+          - Library/LibraryHeaderShot.swift
           - Library/LibraryViewController+Sample.swift
           - Library/LibraryViewController+Sorting.swift
           - Library/LibraryViewController.swift
