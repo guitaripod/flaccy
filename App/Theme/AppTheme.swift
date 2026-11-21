@@ -176,7 +176,9 @@ final class AppTheme {
 
     /// Applies the look to every window, crossfading unless Reduce Motion is on.
     func apply(animated: Bool) {
+        let began = CACurrentMediaTime()
         prepare()
+        let prepared = CACurrentMediaTime()
         for window in windows {
             let change = { self.dress(window) }
             if animated, !UIAccessibility.isReduceMotionEnabled {
@@ -186,6 +188,13 @@ final class AppTheme {
             }
         }
         ThemeHooks.dressEverything(in: windows)
+        let dressed = CACurrentMediaTime()
         NotificationCenter.default.post(name: AppTheme.didChange, object: nil)
+        let told = CACurrentMediaTime()
+        func milliseconds(_ from: CFTimeInterval, _ to: CFTimeInterval) -> Int { Int(((to - from) * 1000).rounded()) }
+        MidgarLog.info(
+            "Theme applied in \(milliseconds(began, told)) ms: palettes and faces \(milliseconds(began, prepared)), windows and views \(milliseconds(prepared, dressed)), screens that lay out by the look \(milliseconds(dressed, told))",
+            category: .performance
+        )
     }
 }

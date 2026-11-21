@@ -147,6 +147,7 @@ targets:
           - Pad/PlayerColumnSetting.swift
           - Pad/ColumnExercise.swift
           - SceneDelegate.swift
+          - DebugLaunch.swift
           - Theme/AppTheme.swift
           - Theme/ThemeColors.swift
           - Theme/ThemeCover.swift
