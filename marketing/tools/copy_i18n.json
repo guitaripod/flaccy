@@ -65,9 +65,9 @@
       "sub": "Neuerscheinungen und Lücken in deiner Sammlung."
     },
     "themes": {
-      "kicker": "Darstellung",
-      "headline": "Hell oder dunkel.\n*Du entscheidest.*",
-      "sub": "Folgt dem System oder wähle selbst."
+      "kicker": "Themen",
+      "headline": "Dein Look,\n*deine Regeln.*",
+      "sub": "Sechs Themen. Vier Ansichten für deine Alben."
     },
     "eqpro": {
       "kicker": "Präziser EQ",
@@ -141,9 +141,9 @@
       "sub": "Novedades y los huecos de tu colección."
     },
     "themes": {
-      "kicker": "Apariencia",
-      "headline": "Claro u oscuro.\n*Tú decides.*",
-      "sub": "Sigue al sistema o elige uno."
+      "kicker": "Temas",
+      "headline": "Se ve como\n*tú lo quieres.*",
+      "sub": "Seis temas. Cuatro formas de ver tus álbumes."
     },
     "eqpro": {
       "kicker": "EQ de precisión",
@@ -217,9 +217,9 @@
       "sub": "Nouveautés et trous dans votre collection."
     },
     "themes": {
-      "kicker": "Apparence",
-      "headline": "Clair ou sombre.\n*À vous de choisir.*",
-      "sub": "Suit votre système, ou choisissez."
+      "kicker": "Thèmes",
+      "headline": "Une allure\n*à votre image.*",
+      "sub": "Six thèmes. Quatre façons de voir vos albums."
     },
     "eqpro": {
       "kicker": "Égaliseur précis",
@@ -293,9 +293,9 @@
       "sub": "Novità e i buchi nella tua collezione."
     },
     "themes": {
-      "kicker": "Aspetto",
-      "headline": "Chiaro o scuro.\n*Decidi tu.*",
-      "sub": "Segue il sistema o scegline uno."
+      "kicker": "Temi",
+      "headline": "Ha l’aspetto\n*che piace a te.*",
+      "sub": "Sei temi. Quattro modi di vedere i tuoi album."
     },
     "eqpro": {
       "kicker": "EQ di precisione",
@@ -369,9 +369,9 @@
       "sub": "新譜と、コレクションの欠けを表示。"
     },
     "themes": {
-      "kicker": "外観",
-      "headline": "ライトも、ダークも。\n*お好みで。*",
-      "sub": "システムに従うか、好みで選択。"
+      "kicker": "テーマ",
+      "headline": "あなた好みの見た目に\n*着せ替える。*",
+      "sub": "6つのテーマ。アルバムの表示は4通り。"
     },
     "eqpro": {
       "kicker": "精密EQ",
@@ -445,9 +445,9 @@
       "sub": "신보와 내 컬렉션에서 빠진 앨범."
     },
     "themes": {
-      "kicker": "화면 모드",
-      "headline": "라이트든 다크든.\n*선택은 당신에게.*",
-      "sub": "시스템을 따르거나 직접 고르세요."
+      "kicker": "테마",
+      "headline": "내 취향대로\n*보이게 하세요.*",
+      "sub": "여섯 가지 테마, 네 가지 앨범 보기."
     },
     "eqpro": {
       "kicker": "정밀 EQ",
@@ -521,9 +521,9 @@
       "sub": "Nowości i luki w Twojej kolekcji."
     },
     "themes": {
-      "kicker": "Wygląd",
-      "headline": "Jasny czy ciemny?\n*Ty decydujesz.*",
-      "sub": "Podąża za systemem albo wybierz sam."
+      "kicker": "Motywy",
+      "headline": "Wygląda\n*jak ty chcesz.*",
+      "sub": "Sześć motywów. Cztery widoki albumów."
     },
     "eqpro": {
       "kicker": "Precyzyjny EQ",
@@ -597,9 +597,9 @@
       "sub": "Lançamentos e as lacunas da sua coleção."
     },
     "themes": {
-      "kicker": "Aparência",
-      "headline": "Claro ou escuro.\n*Você decide.*",
-      "sub": "Segue o sistema ou escolha um."
+      "kicker": "Temas",
+      "headline": "Deixe com a cara\n*que você quer.*",
+      "sub": "Seis temas. Quatro jeitos de ver seus álbuns."
     },
     "eqpro": {
       "kicker": "EQ de precisão",
@@ -673,9 +673,9 @@
       "sub": "新发行与收藏中的空缺。"
     },
     "themes": {
-      "kicker": "外观",
-      "headline": "浅色或深色，\n*由你决定。*",
-      "sub": "跟随系统，或自行选择。"
+      "kicker": "主题",
+      "headline": "让外观\n*像你所想。*",
+      "sub": "六款主题，四种专辑视图。"
     },
     "eqpro": {
       "kicker": "精准 EQ",
@@ -749,9 +749,9 @@
       "sub": "新發行與收藏中的空缺。"
     },
     "themes": {
-      "kicker": "外觀",
-      "headline": "淺色或深色，\n*由你決定。*",
-      "sub": "跟隨系統，或自行選擇。"
+      "kicker": "主題",
+      "headline": "讓外觀\n*如你所想。*",
+      "sub": "六款主題，四種專輯顯示方式。"
     },
     "eqpro": {
       "kicker": "精準 EQ",
@@ -825,9 +825,9 @@
       "sub": "Nya släpp och luckorna i din samling."
     },
     "themes": {
-      "kicker": "Utseende",
-      "headline": "Ljust eller mörkt.\n*Du väljer.*",
-      "sub": "Följer systemet, eller välj själv."
+      "kicker": "Teman",
+      "headline": "Få det att se ut\n*som du vill.*",
+      "sub": "Sex teman. Fyra sätt att se dina album."
     },
     "eqpro": {
       "kicker": "Precisions-EQ",
@@ -901,9 +901,9 @@
       "sub": "Nye udgivelser og hullerne i din samling."
     },
     "themes": {
-      "kicker": "Udseende",
-      "headline": "Lyst eller mørkt.\n*Du bestemmer.*",
-      "sub": "Følger systemet, eller vælg selv."
+      "kicker": "Temaer",
+      "headline": "Få det til at ligne\n*dig.*",
+      "sub": "Seks temaer. Fire måder at se dine album på."
     },
     "eqpro": {
       "kicker": "Præcisions-EQ",
@@ -977,9 +977,9 @@
       "sub": "Nye utgivelser og hullene i samlingen din."
     },
     "themes": {
-      "kicker": "Utseende",
-      "headline": "Lyst eller mørkt.\n*Du bestemmer.*",
-      "sub": "Følger systemet, eller velg selv."
+      "kicker": "Temaer",
+      "headline": "Få det til å se ut\n*som deg.*",
+      "sub": "Seks temaer. Fire måter å se albumene dine på."
     },
     "eqpro": {
       "kicker": "Presisjons-EQ",
@@ -1053,9 +1053,9 @@
       "sub": "Uutuudet ja kokoelmasi aukot."
     },
     "themes": {
-      "kicker": "Ulkoasu",
-      "headline": "Vaalea vai tumma.\n*Sinä päätät.*",
-      "sub": "Seuraa järjestelmää, tai valitse itse."
+      "kicker": "Teemat",
+      "headline": "Saa se näyttämään\n*omaltasi.*",
+      "sub": "Kuusi teemaa. Neljä tapaa selata albumeja."
     },
     "eqpro": {
       "kicker": "Tarkka EQ",

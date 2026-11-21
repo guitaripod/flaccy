@@ -38,5 +38,10 @@
     "kicker": "Year in Music",
     "headline": "Your year in music, *ready to share.*",
     "maxLines": 1
+  },
+  "themes": {
+    "kicker": "Themes",
+    "headline": "Make it look *like yours.*",
+    "maxLines": 1
   }
 }
