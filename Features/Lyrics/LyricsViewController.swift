@@ -69,6 +69,7 @@ final class LyricsViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        FlaccyLifestream.opened(.lyrics)
         NotificationCenter.default.addObserver(
             self, selector: #selector(modelRegionDidChange), name: FlaccyModelRegion.didChangeNotification, object: nil
         )

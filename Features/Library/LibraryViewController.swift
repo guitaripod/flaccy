@@ -218,6 +218,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        FlaccyLifestream.opened(.library)
         guard viewModel.currentSegment == .playlists else { return }
         playlistAlbumIndex.invalidate()
         reconfigureVisibleArtwork()

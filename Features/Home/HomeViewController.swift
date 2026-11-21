@@ -56,6 +56,7 @@ final class HomeViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        FlaccyLifestream.opened(.home)
         viewModel.reload()
     }
 

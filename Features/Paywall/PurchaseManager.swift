@@ -285,6 +285,9 @@ final class PurchaseManager {
     /// like every trial date, so it can never move once written, and it is
     /// written even after a purchase so a lapsed subscription still has a start.
     func noteTrackStarted(_ track: Track) {
+        if !trialClockIsOverridden, !SampleMusicService.isSample(track.fileURL) {
+            FlaccyLifestream.playedOwnMusic()
+        }
         guard !trialHasStarted, !trialClockIsOverridden else { return }
         guard !SampleMusicService.isSample(track.fileURL) else {
             FunnelSignals.shared.noteSamplePlayed()

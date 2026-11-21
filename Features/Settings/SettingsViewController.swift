@@ -107,6 +107,7 @@ final class SettingsViewController: UITableViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        FlaccyLifestream.opened(.settings)
         applySnapshot(animated: false)
         refreshHeader()
         metadataViewModel.refresh()
