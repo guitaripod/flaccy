@@ -4,6 +4,7 @@ use std::cell::{Cell, RefCell};
 
 thread_local! {
     static CURRENT: Cell<f64> = const { Cell::new(config::UI_SCALE_DEFAULT) };
+    static CORNERS: Cell<f64> = const { Cell::new(1.0) };
     static BASE_PROVIDER: RefCell<Option<gtk::CssProvider>> = const { RefCell::new(None) };
 }
 
@@ -30,6 +31,26 @@ pub fn apply(scale: f64) {
     if let Some(settings) = gtk::Settings::default() {
         settings.set_gtk_xft_dpi((BASE_DPI * 1024.0 * scale).round() as i32);
     }
+    reload();
+    crate::ui::lyrics_style::reapply();
+    if let Some(theme) = crate::theme::ThemeController::current() {
+        theme.rescale();
+    }
+}
+
+/// Sets how round the app's own surfaces are, as a multiple of the radii the
+/// stylesheet is written with: 0 squares everything, 1 leaves it as written.
+pub fn set_corners(corners: f64) {
+    if CORNERS.with(|c| (c.replace(corners) - corners).abs() < f64::EPSILON) {
+        return;
+    }
+    reload();
+}
+
+/// Loads the app stylesheet as the current zoom and corner scale shape it.
+fn reload() {
+    let scale = current();
+    let corners = CORNERS.with(|c| c.get());
     BASE_PROVIDER.with(|slot| {
         let mut slot = slot.borrow_mut();
         let provider = slot.get_or_insert_with(|| {
@@ -45,11 +66,10 @@ pub fn apply(scale: f64) {
         });
         provider.load_from_string(&format!(
             "{}\n{}",
-            scaled_stylesheet(BASE_CSS, scale),
+            scaled_stylesheet(&crate::theme::css::scale_radii(BASE_CSS, corners), scale),
             icon_rule(scale)
         ));
     });
-    crate::ui::lyrics_style::reapply();
 }
 
 /// Symbolic icons are drawn at GTK's 16 px default regardless of font DPI, so
@@ -65,7 +85,7 @@ fn icon_rule(scale: f64) -> String {
 
 /// Rewrites every `font-size: <n>px` declaration by `scale`, leaving spacing,
 /// radii and icon sizes alone so the chrome keeps its proportions.
-fn scaled_stylesheet(css: &str, scale: f64) -> String {
+pub fn scaled_stylesheet(css: &str, scale: f64) -> String {
     if (scale - 1.0).abs() < f64::EPSILON {
         return css.to_string();
     }

@@ -1,0 +1,64 @@
+format = 1
+name = "Marquee"
+author = "Flaccy"
+description = "One album under the lights at a time, flipped through like a jukebox."
+appearance = "dark"
+
+[shape]
+corners = "round"
+
+[layout]
+albums = "carousel"
+cover_size = 172
+
+[[scheme]]
+id = "neon"
+name = "Neon"
+accent = "#ff3ea5"
+[scheme.dark]
+window = "#0b0612"
+view = "#0d0716"
+sidebar = "#0e0818"
+headerbar = "#110a1c"
+card = "#1a1029"
+popover = "#170e24"
+wash_a = "#5a1a6e"
+wash_b = "#12306b"
+
+[[scheme]]
+id = "arcade"
+name = "Arcade"
+accent = "#2ee6ff"
+[scheme.dark]
+window = "#04080f"
+view = "#050a13"
+sidebar = "#060b15"
+headerbar = "#080e19"
+card = "#0e1828"
+popover = "#0c1523"
+wash_a = "#0f4a78"
+wash_b = "#4a1f7a"
+
+[[scheme]]
+id = "ember"
+name = "Ember"
+accent = "#ff6a2b"
+[scheme.dark]
+window = "#0d0705"
+view = "#100806"
+sidebar = "#110906"
+headerbar = "#150b08"
+card = "#21120c"
+popover = "#1c0f0a"
+wash_a = "#7a2a10"
+wash_b = "#5a1030"
+
+[[variant]]
+id = "carousel"
+name = "Carousel"
+
+[[variant]]
+id = "grid"
+name = "Grid"
+[variant.layout]
+albums = "grid"

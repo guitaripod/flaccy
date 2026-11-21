@@ -11,7 +11,7 @@ Lossless music player: GTK4/libadwaita, gapless GStreamer playback, MPRIS, Last.
 - **Music videos** in Now Playing, always on: the official video, streamed and locked to your own audio within a frame or two, opening out of the cover as it starts; a song with no video keeps its cover. Needs `yt-dlp`; a local Ollama model breaks ties when choosing the video.
 - **Comments** (Now Playing → Comments): the video's YouTube comments beside the song, top or newest first, and Moments, the comments that name a time ("2:05 this part") in the order the song reaches them; a time is a link that plays your file from that moment of the video.
 - **Downloads** (Ctrl+D): paste a YouTube, SoundCloud or Bandcamp link and get tagged audio in your library. Needs `yt-dlp` and `ffmpeg`.
-- **Adaptive theme** that retints the app to what is playing, or one of seven palettes.
+- **Themes** (Preferences → Appearance) change the whole app, not only its colors: six ship with it, from the adaptive look that retints to what is playing to a green-screen terminal, a jukebox and a wall of covers, each with color schemes and variants. Albums show as a grid, a wall, a list with the selected album beside it, or a carousel. Cover size and shape, corners and font are yours to set over any theme, and a theme of your own is a folder with a `theme.toml` and a `style.css` that Flaccy reloads as you save ([how to make one](data/themes/README.md)).
 
 Flaccy for Linux is free. The same Flaccy runs on iPhone, Apple Watch and Mac ([App Store](https://apps.apple.com/app/id6787493695)); connect them all to Flaccy Server and your playlists, loves and plays follow you between this computer and your phone (on the Apple side that sync is part of Flaccy Pro).
 

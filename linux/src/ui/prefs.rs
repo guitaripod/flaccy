@@ -100,7 +100,7 @@ fn sections(ui: &Rc<Ui>, dialog: &PrefsDialog) -> Vec<Section> {
             "Appearance",
             "flaccy-appearance-symbolic",
             "sound-tint-blue",
-            vec![appearance_group(ui)],
+            crate::ui::prefs_appearance::groups(ui),
         ),
         Section {
             id: "sound",
@@ -175,6 +175,9 @@ fn search_text(section: &Section) -> String {
         }
         if let Some(row) = widget.downcast_ref::<adw::ActionRow>() {
             words.extend(row.subtitle().map(|subtitle| subtitle.to_string()));
+        }
+        if let Some(card) = widget.downcast_ref::<gtk::FlowBoxChild>() {
+            words.push(card.widget_name().to_string());
         }
         if let Some(group) = widget.downcast_ref::<adw::PreferencesGroup>() {
             words.push(group.title().to_string());
@@ -605,94 +608,9 @@ fn playback_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     group
 }
 
-fn appearance_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
-    let group = adw::PreferencesGroup::builder().title("Appearance").build();
-    let model = gtk::StringList::new(&["System", "Light", "Dark"]);
-    let row = adw::ComboRow::builder()
-        .title("Color Scheme")
-        .subtitle("Follow the system or force a look")
-        .model(&model)
-        .build();
-    let selected = match ui.core.config.borrow().appearance.as_str() {
-        "light" => 1,
-        "dark" => 2,
-        _ => 0,
-    };
-    row.set_selected(selected);
-    {
-        let ui = Rc::clone(ui);
-        row.connect_selected_notify(move |row| {
-            let appearance = match row.selected() {
-                1 => "light",
-                2 => "dark",
-                _ => "system",
-            };
-            ui.core.config.borrow_mut().appearance = appearance.to_string();
-            ui.core.save_config();
-            crate::ui::window::apply_color_scheme(appearance);
-            crate::logger::info("ui", &format!("appearance set to {appearance}"));
-        });
-    }
-    group.add(&row);
-    group.add(&theme_row(ui));
-    group.add(&ui_scale_row(ui));
-    group.add(&crate::ui::prefs_sound::home_screen_row(ui));
-    group
-}
-
-/// Theme picker: Adaptive (follows the playing album) plus curated palettes.
-/// Applying is live — the whole app retints instantly via ThemeController.
-fn theme_row(ui: &Rc<Ui>) -> adw::ComboRow {
-    use crate::theme::Theme;
-    let titles: Vec<&str> = Theme::ALL.iter().map(|t| t.title()).collect();
-    let model = gtk::StringList::new(&titles);
-    let row = adw::ComboRow::builder()
-        .title("Theme")
-        .subtitle("How Flaccy colors itself")
-        .model(&model)
-        .build();
-    let current = Theme::from_id(&ui.core.config.borrow().theme);
-    let selected = Theme::ALL.iter().position(|t| *t == current).unwrap_or(0);
-    row.set_selected(selected as u32);
-    row.set_subtitle(current.subtitle());
-
-    let swatch = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    swatch.add_css_class("theme-swatch");
-    swatch.set_valign(gtk::Align::Center);
-    apply_swatch(&swatch, current);
-    row.add_prefix(&swatch);
-    {
-        let ui = Rc::clone(ui);
-        let swatch = swatch.clone();
-        row.connect_selected_notify(move |row| {
-            let theme = Theme::ALL
-                .get(row.selected() as usize)
-                .copied()
-                .unwrap_or(Theme::Adaptive);
-            row.set_subtitle(theme.subtitle());
-            apply_swatch(&swatch, theme);
-            ui.core.config.borrow_mut().theme = theme.id().to_string();
-            ui.core.save_config();
-            if let Some(controller) = crate::theme::ThemeController::current() {
-                controller.set_theme(theme);
-            }
-            crate::logger::info("ui", &format!("theme set to {}", theme.id()));
-        });
-    }
-    row
-}
-
-/// Swaps the `swatch-<id>` class so the picker's dot previews the theme color.
-fn apply_swatch(swatch: &gtk::Box, theme: crate::theme::Theme) {
-    for other in crate::theme::Theme::ALL {
-        swatch.remove_css_class(&format!("swatch-{}", other.id()));
-    }
-    swatch.add_css_class(&format!("swatch-{}", theme.id()));
-}
-
 /// Interface zoom in percent. Same config key as Ctrl+= / Ctrl+-, so the
 /// spinner and the shortcuts stay in step, and every window restyles live.
-fn ui_scale_row(ui: &Rc<Ui>) -> adw::SpinRow {
+pub(crate) fn ui_scale_row(ui: &Rc<Ui>) -> adw::SpinRow {
     let row = adw::SpinRow::with_range(
         ui_scale::percent(config::UI_SCALE_MIN) as f64,
         ui_scale::percent(config::UI_SCALE_MAX) as f64,

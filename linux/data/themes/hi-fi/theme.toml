@@ -1,0 +1,72 @@
+format = 1
+name = "Hi-Fi"
+author = "Flaccy"
+description = "Records as records: round sleeves on warm dark wood, lit like a receiver's dial."
+appearance = "dark"
+
+[shape]
+corners = 1.3
+covers = "circle"
+
+[layout]
+albums = "grid"
+cover_size = 172
+glow = false
+
+[[scheme]]
+id = "dial"
+name = "Dial Amber"
+accent = "#ffb454"
+[scheme.dark]
+window = "#17120e"
+view = "#1b1510"
+sidebar = "#14100c"
+headerbar = "#1a140f"
+card = "#261d16"
+popover = "#231b14"
+text = "#f3e7d8"
+accent = "#f2a445"
+accent_text = "#ffc27a"
+on_accent = "#1f1305"
+
+[[scheme]]
+id = "cherry"
+name = "Cherry"
+accent = "#ff5a5f"
+[scheme.dark]
+window = "#170f10"
+view = "#1b1213"
+sidebar = "#140d0e"
+headerbar = "#1a1112"
+card = "#281a1c"
+popover = "#241719"
+text = "#f6e6e4"
+accent = "#ee4f55"
+accent_text = "#ff8a8d"
+on_accent = "#ffffff"
+
+[[scheme]]
+id = "tape"
+name = "Tape Blue"
+accent = "#6fb6d9"
+[scheme.dark]
+window = "#0f1417"
+view = "#12181b"
+sidebar = "#0d1215"
+headerbar = "#11171a"
+card = "#1a2327"
+popover = "#172024"
+text = "#e2edf1"
+accent = "#62aacd"
+accent_text = "#93cde8"
+on_accent = "#06151c"
+
+[[variant]]
+id = "grid"
+name = "Grid"
+
+[[variant]]
+id = "carousel"
+name = "Carousel"
+[variant.layout]
+albums = "carousel"

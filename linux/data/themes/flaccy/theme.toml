@@ -1,0 +1,40 @@
+format = 1
+name = "Flaccy"
+author = "Flaccy"
+description = "Covers on a soft wash of the album that is playing."
+
+[[scheme]]
+id = "adaptive"
+name = "Adaptive"
+accent = "artwork"
+
+[[scheme]]
+id = "rosewater"
+name = "Rosewater"
+accent = "#ff4d6d"
+
+[[scheme]]
+id = "aurora"
+name = "Aurora"
+accent = "#2dd4bf"
+
+[[scheme]]
+id = "nocturne"
+name = "Nocturne"
+accent = "#6e8bff"
+
+[[scheme]]
+id = "verdant"
+name = "Verdant"
+accent = "#34d399"
+
+[[scheme]]
+id = "sunset"
+name = "Sunset"
+accent = "#fb8b24"
+
+[[scheme]]
+id = "mono"
+name = "Mono"
+accent = "#9ca3af"
+muted = true

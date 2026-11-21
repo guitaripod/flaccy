@@ -1,0 +1,77 @@
+format = 1
+name = "Liner Notes"
+author = "Flaccy"
+description = "Paper, ink and a serif, read like the booklet inside the sleeve."
+
+[fonts]
+headings = "Charter, Bitstream Charter, Source Serif 4, Noto Serif, DejaVu Serif, Georgia, serif"
+
+[shape]
+corners = 0.4
+shadows = false
+
+[layout]
+albums = "list"
+glow = false
+
+[[scheme]]
+id = "oxblood"
+name = "Oxblood"
+accent = "#8c1c13"
+appearance = "light"
+[scheme.light]
+window = "#f4efe4"
+view = "#f8f4ea"
+sidebar = "#eee8da"
+headerbar = "#f4efe4"
+card = "#fbf8f0"
+popover = "#fbf8f0"
+text = "#231f1a"
+accent = "#8c1c13"
+accent_text = "#7a1810"
+on_accent = "#fbf8f0"
+
+[[scheme]]
+id = "ink"
+name = "Ink"
+accent = "#1d3557"
+appearance = "light"
+[scheme.light]
+window = "#f1f0ea"
+view = "#f6f5ef"
+sidebar = "#e9e8e0"
+headerbar = "#f1f0ea"
+card = "#fafaf5"
+popover = "#fafaf5"
+text = "#1b1e24"
+accent = "#1d3557"
+accent_text = "#1a2f4d"
+on_accent = "#fafaf5"
+
+[[scheme]]
+id = "lamplight"
+name = "Lamplight"
+accent = "#e0b070"
+appearance = "dark"
+[scheme.dark]
+window = "#1b1814"
+view = "#1f1c17"
+sidebar = "#191612"
+headerbar = "#1b1814"
+card = "#27231d"
+popover = "#27231d"
+text = "#ece3d2"
+accent = "#d9a55f"
+accent_text = "#e6bb80"
+on_accent = "#1b1408"
+
+[[variant]]
+id = "list"
+name = "List"
+
+[[variant]]
+id = "grid"
+name = "Grid"
+[variant.layout]
+albums = "grid"
+cover_size = 164

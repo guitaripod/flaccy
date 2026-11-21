@@ -1,0 +1,67 @@
+/* Liner Notes: print. Hairlines around the pictures, rules between the
+   entries, and the accent as a mark in the margin. */
+
+.transport {
+  background-image: none;
+  box-shadow: 0 -1px 0 0 alpha(@window_fg_color, 0.16);
+}
+
+.flaccy-sidebar > row,
+.flaccy-sidebar > row:selected {
+  border-radius: 0;
+}
+
+.flaccy-sidebar > row:selected {
+  background-image: none;
+  background-color: alpha(@accent_bg_color, 0.07);
+  box-shadow: inset 3px 0 0 0 @accent_bg_color;
+  color: @accent_color;
+}
+
+.album-list > row {
+  margin: 0;
+  border-radius: 0;
+  border-bottom: 1px solid alpha(@window_fg_color, 0.09);
+}
+
+.album-list > row:selected {
+  background-color: alpha(@accent_bg_color, 0.09);
+  box-shadow: inset 3px 0 0 0 @accent_bg_color;
+}
+
+.album-title {
+  font-size: 15px;
+}
+
+.dim {
+  opacity: 0.64;
+}
+
+.cover,
+.cover-large,
+.cover-thumb,
+.list-cover,
+.flow-cover,
+.playlist-thumb {
+  box-shadow: 0 0 0 1px alpha(@window_fg_color, 0.18);
+}
+
+.album-tile:hover {
+  background-color: alpha(@accent_bg_color, 0.06);
+  box-shadow: none;
+  transform: none;
+}
+
+.album-pane {
+  border-left: 1px solid alpha(@window_fg_color, 0.16);
+  background-color: alpha(@card_bg_color, 0.7);
+}
+
+.play-pill,
+button.pill {
+  box-shadow: none;
+}
+
+separator {
+  background-color: alpha(@window_fg_color, 0.14);
+}

@@ -12,7 +12,24 @@ pub struct Config {
     pub window_height: i32,
     pub volume: f64,
     pub appearance: String,
+    /// The color scheme of the theme that is on (`Scheme::id`). It keeps the
+    /// name it had when the palettes were the only themes there were.
     pub theme: String,
+    /// The theme that is on (`Pack::id`); empty means Flaccy's own.
+    pub theme_pack: String,
+    /// Which of the theme's variants is on; empty means its first.
+    pub theme_variant: String,
+    /// The person's own choices over the theme. Empty or zero means "as the
+    /// theme has it": the Albums view (`AlbumsView::id`), the cover edge in
+    /// pixels, the cover shape (`CoverShape::id`), `sharp`, `standard` or
+    /// `round` corners, an interface font family, and the window glow `on` or
+    /// `off`.
+    pub albums_view: String,
+    pub look_cover_size: i32,
+    pub look_covers: String,
+    pub look_corners: String,
+    pub look_font: String,
+    pub look_glow: String,
     pub autoplay_continuation: bool,
     /// Clean Library: one row per song in the Songs list and on an album's
     /// page, one play per song in stations and mixes, and an album's editions
@@ -108,6 +125,11 @@ pub struct Config {
     pub flaccy_server_nudge_dismissed: bool,
     /// The person turned off showing the connected Flaccy Server's music in the library.
     pub flaccy_server_library_hidden: bool,
+    /// The color scheme and variant each theme was last worn with, as
+    /// `scheme|variant` under the theme's id, so coming back to a theme finds
+    /// it as it was left. A table, so it stays the last field: TOML writes
+    /// every plain value before the first table.
+    pub theme_memory: std::collections::BTreeMap<String, String>,
 }
 
 /// The cache cap a fresh install starts with, and the smallest one offered.
@@ -229,6 +251,14 @@ impl Default for Config {
             volume: 0.9,
             appearance: "system".to_string(),
             theme: "adaptive".to_string(),
+            theme_pack: String::new(),
+            theme_variant: String::new(),
+            albums_view: String::new(),
+            look_cover_size: 0,
+            look_covers: String::new(),
+            look_corners: String::new(),
+            look_font: String::new(),
+            look_glow: String::new(),
             autoplay_continuation: true,
             clean_library: true,
             group_album_editions: None,
@@ -277,6 +307,7 @@ impl Default for Config {
             flaccy_server_name: String::new(),
             flaccy_server_nudge_dismissed: false,
             flaccy_server_library_hidden: false,
+            theme_memory: std::collections::BTreeMap::new(),
         }
     }
 }

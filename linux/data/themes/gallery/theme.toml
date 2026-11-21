@@ -1,0 +1,58 @@
+format = 1
+name = "Gallery"
+author = "Flaccy"
+description = "Nothing but the covers, edge to edge."
+
+[shape]
+corners = 0.5
+covers = "square"
+shadows = false
+
+[layout]
+albums = "wall"
+cover_size = 184
+glow = false
+
+[[scheme]]
+id = "black"
+name = "Black"
+accent = "#f2f2f2"
+muted = true
+appearance = "dark"
+[scheme.dark]
+window = "#000000"
+view = "#000000"
+sidebar = "#060606"
+headerbar = "#000000"
+card = "#111111"
+popover = "#141414"
+accent = "#f2f2f2"
+accent_text = "#ffffff"
+on_accent = "#000000"
+
+[[scheme]]
+id = "white"
+name = "White"
+accent = "#141414"
+muted = true
+appearance = "light"
+[scheme.light]
+window = "#ffffff"
+view = "#ffffff"
+sidebar = "#f6f6f6"
+headerbar = "#ffffff"
+card = "#f1f1f1"
+popover = "#ffffff"
+accent = "#141414"
+accent_text = "#000000"
+on_accent = "#ffffff"
+
+[[variant]]
+id = "wall"
+name = "Wall"
+
+[[variant]]
+id = "large"
+name = "Large Wall"
+[variant.layout]
+cover_size = 264

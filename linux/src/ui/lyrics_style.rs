@@ -18,7 +18,8 @@ pub fn reapply() {
 
 /// Lyrics typography lives in its own swappable provider rather than in
 /// `ThemeController`, so resizing the type never forces a whole-app palette
-/// recompute. It sits above both the base stylesheet and the theme provider.
+/// recompute. It sits above the base stylesheet and both theme providers, so
+/// the size the person set holds under any theme.
 pub fn apply(size: i32) {
     let size = size.clamp(config::LYRICS_FONT_MIN, config::LYRICS_FONT_MAX);
     LAST_SIZE.with(|last| last.set(size));
@@ -44,7 +45,7 @@ pub fn apply(size: i32) {
                 gtk::style_context_add_provider_for_display(
                     &display,
                     &provider,
-                    gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 2,
+                    gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 3,
                 );
             }
             provider

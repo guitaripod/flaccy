@@ -69,6 +69,9 @@ pub enum AppEvent {
     /// brought it back. Anything that wakes on a timer to keep a picture moving
     /// stops while it is suspended and picks up again on resume.
     WindowSuspended(bool),
+    /// The theme, its variant or one of the person's own choices over it
+    /// changed, so pages that are laid out by the look rebuild.
+    LookChanged,
     LyricsToggled(bool),
     QueueChanged,
     Toast(String),

@@ -1076,23 +1076,116 @@ button.pill.suggested-action:active {
   transform: scale(1.05);
 }
 
-/* ---- theme preview swatch (preferences) --------------------------------- */
-.theme-swatch {
-  min-width: 26px;
-  min-height: 26px;
-  border-radius: 9999px;
-  box-shadow: inset 0 0 0 1px alpha(#fff, 0.22), 0 2px 6px alpha(#000, 0.3);
+/* ---- albums as a wall, a list or a carousel ------------------------------- */
+.album-wall > child {
+  padding: 0;
+  border-radius: 0;
 }
 
-.swatch-adaptive {
-  background-image: linear-gradient(135deg, #ff4d6d, #9d4edd 45%, #2dd4bf);
+.album-wall > child:hover,
+.album-wall > child:selected {
+  background: none;
 }
-.swatch-rosewater { background-color: #ff4d6d; }
-.swatch-aurora    { background-image: linear-gradient(135deg, #2dd4bf, #9d4edd); }
-.swatch-nocturne  { background-color: #6e8bff; }
-.swatch-verdant   { background-color: #34d399; }
-.swatch-sunset    { background-image: linear-gradient(135deg, #fb8b24, #e01b24); }
-.swatch-mono      { background-color: #9ca3af; }
+
+.wall-tile {
+  border-radius: 0;
+}
+
+.wall-caption {
+  padding: 26px 10px 8px 10px;
+  background-image: linear-gradient(to top, alpha(#000, 0.86), alpha(#000, 0.5) 55%, alpha(#000, 0));
+  color: #fff;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.wall-caption .caption {
+  opacity: 0.78;
+}
+
+.wall-cell:hover .wall-caption {
+  opacity: 1;
+}
+
+.album-list {
+  background: none;
+  padding: 10px 12px 18px 16px;
+}
+
+.album-list > row {
+  padding: 6px 12px 6px 8px;
+  margin: 1px 0;
+  border-radius: 10px;
+  transition: background-color 120ms ease;
+}
+
+.album-list > row:hover {
+  background-color: alpha(@window_fg_color, 0.06);
+}
+
+.album-list > row:selected {
+  background-color: alpha(@accent_bg_color, 0.22);
+}
+
+.list-cover {
+  border-radius: 6px;
+}
+
+.album-pane {
+  border-left: 1px solid alpha(@window_fg_color, 0.08);
+}
+
+.album-pane-songs {
+  background: none;
+  margin-top: 6px;
+}
+
+.album-pane-songs > row {
+  padding: 7px 8px;
+  border-radius: 8px;
+}
+
+.flow-cover {
+  border-radius: 14px;
+  box-shadow: 0 2px 8px alpha(#000, 0.30), 0 14px 44px alpha(#000, 0.34);
+}
+
+.flow-title {
+  font-size: 28px;
+}
+
+coverflow:focus-visible {
+  outline: none;
+}
+
+/* ---- theme gallery (preferences) ------ --------------------------------- */
+.theme-gallery {
+  background: none;
+}
+
+.theme-gallery > flowboxchild {
+  padding: 8px 6px;
+  border-radius: 14px;
+  background: none;
+  transition: background-color 160ms ease;
+}
+
+.theme-gallery > flowboxchild:hover {
+  background-color: alpha(@window_fg_color, 0.05);
+}
+
+.theme-gallery > flowboxchild:selected {
+  background-color: alpha(@accent_bg_color, 0.16);
+}
+
+.theme-card-frame {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px alpha(@window_fg_color, 0.14);
+}
+
+.theme-gallery > flowboxchild:selected .theme-card-frame {
+  box-shadow: 0 0 0 2px @accent_bg_color;
+}
 
 /* ---- preferences hero --------------------------------------------------- */
 /* Branded banner + live library dashboard atop Preferences. Keys off the same

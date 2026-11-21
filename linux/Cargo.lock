@@ -958,6 +958,7 @@ dependencies = [
  "libadwaita",
  "lofty",
  "mpris-server",
+ "pango",
  "pangocairo",
  "rand 0.9.4",
  "rusqlite",

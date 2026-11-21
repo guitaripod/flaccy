@@ -1,15 +1,17 @@
 use crate::events::{AppEvent, ScanFailure};
 use crate::filters::{self, LibraryFilter};
 use crate::library::{Album, Library};
+use crate::theme::{AlbumsView, ThemeController};
 use crate::ui::album_layouts::AlbumBody;
+use crate::ui::album_views::{self, AlbumCard, AlbumView, Shelf};
 use crate::ui::filter_chips::ChipBar;
 use crate::ui::track_page::PageMode;
 use crate::ui::{context, debut, Ui};
 use adw::prelude::*;
 use gtk::glib::BoxedAnyObject;
-use gtk::{gdk, gio, glib, pango};
+use gtk::{gio, pango};
 use std::cell::{Cell, RefCell};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::rc::Rc;
 
 /// The edge, in pixels, of the cover bitmap an album page asks the artwork
@@ -61,47 +63,6 @@ impl AlbumSort {
             .into_iter()
             .find(|sort| sort.id() == id)
             .unwrap_or(AlbumSort::Artist)
-    }
-}
-
-/// What the grid keeps of an album: the few fields a tile shows, the key it is
-/// found by, and where it sat in the library when the grid was built. The
-/// tracks stay in the library, so building the grid copies no track and a
-/// tile always opens the album as the library holds it now.
-struct AlbumCard {
-    key: String,
-    title: String,
-    artist: String,
-    year: Option<String>,
-    index: usize,
-}
-
-impl AlbumCard {
-    fn of(album: &Album, index: usize) -> Self {
-        Self {
-            key: album.key(),
-            title: album.title.clone(),
-            artist: album.artist.clone(),
-            year: album.year.clone(),
-            index,
-        }
-    }
-
-    fn subtitle(&self) -> String {
-        match &self.year {
-            Some(year) if !year.is_empty() => format!("{} · {}", self.artist, year),
-            _ => self.artist.clone(),
-        }
-    }
-
-    /// The album this tile stands for in `library`: the one at the remembered
-    /// position when it is still the same album, otherwise found by its key.
-    fn album_in<'a>(&self, library: &'a Library) -> Option<&'a Album> {
-        library
-            .albums
-            .get(self.index)
-            .filter(|album| album.title == self.title && album.artist == self.artist)
-            .or_else(|| library.album_by_key(&self.key))
     }
 }
 
@@ -182,6 +143,119 @@ impl AdmissionStamp {
     }
 }
 
+/// The switch between the ways the shelf can be laid out, in the page header.
+/// It shows the view the look resolves to and reports a click as the person's
+/// own choice for the theme that is on.
+struct ViewSwitch {
+    widget: gtk::Box,
+    buttons: Vec<(AlbumsView, gtk::ToggleButton)>,
+    syncing: Rc<Cell<bool>>,
+}
+
+impl ViewSwitch {
+    fn new(on_pick: impl Fn(AlbumsView) + 'static) -> ViewSwitch {
+        let widget = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        widget.add_css_class("linked");
+        widget.set_valign(gtk::Align::Center);
+        let syncing = Rc::new(Cell::new(false));
+        let on_pick = Rc::new(on_pick);
+        let mut buttons: Vec<(AlbumsView, gtk::ToggleButton)> = Vec::new();
+        for view in AlbumsView::ALL {
+            let button = gtk::ToggleButton::builder()
+                .icon_name(view.icon())
+                .tooltip_text(format!("{} view", view.title()))
+                .build();
+            button.update_property(&[gtk::accessible::Property::Label(&format!("{} view", view.title()))]);
+            if let Some((_, first)) = buttons.first() {
+                button.set_group(Some(first));
+            }
+            let (on_pick, syncing) = (Rc::clone(&on_pick), Rc::clone(&syncing));
+            button.connect_toggled(move |button| {
+                if button.is_active() && !syncing.get() {
+                    on_pick(view);
+                }
+            });
+            widget.append(&button);
+            buttons.push((view, button));
+        }
+        ViewSwitch {
+            widget,
+            buttons,
+            syncing,
+        }
+    }
+
+    fn show(&self, view: AlbumsView) {
+        self.syncing.set(true);
+        for (candidate, button) in &self.buttons {
+            if *candidate == view && !button.is_active() {
+                button.set_active(true);
+            }
+        }
+        self.syncing.set(false);
+    }
+}
+
+/// Holds whichever view of the shelf the look asks for and swaps it for
+/// another when the look's layout changes, leaving it alone when only colors
+/// or corners did.
+struct ViewHost {
+    widget: gtk::Box,
+    shelf: Rc<Shelf>,
+    view: RefCell<Option<Box<dyn AlbumView>>>,
+    shape: Cell<Option<(AlbumsView, i32, bool)>>,
+}
+
+impl ViewHost {
+    fn new(shelf: &Rc<Shelf>) -> ViewHost {
+        let widget = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        widget.set_vexpand(true);
+        ViewHost {
+            widget,
+            shelf: Rc::clone(shelf),
+            view: RefCell::new(None),
+            shape: Cell::new(None),
+        }
+    }
+
+    /// Builds the view for the look that is on, unless the one showing is
+    /// already it. Returns the view kind now on screen.
+    fn wear(&self) -> Option<AlbumsView> {
+        let look = ThemeController::current()?.look();
+        let shape = album_views::shape_of(&look);
+        if self.shape.replace(Some(shape)) == Some(shape) {
+            return Some(look.albums);
+        }
+        let had_focus = self.widget.focus_child().is_some();
+        let place = self
+            .view
+            .borrow()
+            .as_ref()
+            .filter(|view| view.kind() == look.albums)
+            .map(|view| view.place());
+        if let Some(old) = self.view.borrow_mut().take() {
+            self.widget.remove(&old.widget());
+        }
+        let view = album_views::build(&self.shelf, &look);
+        self.widget.append(&view.widget());
+        if let Some(place) = place {
+            view.restore(place);
+        }
+        if had_focus {
+            view.focus();
+        }
+        *self.view.borrow_mut() = Some(view);
+        crate::logger::info("ui", &format!("albums shown as {}", look.albums.id()));
+        Some(look.albums)
+    }
+
+    fn with(&self, act: impl FnOnce(&dyn AlbumView)) {
+        if let Some(view) = self.view.borrow().as_ref() {
+            act(view.as_ref());
+        }
+    }
+}
+
 /// The albums page.
 ///
 /// `debut_presenting` is why the empty state and the Debut cannot collide: the
@@ -223,151 +297,18 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         })
     };
     let filter_model = gtk::FilterListModel::new(Some(store.clone()), Some(filter.clone()));
-    let selection = gtk::NoSelection::new(Some(filter_model));
-
-    let bound: Rc<RefCell<HashMap<String, glib::WeakRef<gtk::Picture>>>> =
-        Rc::new(RefCell::new(HashMap::new()));
-
-    let factory = gtk::SignalListItemFactory::new();
-    let setup_ui = Rc::clone(ui);
-    factory.connect_setup(move |_, item| {
-        let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
-            return;
-        };
-        let cell = build_album_cell();
-        {
-            let item_weak = item.downgrade();
-            let drop_ui = Rc::clone(&setup_ui);
-            crate::ui::artwork_editor::attach_image_drop(&cell, &setup_ui, move || {
-                let boxed = item_weak.upgrade()?.item().and_downcast::<BoxedAnyObject>()?;
-                let library = drop_ui.core.library.borrow().clone();
-                let album = boxed.borrow::<AlbumCard>().album_in(&library).cloned();
-                album
-            });
-        }
-        let gesture = gtk::GestureClick::builder()
-            .button(gdk::BUTTON_SECONDARY)
-            .build();
-        let item_weak = item.downgrade();
-        let anchor = cell.clone();
-        let menu_ui = Rc::clone(&setup_ui);
-        gesture.connect_pressed(move |_, _, x, y| {
-            let Some(item) = item_weak.upgrade() else {
-                return;
-            };
-            let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
-                return;
-            };
-            let key = boxed.borrow::<AlbumCard>().key.clone();
-            context::popup_menu_at(
-                &anchor,
-                &context::album_menu(&key, context::album_downloads(&menu_ui.core, &key)),
-                x,
-                y,
-            );
-        });
-        cell.add_controller(gesture);
-        item.set_child(Some(&cell));
+    let shelf = Rc::new(Shelf {
+        ui: Rc::clone(ui),
+        albums: filter_model,
     });
-    {
-        let ui = Rc::clone(ui);
-        let bound = Rc::clone(&bound);
-        factory.connect_bind(move |_, item| {
-            let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
-                return;
-            };
-            let Some(cell) = item.child() else { return };
-            let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
-                return;
-            };
-            let card = boxed.borrow::<AlbumCard>();
-            let Some(picture) = cell.first_child().and_downcast::<gtk::Picture>() else {
-                return;
-            };
-            let Some(title) = picture.next_sibling().and_downcast::<gtk::Label>() else {
-                return;
-            };
-            let Some(subtitle) = title.next_sibling().and_downcast::<gtk::Label>() else {
-                return;
-            };
-            title.set_label(&card.title);
-            title.set_tooltip_text(Some(&card.title));
-            subtitle.set_label(&card.subtitle());
-            picture.set_paintable(Some(&ui.core.artwork.placeholder(&card.key)));
-            let expected = card.key.clone();
-            let item_weak = item.downgrade();
-            let weak = picture.downgrade();
-            let wanted = {
-                let item_weak = item_weak.clone();
-                let expected = expected.clone();
-                move || still_bound_album(&item_weak, &expected)
-            };
-            ui.core.artwork.request_while(
-                wanted,
-                &card.title,
-                &card.artist,
-                168,
-                move |texture, _| {
-                    if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
-                        if still_bound_album(&item_weak, &expected) {
-                            picture.set_paintable(Some(texture));
-                        }
-                    }
-                },
-            );
-            bound.borrow_mut().insert(card.key.clone(), picture.downgrade());
-        });
-    }
-    {
-        let bound = Rc::clone(&bound);
-        factory.connect_unbind(move |_, item| {
-            let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
-                return;
-            };
-            if let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() {
-                bound.borrow_mut().remove(&boxed.borrow::<AlbumCard>().key);
-            }
-        });
-    }
+    let host = Rc::new(ViewHost::new(&shelf));
 
-    let grid = gtk::GridView::builder()
-        .model(&selection)
-        .factory(&factory)
-        .min_columns(1)
-        // Low starting max so natural width stays small; grows with allocation.
-        .max_columns(3)
-        .single_click_activate(true)
-        .margin_top(24)
-        .margin_bottom(24)
-        .margin_start(24)
-        .margin_end(24)
-        .build();
-    grid.add_css_class("album-grid");
-    crate::ui::controls::bind_adaptive_grid_columns(&grid, 156);
-    {
+    let view_switch = Rc::new(ViewSwitch::new({
         let ui = Rc::clone(ui);
-        grid.connect_activate(move |grid, position| {
-            let Some(boxed) = grid
-                .model()
-                .and_then(|model| model.item(position))
-                .and_downcast::<BoxedAnyObject>()
-            else {
-                return;
-            };
-            let library = ui.core.library.borrow().clone();
-            let card = boxed.borrow::<AlbumCard>();
-            if let Some(album) = card.album_in(&library) {
-                push_album_detail(&ui, album);
-            }
-        });
-    }
-
-    let scroll = gtk::ScrolledWindow::builder()
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .vexpand(true)
-        .child(&grid)
-        .build();
-    ui.register_scroller(&scroll);
+        move |view| {
+            crate::ui::look::edit(&ui.core, |config| config.albums_view = view.id().to_string());
+        }
+    }));
 
     let sort_labels: Vec<&str> = AlbumSort::ALL.iter().map(|s| s.label()).collect();
     let sort_dropdown = gtk::DropDown::from_strings(&sort_labels);
@@ -389,14 +330,16 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .margin_end(24)
         .valign(gtk::Align::Center)
         .build();
+    sort_controls.append(&view_switch.widget);
     sort_controls.append(&sort_label);
     sort_controls.append(&sort_dropdown);
+    sort_label.set_margin_start(8);
 
     let header_row = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     header_row.append(&sort_controls);
     let grid_content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     grid_content.append(&header_row);
-        grid_content.append(&scroll);
+    grid_content.append(&host.widget);
 
     let empty = build_empty_state(ui);
 
@@ -406,12 +349,22 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     stack.add_named(&empty, Some("empty"));
     stack.add_named(&grid_content, Some("grid"));
 
+    let wear_look = {
+        let (host, view_switch) = (Rc::clone(&host), Rc::clone(&view_switch));
+        move || {
+            if let Some(view) = host.wear() {
+                view_switch.show(view);
+            }
+        }
+    };
+    wear_look();
+
     let debut_presenting = Rc::new(Cell::new(false));
 
     let rebuild: Rc<dyn Fn()> = {
         let store = store.clone();
         let stack = stack.clone();
-        let scroll = scroll.clone();
+        let host = Rc::clone(&host);
         let ui = Rc::clone(ui);
         let sort_mode = Rc::clone(&sort_mode);
         let debut_presenting = Rc::clone(&debut_presenting);
@@ -435,16 +388,14 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             let sort = sort_mode.get();
             let state = GridState::of(&filters::library_signature(&library), sort);
             if applied.replace(Some(state)) != Some(state) {
-                let saved = scroll.vadjustment().value();
+                let mut saved = 0.0;
+                host.with(|view| saved = view.place());
                 let items: Vec<BoxedAnyObject> = sorted_order(&library.albums, sort)
                     .into_iter()
                     .map(|index| BoxedAnyObject::new(AlbumCard::of(&library.albums[index], index)))
                     .collect();
                 store.splice(0, store.n_items(), &items);
-                if saved > 0.0 {
-                    let adj = scroll.vadjustment();
-                    glib::idle_add_local_once(move || adj.set_value(saved));
-                }
+                host.with(|view| view.restore(saved));
             }
             stack.set_visible_child_name(if debut_presenting.get() {
                 "debut"
@@ -463,7 +414,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             let ui = Rc::clone(ui);
             let chip_filter = Rc::clone(&chip_filter);
             let rebuild = Rc::clone(&rebuild);
-            let scroll = scroll.clone();
+            let host = Rc::clone(&host);
             let sort_dropdown = sort_dropdown.clone();
             let sort_mode = Rc::clone(&sort_mode);
             let own_sort = Rc::clone(&own_sort);
@@ -472,7 +423,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 chip_filter.set(picked);
                 ui.core.config.borrow_mut().albums_filter = picked.id().to_string();
                 ui.core.save_config();
-                scroll.vadjustment().set_value(0.0);
+                host.with(|view| view.scroll_to_top());
                 let target = match pivot_sort(picked) {
                     Some(sort) => {
                         let current = sort_mode.get();
@@ -524,7 +475,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let own_sort = Rc::clone(&own_sort);
         let pivoting = Rc::clone(&pivoting);
         let rebuild = Rc::clone(&rebuild);
-        let scroll = scroll.clone();
+        let host = Rc::clone(&host);
         sort_dropdown.connect_selected_notify(move |dropdown| {
             let sort = AlbumSort::ALL[(dropdown.selected() as usize).min(AlbumSort::ALL.len() - 1)];
             if sort_mode.replace(sort) == sort {
@@ -535,7 +486,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 ui.core.config.borrow_mut().album_sort = sort.id().to_string();
                 ui.core.save_config();
             }
-            scroll.vadjustment().set_value(0.0);
+            host.with(|view| view.scroll_to_top());
             rebuild();
         });
     }
@@ -543,11 +494,14 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let library_dirty = Rc::new(Cell::new(false));
         let search_dirty = Rc::new(Cell::new(false));
+        let look_dirty = Rc::new(Cell::new(false));
         {
             let rebuild = Rc::clone(&rebuild);
             let filter = filter.clone();
             let library_dirty = Rc::clone(&library_dirty);
             let search_dirty = Rc::clone(&search_dirty);
+            let look_dirty = Rc::clone(&look_dirty);
+            let wear_look = wear_look.clone();
             ui.core
                 .hub
                 .subscribe_widget(&stack, move |stack, event| match event {
@@ -559,12 +513,19 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                         filter.changed(gtk::FilterChange::Different)
                     }
                     AppEvent::SearchChanged(_) => search_dirty.set(true),
+                    AppEvent::LookChanged if stack.is_mapped() => wear_look(),
+                    AppEvent::LookChanged => look_dirty.set(true),
                     _ => {}
                 });
         }
         let rebuild = Rc::clone(&rebuild);
         let filter = filter.clone();
+        let host = Rc::clone(&host);
         stack.connect_map(move |_| {
+            if look_dirty.replace(false) {
+                wear_look();
+            }
+            host.with(|view| view.focus());
             if library_dirty.replace(false) {
                 rebuild();
             }
@@ -576,7 +537,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     {
         let ui = Rc::clone(ui);
-        let bound = Rc::clone(&bound);
+        let host = Rc::clone(&host);
         ui.core
             .hub
             .clone()
@@ -587,30 +548,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                     if matches!(event, AppEvent::AlbumEnriched { .. }) {
                         ui.core.artwork.invalidate(title, artist);
                     }
-                    let key = format!("{title}|{artist}");
-                    let picture = bound.borrow().get(&key).and_then(|w| w.upgrade());
-                    if let Some(picture) = picture {
-                        let weak = picture.downgrade();
-                        let bound = Rc::clone(&bound);
-                        let placeholder = ui.core.artwork.placeholder(&key);
-                        ui.core
-                            .artwork
-                            .request(title, artist, 168, move |texture, _| {
-                                if let Some(picture) = weak.upgrade() {
-                                    let still = bound
-                                        .borrow()
-                                        .get(&key)
-                                        .and_then(|w| w.upgrade())
-                                        .is_some_and(|current| current == picture);
-                                    if still {
-                                        match texture {
-                                            Some(texture) => picture.set_paintable(Some(texture)),
-                                            None => picture.set_paintable(Some(&placeholder)),
-                                        }
-                                    }
-                                }
-                            });
-                    }
+                    host.with(|view| view.cover_changed(title, artist));
                 }
             });
     }
@@ -762,61 +700,6 @@ pub(crate) fn build_empty_state(ui: &Rc<Ui>) -> adw::StatusPage {
     empty.set_child(Some(&empty_actions));
     attach_scan_status(ui, &empty, &empty_actions);
     empty
-}
-
-/// Guards an async artwork callback against GridView cell recycling: the shared
-/// tile widget may have been rebound to a different album by the time a queued
-/// cover decode lands, so only paint if the list item still holds this album.
-fn still_bound_album(item: &glib::WeakRef<gtk::ListItem>, expected: &str) -> bool {
-    item.upgrade()
-        .and_then(|item| item.item())
-        .and_downcast::<BoxedAnyObject>()
-        .is_some_and(|boxed| boxed.borrow::<AlbumCard>().key == expected)
-}
-
-/// Empty tile shell reused by the GridView factory: cover picture, title, and
-/// subtitle in fixed order (the bind step fills them and requests artwork).
-fn build_album_cell() -> gtk::Box {
-    let cell = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(8)
-        .width_request(140)
-        .halign(gtk::Align::Center)
-        .valign(gtk::Align::Start)
-        .hexpand(true)
-        .build();
-    cell.add_css_class("album-tile");
-
-    let picture = gtk::Picture::builder()
-        .width_request(140)
-        .height_request(140)
-        .content_fit(gtk::ContentFit::Cover)
-        .hexpand(true)
-        .build();
-    picture.set_overflow(gtk::Overflow::Hidden);
-    picture.add_css_class("cover");
-    cell.append(&picture);
-
-    let title = gtk::Label::builder()
-        .xalign(0.0)
-        .ellipsize(pango::EllipsizeMode::End)
-        .max_width_chars(16)
-        .hexpand(true)
-        .build();
-    title.add_css_class("album-title");
-    cell.append(&title);
-
-    let subtitle = gtk::Label::builder()
-        .xalign(0.0)
-        .ellipsize(pango::EllipsizeMode::End)
-        .max_width_chars(18)
-        .hexpand(true)
-        .build();
-    subtitle.add_css_class("dim");
-    subtitle.add_css_class("caption");
-    cell.append(&subtitle);
-
-    cell
 }
 
 pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {

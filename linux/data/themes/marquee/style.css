@@ -1,0 +1,56 @@
+/* Marquee: a jukebox in a dark room. Everything the accent touches glows. */
+
+.flaccy-window {
+  background-image:
+    radial-gradient(ellipse at 50% -12%, alpha(@flaccy_wash_a, 0.62), transparent 58%),
+    radial-gradient(ellipse at 50% 118%, alpha(@flaccy_wash_b, 0.52), transparent 60%);
+}
+
+.flow-cover {
+  border-radius: 18px;
+  box-shadow:
+    0 0 0 1px alpha(@accent_bg_color, 0.55),
+    0 0 36px alpha(@accent_bg_color, 0.42),
+    0 20px 54px alpha(#000, 0.6);
+}
+
+.flow-title {
+  font-size: 34px;
+  font-weight: 800;
+  text-shadow: 0 0 24px alpha(@accent_bg_color, 0.7);
+}
+
+.flaccy-sidebar > row:selected {
+  box-shadow:
+    inset 0 0 0 1px alpha(@accent_bg_color, 0.62),
+    0 0 20px alpha(@accent_bg_color, 0.38);
+}
+
+.play-pill,
+button.pill.suggested-action {
+  box-shadow: 0 0 24px alpha(@accent_bg_color, 0.62);
+}
+
+.transport {
+  background-image: linear-gradient(180deg, alpha(@flaccy_accent, 0.16), transparent 70%);
+  box-shadow:
+    0 -1px 0 0 alpha(@accent_bg_color, 0.5),
+    0 -12px 40px alpha(@accent_bg_color, 0.12);
+}
+
+.album-tile:hover {
+  box-shadow:
+    0 0 0 1px alpha(@accent_bg_color, 0.55),
+    0 0 28px alpha(@accent_bg_color, 0.36);
+}
+
+.cover,
+.cover-large {
+  box-shadow:
+    0 0 0 1px alpha(@accent_bg_color, 0.28),
+    0 10px 30px alpha(#000, 0.5);
+}
+
+.chip:checked {
+  box-shadow: 0 0 16px alpha(@accent_bg_color, 0.45);
+}

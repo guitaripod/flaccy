@@ -1,0 +1,75 @@
+format = 1
+name = "Phosphor"
+author = "Flaccy"
+description = "A terminal for your records: one typeface, hard corners, a list where the wall of covers was."
+appearance = "dark"
+
+[fonts]
+interface = "JetBrains Mono, Cascadia Code, Fira Code, DejaVu Sans Mono, monospace"
+
+[shape]
+corners = "sharp"
+covers = "square"
+shadows = false
+
+[layout]
+albums = "list"
+glow = false
+
+[[scheme]]
+id = "green"
+name = "Green"
+accent = "#3dff7f"
+[scheme.dark]
+window = "#040705"
+view = "#060a07"
+sidebar = "#050806"
+headerbar = "#070c08"
+card = "#0b130d"
+popover = "#0a110c"
+text = "#b9ffcf"
+accent = "#2fe36c"
+accent_text = "#5dff97"
+on_accent = "#021006"
+
+[[scheme]]
+id = "amber"
+name = "Amber"
+accent = "#ffb000"
+[scheme.dark]
+window = "#070502"
+view = "#0a0703"
+sidebar = "#080603"
+headerbar = "#0c0904"
+card = "#130e06"
+popover = "#110d05"
+text = "#ffdf9e"
+accent = "#f5a700"
+accent_text = "#ffc23d"
+on_accent = "#140c00"
+
+[[scheme]]
+id = "ice"
+name = "Ice"
+accent = "#7fd4ff"
+[scheme.dark]
+window = "#03060a"
+view = "#04080d"
+sidebar = "#04070b"
+headerbar = "#060a10"
+card = "#0a1119"
+popover = "#091017"
+text = "#d3ecff"
+accent = "#62c4f5"
+accent_text = "#8fd9ff"
+on_accent = "#02101a"
+
+[[variant]]
+id = "list"
+name = "List"
+
+[[variant]]
+id = "grid"
+name = "Grid"
+[variant.layout]
+albums = "grid"

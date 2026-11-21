@@ -1,0 +1,40 @@
+/* Gallery: the room stays out of the way. No tint, no glow, no lift. */
+
+.transport {
+  background-image: none;
+  box-shadow: 0 -1px 0 0 alpha(@window_fg_color, 0.1);
+}
+
+.flaccy-sidebar > row:selected {
+  background-image: none;
+  background-color: alpha(@window_fg_color, 0.1);
+  box-shadow: none;
+  color: @window_fg_color;
+}
+
+.flaccy-sidebar > row:selected image {
+  color: @window_fg_color;
+}
+
+.play-pill,
+button.pill {
+  box-shadow: none;
+}
+
+.album-tile:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.title-1,
+.flow-title {
+  font-weight: 300;
+}
+
+.album-pane {
+  border-left: 1px solid alpha(@window_fg_color, 0.1);
+}
+
+.wall-caption {
+  background-image: linear-gradient(to top, alpha(#000, 0.9), alpha(#000, 0));
+}

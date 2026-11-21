@@ -144,10 +144,12 @@ fn sync_history_when_focused(window: &adw::ApplicationWindow, core: &Rc<AppCore>
 pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWindow {
     ui::ui_scale::apply(core.config.borrow().ui_scale());
     register_icon_paths();
-    apply_color_scheme(&core.config.borrow().appearance);
-    crate::theme::ThemeController::install(crate::theme::Theme::from_id(
-        &core.config.borrow().theme,
-    ));
+    {
+        let hub = Rc::clone(&core.hub);
+        crate::theme::ThemeController::install(&core.config.borrow(), move || {
+            hub.emit(&AppEvent::LookChanged);
+        });
+    }
     ui::lyrics_style::apply(core.config.borrow().lyrics_font_size);
     gtk::Window::set_default_icon_name("cc.midgarcorp.Flaccy");
 
@@ -180,6 +182,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         window: window.clone(),
         query: Rc::new(RefCell::new(String::new())),
         scrollers: RefCell::new(Vec::new()),
+        steppers: RefCell::new(Vec::new()),
     });
 
     let header = adw::HeaderBar::builder()
@@ -1862,6 +1865,15 @@ fn handle_vim_navigation(
         }
         _ => return false,
     }
+    if let Some(step) = ui.active_stepper() {
+        step(match key {
+            gdk::Key::j => ui::Step::Forward,
+            gdk::Key::k => ui::Step::Back,
+            gdk::Key::G => ui::Step::Last,
+            _ => ui::Step::First,
+        });
+        return true;
+    }
     let Some(scroll) = ui.active_scroller() else {
         return true;
     };
@@ -1964,15 +1976,6 @@ fn attach_playback_keys(ui: &Rc<Ui>) {
         glib::Propagation::Stop
     });
     ui.window.add_controller(controller);
-}
-
-pub fn apply_color_scheme(appearance: &str) {
-    let scheme = match appearance {
-        "light" => adw::ColorScheme::ForceLight,
-        "dark" => adw::ColorScheme::ForceDark,
-        _ => adw::ColorScheme::Default,
-    };
-    adw::StyleManager::default().set_color_scheme(scheme);
 }
 
 /// Makes the bundled hicolor fallback icons (emote-love, view-list, dialogs,

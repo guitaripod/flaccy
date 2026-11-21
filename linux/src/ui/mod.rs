@@ -1,4 +1,5 @@
 pub mod album_layouts;
+pub mod album_views;
 pub mod ambient;
 pub mod albums;
 pub mod artist_page;
@@ -28,6 +29,7 @@ pub mod home_backdrop;
 pub mod home_customize;
 pub mod home_parts;
 pub mod home_wait;
+pub mod look;
 pub mod lyric_captions;
 pub mod lyric_share_dialog;
 pub mod lyrics_panel;
@@ -41,6 +43,7 @@ pub mod playlist_cover_demo;
 pub mod playlist_suggestions;
 pub mod playlists;
 pub mod prefs;
+pub mod prefs_appearance;
 pub mod prefs_sound;
 pub mod queue_panel;
 pub mod resize;
@@ -54,6 +57,7 @@ pub mod songlink_dialog;
 pub mod songs;
 pub mod stage_layout;
 pub mod stats;
+pub mod theme_preview;
 pub mod track_page;
 pub mod transport;
 pub mod ui_scale;
@@ -128,6 +132,18 @@ pub fn retry_missing_artwork(ui: &Rc<Ui>) -> usize {
     queued
 }
 
+/// One move of the vim-style navigation keys, for a page that steps through
+/// its items instead of scrolling.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Step {
+    Forward,
+    Back,
+    First,
+    Last,
+}
+
+pub type Stepper = Rc<dyn Fn(Step)>;
+
 pub struct Ui {
     pub core: Rc<AppCore>,
     pub nav: adw::NavigationView,
@@ -135,6 +151,7 @@ pub struct Ui {
     pub window: adw::ApplicationWindow,
     pub query: Rc<RefCell<String>>,
     pub scrollers: RefCell<Vec<glib::WeakRef<gtk::ScrolledWindow>>>,
+    pub steppers: RefCell<Vec<(glib::WeakRef<gtk::Widget>, Stepper)>>,
 }
 
 impl Ui {
@@ -144,6 +161,24 @@ impl Ui {
     /// briefly mapped during transitions.
     pub fn register_scroller(&self, scroll: &gtk::ScrolledWindow) {
         self.scrollers.borrow_mut().push(scroll.downgrade());
+    }
+
+    /// Enrolls a page that has no scroller to step: while `widget` is on
+    /// screen, j/k/gg/G are handed to `step` instead.
+    pub fn register_stepper(&self, widget: &impl IsA<gtk::Widget>, step: impl Fn(Step) + 'static) {
+        self.steppers
+            .borrow_mut()
+            .push((widget.as_ref().downgrade(), Rc::new(step)));
+    }
+
+    pub fn active_stepper(&self) -> Option<Stepper> {
+        let mut steppers = self.steppers.borrow_mut();
+        steppers.retain(|(weak, _)| weak.upgrade().is_some());
+        steppers
+            .iter()
+            .rev()
+            .find(|(weak, _)| weak.upgrade().is_some_and(|widget| widget.is_mapped()))
+            .map(|(_, step)| Rc::clone(step))
     }
 
     pub fn active_scroller(&self) -> Option<gtk::ScrolledWindow> {
