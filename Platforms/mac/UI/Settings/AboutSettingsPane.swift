@@ -4,7 +4,9 @@ import AuthenticationServices
 import Combine
 import FlaccyCore
 import MidgarPortal
+import MidgarUI
 import ServiceManagement
+import SwiftUI
 import UserNotifications
 
 /// About: version, licenses, legal links.
@@ -47,6 +49,11 @@ final class AboutSettingsPane: SettingsPane {
         support.toolTip = MidgarSupport.address
         addRow([privacy, terms, support], spacing: 10)
 
+        let usage = NSButton(title: "\(MidgarUsageCounts.title)…", target: self, action: #selector(openUsageCounts))
+        usage.bezelStyle = .rounded
+        usage.setAccessibilityIdentifier("settings.usageCounts")
+        addRow([usage], spacing: 10)
+
         let copyright = explanation("© 2026 Midgar Oy")
         formStack.addArrangedSubview(copyright)
     }
@@ -57,6 +64,13 @@ final class AboutSettingsPane: SettingsPane {
 
     @objc func openTerms() {
         NSWorkspace.shared.open(LegalLinks.termsURL)
+    }
+
+    /// Opens the Usage Counts screen as a sheet: what Flaccy counts and reports, and the one switch that turns it off.
+    @objc func openUsageCounts() {
+        let screen = NSHostingController(rootView: MacUsageCountsSheet())
+        screen.preferredContentSize = NSSize(width: 460, height: 560)
+        presentAsSheet(screen)
     }
 
     /// Starts an email to support with the log attached, through the mail app's link when the
@@ -74,5 +88,23 @@ final class AboutSettingsPane: SettingsPane {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(MidgarSupport.address, forType: .string)
         MacToast.show(String(localized: "Copied to the clipboard"), style: .info, in: view.window)
+    }
+}
+
+/// The Usage Counts screen with a Done button, as the sheet the About page opens.
+struct MacUsageCountsSheet: View {
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            MidgarUsageCounts()
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(String(localized: "Done")) { dismiss() }
+                    }
+                }
+        }
+        .frame(width: 460, height: 560)
     }
 }

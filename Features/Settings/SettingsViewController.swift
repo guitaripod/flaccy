@@ -4,6 +4,7 @@ import MidgarCore
 import FlaccyCore
 import StoreKit
 import MidgarPortal
+import MidgarUI
 import UIKit
 
 final class SettingsViewController: UITableViewController {
@@ -297,7 +298,7 @@ final class SettingsViewController: UITableViewController {
         case .lastFM: [(.lastFM, lastFMRows())]
         case .about: [
             (.aboutVersion, [.version(Self.versionLine)]),
-            (.aboutLegal, [.privacyPolicy, .termsOfUse]),
+            (.aboutLegal, [.usageCounts(status: MidgarUsageCounts.status), .privacyPolicy, .termsOfUse]),
         ]
         }
     }
@@ -449,6 +450,7 @@ final class SettingsViewController: UITableViewController {
             Entry(String(localized: "Contact Support"), symbolName: "envelope.fill", tint: .systemGreen, row: .support),
             Entry(Page.about.title, in: .about),
             Entry(String(localized: "Version"), in: .about),
+            Entry(MidgarUsageCounts.title, in: .about),
             Entry(String(localized: "Privacy Policy"), in: .about),
             Entry(String(localized: "Terms of Use"), in: .about),
         ]
@@ -576,6 +578,9 @@ final class SettingsViewController: UITableViewController {
             impactLight.impactOccurred()
             presenter.present(EqualizerViewController.makePresented(), animated: true)
         case .watchSync: handleWatchTap()
+        case .usageCounts:
+            impactLight.impactOccurred()
+            navigationController?.pushViewController(MidgarUsageCountsViewController(), animated: true)
         case .privacyPolicy: UIApplication.shared.open(LegalLinks.privacyURL)
         case .termsOfUse: UIApplication.shared.open(LegalLinks.termsURL)
         case .support: handleSupportTap()
