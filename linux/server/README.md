@@ -50,7 +50,9 @@ MD5 empty, is fingerprinted afterwards in the background, a minute at a time, so
 music folder is never kept waiting behind it; that is what tells a re-exported mix from a retag.
 Progress is in the log (`flaccy.log` in the data folder, a line every fifteen seconds), in
 `flaccy-server status` (`Scanning:`, and the songs still to fingerprint in `Last scan:`) and in
-the OpenSubsonic call `getScanStatus`, whose `scanning` flag and `count` an app can poll.
+the OpenSubsonic call `getScanStatus`, whose `scanning` flag and `count` an app can poll. Its
+`lastScan` moves whenever a scan adds, removes, revises or retags songs, so Flaccy apps ask it when
+they come to the front (Linux every two minutes) and fetch the songs again only when it moved.
 
 The server keeps each user's playlists, loves, ratings, preferences and listens and
 hands them to every device they enrolled; the wire contract is

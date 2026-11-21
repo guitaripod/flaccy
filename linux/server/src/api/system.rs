@@ -37,10 +37,19 @@ pub(super) fn extensions() -> Fields {
     )
 }
 
-/// `getScanStatus`: whether a scan is running and how many songs the library holds so far.
+/// `getScanStatus`: whether a scan is running, how many songs the library holds and when its songs last changed.
+///
+/// `lastScan` moves only when a scan added, removed, revised or retagged songs, so a client that synced after it
+/// already has the library and one that synced before it has to fetch the songs again.
 pub(super) fn scan_status(call: &Call<'_>) -> Fields {
     let scan = call.state.0.scan.snapshot();
-    one("scanStatus", json!({"scanning": scan.scanning, "count": scan.indexed}))
+    let listed = call.state.catalog().song_count();
+    let count = if scan.scanning { listed.max(scan.indexed) } else { listed };
+    let mut status = json!({"scanning": scan.scanning, "count": count});
+    if let Some(changed) = call.state.0.store.state(crate::refresh::LIBRARY_CHANGED_AT) {
+        status["lastScan"] = json!(changed);
+    }
+    one("scanStatus", status)
 }
 
 /// `getUser`: the calling user. Roles for features the server does not offer are false.

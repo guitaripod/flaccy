@@ -176,6 +176,28 @@ async fn unknown_methods_say_they_are_not_implemented() {
 }
 
 #[tokio::test]
+async fn scan_status_counts_the_library_and_moves_last_scan_only_when_songs_change() {
+    let server = TestServer::new().await;
+    server.standard_library();
+    let first = server.json("getScanStatus", "").await.raw["scanStatus"].clone();
+    assert_eq!(first["count"], 6);
+    let stamp = first["lastScan"].as_str().expect("lastScan after a scan that added songs").to_string();
+    assert!(chrono::DateTime::parse_from_rfc3339(&stamp).is_ok(), "{stamp}");
+
+    server.scan();
+    let quiet = server.json("getScanStatus", "").await.raw["scanStatus"].clone();
+    assert_eq!(quiet["count"], 6, "a scan that reads no new file still reports the whole library");
+    assert_eq!(quiet["lastScan"], stamp.as_str(), "a scan that changed nothing keeps lastScan");
+
+    std::thread::sleep(std::time::Duration::from_millis(5));
+    server.write_song("Zed/Third/02 Encore.wav", "Encore", "Zed", "Third", 8000, 3);
+    assert_eq!(server.scan().added, 1);
+    let grown = server.json("getScanStatus", "").await.raw["scanStatus"].clone();
+    assert_eq!(grown["count"], 7);
+    assert!(grown["lastScan"].as_str().unwrap() > stamp.as_str(), "{grown}");
+}
+
+#[tokio::test]
 async fn identity_calls_describe_the_server() {
     let server = TestServer::new().await;
     server.standard_library();

@@ -18,6 +18,8 @@ const SETTLE: Duration = Duration::from_secs(3);
 /// How long one background scan may spend hashing the audio of files that have no MD5 of their own, before it
 /// lets the next change to the music folder in.
 const FINGERPRINT_SLICE: Duration = Duration::from_secs(60);
+/// The `serverState` key holding when a scan last changed the songs the library lists, as RFC 3339 UTC.
+pub const LIBRARY_CHANGED_AT: &str = "libraryChangedAt";
 /// The pause between two slices of that hashing.
 const FINGERPRINT_PAUSE: Duration = Duration::from_secs(1);
 
@@ -34,6 +36,11 @@ pub struct ScanSummary {
 }
 
 impl ScanSummary {
+    /// Whether the scan changed what the library lists, so clients holding a copy have to fetch it again.
+    pub fn changed_songs(&self) -> bool {
+        self.failure.is_none() && (self.added > 0 || self.removed > 0 || self.new_versions > 0 || self.retagged)
+    }
+
     /// One line for the log and for `status`.
     pub fn describe(&self, songs: usize) -> String {
         match &self.failure {
@@ -127,7 +134,14 @@ fn refresh_with(state: &AppState, options: ScanOptions) -> ScanSummary {
         &chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
     );
     state.0.store.set_state("lastScanSummary", &line);
+    if summary.changed_songs() {
+        state.0.store.set_state(LIBRARY_CHANGED_AT, &now_stamp());
+    }
     summary
+}
+
+fn now_stamp() -> String {
+    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
 
 async fn refresh_in_background(state: &AppState) -> usize {
