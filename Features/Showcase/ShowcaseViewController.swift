@@ -9,9 +9,12 @@ final class ShowcaseViewController: UIViewController {
     var onFinish: ((ShowcaseFooter.Action) -> Void)?
 
     private let wash = ShowcaseWashView()
-    private let scrollView = UIScrollView()
+    private let scrollView = ShowcaseScrollView()
     private let hero = ShowcaseHeroView()
     private let rows = ShowcaseCopy.highlights.map { ShowcaseRowView(feature: $0) }
+    private lazy var rowStack = UIStackView(arrangedSubviews: rows)
+    private lazy var content = UIStackView(arrangedSubviews: [hero, rowStack])
+    private var isTight = false
     private let haptics = ShowcaseHaptics()
     private let tap = UIImpactFeedbackGenerator(style: .light)
     private lazy var everythingButton = ShowcaseButtons.onward(title: ShowcaseCopy.seeEverything) { [weak self] in
@@ -26,6 +29,23 @@ final class ShowcaseViewController: UIViewController {
     }
     private var footer = ShowcaseFooter.make(for: nil)
     private var hasPlayedEntrance = false
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        tightenIfThePageDoesNotFit()
+    }
+
+    /// Closes up the page's spacing the first time its content is taller than the room above the buttons (a long
+    /// language, larger text, a small iPhone, a status line that takes two lines), which is often all the fourth row
+    /// needs to fit whole. It never opens up again, so a foot that changes size cannot make the page breathe in and
+    /// out; whatever still does not fit scrolls, and `ShowcaseScrollView` fades it out at the edge.
+    private func tightenIfThePageDoesNotFit() {
+        guard !isTight, scrollView.bounds.height > 0, content.bounds.height > scrollView.bounds.height + 0.5 else { return }
+        isTight = true
+        content.spacing = 20
+        content.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 20, leading: 28, bottom: 12, trailing: 28)
+        rowStack.spacing = 13
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -48,10 +68,9 @@ final class ShowcaseViewController: UIViewController {
     /// Shows a foot: the status line, the main button's title, and the second button when there is one.
     private func apply(_ footer: ShowcaseFooter) {
         self.footer = footer
-        let sells = footer.primary == .plans
         statusLabel.text = footer.status
-        statusLabel.font = .preferredFont(forTextStyle: sells ? .subheadline : .footnote)
-        statusLabel.textColor = sells ? .label : .secondaryLabel
+        statusLabel.font = .preferredFont(forTextStyle: footer.statusLeads ? .subheadline : .footnote)
+        statusLabel.textColor = footer.statusLeads ? .label : .secondaryLabel
         statusLabel.isHidden = footer.status == nil
         primaryButton.configuration?.title = footer.primaryTitle
         secondaryButton.configuration?.title = footer.secondaryTitle
@@ -88,11 +107,9 @@ final class ShowcaseViewController: UIViewController {
     }
 
     private func buildContent() {
-        let rowStack = UIStackView(arrangedSubviews: rows)
         rowStack.axis = .vertical
         rowStack.spacing = 18
 
-        let content = UIStackView(arrangedSubviews: [hero, rowStack])
         content.axis = .vertical
         content.spacing = 30
         content.isLayoutMarginsRelativeArrangement = true
@@ -174,6 +191,39 @@ final class ShowcaseViewController: UIViewController {
 
     private var footerButtons: [UIButton] { [everythingButton, primaryButton, secondaryButton] }
     private var footerViews: [UIView] { [statusLabel] + footerButtons }
+}
+
+/// The showcase's scroll area. While more of the page lies below its bottom edge the last stretch fades out, so a
+/// page too tall for the sheet reads as one that scrolls and never as one cut off; at the end it is whole again.
+final class ShowcaseScrollView: UIScrollView {
+
+    private static let fadeHeight: CGFloat = 40
+
+    private let fade = CAGradientLayer()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        layer.mask = fade
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    /// Runs at every scroll step, so the mask follows the visible bounds and its fade shrinks to nothing over the
+    /// last stretch of the content.
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let below = contentSize.height - (contentOffset.y + bounds.height)
+        let reach = min(1, max(0, below / Self.fadeHeight))
+        let solidUntil = bounds.height > 0 ? 1 - Self.fadeHeight * reach / bounds.height : 1
+        let solid = UIColor.black.cgColor
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        fade.frame = bounds
+        fade.colors = [solid, solid, reach > 0 ? UIColor.clear.cgColor : solid]
+        fade.locations = [0, NSNumber(value: Double(solidUntil)), 1]
+        CATransaction.commit()
+    }
 }
 
 /// The two kinds of button the showcase uses.

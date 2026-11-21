@@ -97,6 +97,7 @@ final class MacShowcaseViewController: NSViewController {
     private func apply(_ footer: ShowcaseFooter) {
         self.footer = footer
         statusLabel.stringValue = footer.status ?? ""
+        statusLabel.textColor = footer.statusLeads ? .labelColor : .secondaryLabelColor
         statusLabel.isHidden = footer.status == nil
         continueButton.title = footer.primaryTitle
         everythingContinueButton.title = footer.primaryTitle

@@ -75,6 +75,7 @@ nonisolated final class ShowcaseTests: XCTestCase {
         XCTAssertEqual(footer.secondary, .listen)
         XCTAssertEqual(footer.secondaryTitle, ShowcaseCopy.notNow)
         XCTAssertEqual(footer.status, PaywallCopy.statusLine(for: .expired))
+        XCTAssertTrue(footer.statusLeads)
     }
 
     @MainActor
@@ -86,6 +87,15 @@ nonisolated final class ShowcaseTests: XCTestCase {
             XCTAssertEqual(footer.secondary, .plans)
             XCTAssertEqual(footer.status, PaywallCopy.statusLine(for: state))
         }
+    }
+
+    @MainActor
+    func testFreeDaysThatWaitAreSaidAsPlainlyAsAnEndedTrial() {
+        XCTAssertTrue(ShowcaseFooter.make(for: .secondLookReady).statusLeads)
+        for state in [EntitlementState.trial(daysRemaining: 5), .trialNotStarted, .purchased(.lifetime), .purchased(.yearly)] {
+            XCTAssertFalse(ShowcaseFooter.make(for: state).statusLeads, "\(state)")
+        }
+        XCTAssertFalse(ShowcaseFooter.make(for: nil).statusLeads)
     }
 
     @MainActor

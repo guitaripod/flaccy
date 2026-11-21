@@ -1,5 +1,6 @@
 import AVFoundation
 import MidgarCore
+import MidgarUI
 import UIKit
 import UserNotifications
 
@@ -16,6 +17,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         FlaccyMidgar.configureLogging()
         #if DEBUG
         ScanBench.start()
+        MidgarFrameWatch.shared.startIfRequested()
         #endif
         FlaccyMidgar.shared.start()
         ReviewPrompt.beginSession()
