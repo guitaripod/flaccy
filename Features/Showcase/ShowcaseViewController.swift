@@ -1,11 +1,12 @@
 import MidgarCore
 import UIKit
 
-/// The first page of the 2.0 showcase: the hero, four things Flaccy does, and the way on. It plays its entrance once,
-/// about a second long, and only then offers Continue, so it is seen and never sat through.
+/// The first page of the 2.0 showcase: the hero, four things Flaccy does, where the person's trial or purchase
+/// stands, and the way on. It plays its entrance once, about a second long, and only then offers its buttons, so it
+/// is seen and never sat through.
 final class ShowcaseViewController: UIViewController {
 
-    var onFinish: (() -> Void)?
+    var onFinish: ((ShowcaseFooter.Action) -> Void)?
 
     private let wash = ShowcaseWashView()
     private let scrollView = UIScrollView()
@@ -16,9 +17,14 @@ final class ShowcaseViewController: UIViewController {
     private lazy var everythingButton = ShowcaseButtons.onward(title: ShowcaseCopy.seeEverything) { [weak self] in
         self?.showEverything(animated: true)
     }
-    private lazy var continueButton = ShowcaseButtons.primary(title: ShowcaseCopy.proceed) { [weak self] in
-        self?.finish()
+    private let statusLabel = WelcomeViewController.label("", style: .footnote, color: .secondaryLabel)
+    private lazy var primaryButton = ShowcaseButtons.primary(title: ShowcaseCopy.proceed) { [weak self] in
+        self?.finish(with: self?.footer.primary ?? .listen)
     }
+    private lazy var secondaryButton = ShowcaseButtons.quiet(title: ShowcaseCopy.seePlans) { [weak self] in
+        self?.finish(with: self?.footer.secondary ?? .listen)
+    }
+    private var footer = ShowcaseFooter.make(for: nil)
     private var hasPlayedEntrance = false
 
     override func viewDidLoad() {
@@ -26,8 +32,31 @@ final class ShowcaseViewController: UIViewController {
         view.backgroundColor = .systemBackground
         navigationItem.backButtonTitle = ShowcaseCopy.back
         buildContent()
+        apply(ShowcaseFooter.current)
         prepareForEntrance()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(entitlementsDidLoad), name: PurchaseManager.entitlementsDidLoad, object: nil
+        )
         MidgarLog.info("Showcase \(ShowcaseCopy.version) shown", category: .ui)
+    }
+
+    /// The store answered after the showcase opened, so the foot can now say where the person stands.
+    @objc private func entitlementsDidLoad() {
+        apply(ShowcaseFooter.current)
+    }
+
+    /// Shows a foot: the status line, the main button's title, and the second button when there is one.
+    private func apply(_ footer: ShowcaseFooter) {
+        self.footer = footer
+        let sells = footer.primary == .plans
+        statusLabel.text = footer.status
+        statusLabel.font = .preferredFont(forTextStyle: sells ? .subheadline : .footnote)
+        statusLabel.textColor = sells ? .label : .secondaryLabel
+        statusLabel.isHidden = footer.status == nil
+        primaryButton.configuration?.title = footer.primaryTitle
+        secondaryButton.configuration?.title = footer.secondaryTitle
+        secondaryButton.isHidden = footer.secondaryTitle == nil
+        (navigationController?.viewControllers.last as? ShowcaseFeaturesViewController)?.apply(footer)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -45,15 +74,15 @@ final class ShowcaseViewController: UIViewController {
     /// Opens the second page, where everything Flaccy can do is listed.
     func showEverything(animated: Bool) {
         tap.impactOccurred()
-        let everything = ShowcaseFeaturesViewController()
-        everything.onFinish = { [weak self] in self?.finish() }
+        let everything = ShowcaseFeaturesViewController(footer: footer)
+        everything.onFinish = { [weak self] action in self?.finish(with: action) }
         navigationController?.pushViewController(everything, animated: animated)
     }
 
-    private func finish() {
+    private func finish(with action: ShowcaseFooter.Action) {
         tap.impactOccurred()
-        MidgarLog.info("Showcase \(ShowcaseCopy.version) closed", category: .ui)
-        onFinish?()
+        MidgarLog.info("Showcase \(ShowcaseCopy.version) closed for \(action)", category: .ui)
+        onFinish?(action)
     }
 
     private func buildContent() {
@@ -68,9 +97,12 @@ final class ShowcaseViewController: UIViewController {
         content.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 36, leading: 28, bottom: 20, trailing: 28)
         content.translatesAutoresizingMaskIntoConstraints = false
 
-        let buttons = UIStackView(arrangedSubviews: [everythingButton, continueButton])
+        statusLabel.textAlignment = .center
+        let buttons = UIStackView(arrangedSubviews: [statusLabel, everythingButton, primaryButton, secondaryButton])
         buttons.axis = .vertical
         buttons.spacing = 10
+        buttons.setCustomSpacing(4, after: statusLabel)
+        buttons.setCustomSpacing(2, after: primaryButton)
         buttons.translatesAutoresizingMaskIntoConstraints = false
 
         wash.translatesAutoresizingMaskIntoConstraints = false
@@ -112,12 +144,11 @@ final class ShowcaseViewController: UIViewController {
 
     private func prepareForEntrance() {
         hero.prepareForEntrance()
-        (rows + [everythingButton, continueButton]).forEach {
+        (rows + footerViews).forEach {
             $0.alpha = 0
             $0.transform = CGAffineTransform(translationX: 0, y: 14)
         }
-        everythingButton.isEnabled = false
-        continueButton.isEnabled = false
+        footerButtons.forEach { $0.isEnabled = false }
     }
 
     private func playEntrance() {
@@ -129,16 +160,18 @@ final class ShowcaseViewController: UIViewController {
             if gentle { row.transform = .identity }
             ShowcaseHeroView.rise(row, delay: gentle ? 0 : ShowcaseTiming.row(index))
         }
-        for button in [everythingButton, continueButton] {
-            if gentle { button.transform = .identity }
-            ShowcaseHeroView.rise(button, delay: buttonsAt)
+        for view in footerViews {
+            if gentle { view.transform = .identity }
+            ShowcaseHeroView.rise(view, delay: buttonsAt)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + buttonsAt) { [weak self] in
-            self?.everythingButton.isEnabled = true
-            self?.continueButton.isEnabled = true
+            self?.footerButtons.forEach { $0.isEnabled = true }
             UIAccessibility.post(notification: .screenChanged, argument: self?.hero)
         }
     }
+
+    private var footerButtons: [UIButton] { [everythingButton, primaryButton, secondaryButton] }
+    private var footerViews: [UIView] { [statusLabel] + footerButtons }
 }
 
 /// The two kinds of button the showcase uses.
@@ -158,6 +191,21 @@ enum ShowcaseButtons {
         }
         let button = UIButton(configuration: configuration, primaryAction: UIAction { _ in action() })
         button.accessibilityIdentifier = "showcase.continue"
+        return button
+    }
+
+    /// The small plain button under the main one, for the other way on.
+    static func quiet(title: String, action: @escaping () -> Void) -> UIButton {
+        var configuration = UIButton.Configuration.plain()
+        configuration.title = title
+        configuration.buttonSize = .small
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
+            var attributes = attributes
+            attributes.font = UIFont.preferredFont(forTextStyle: .subheadline)
+            return attributes
+        }
+        let button = UIButton(configuration: configuration, primaryAction: UIAction { _ in action() })
+        button.accessibilityIdentifier = "showcase.secondary"
         return button
     }
 

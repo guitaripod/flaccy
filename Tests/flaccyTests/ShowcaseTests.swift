@@ -60,6 +60,42 @@ nonisolated final class ShowcaseTests: XCTestCase {
         XCTAssertEqual(withTransfer.count, without.count + 1)
     }
 
+    @MainActor
+    func testAnEndedTrialIsLedToThePlansAndCanStillSayNotNow() {
+        let footer = ShowcaseFooter.make(for: .expired)
+        XCTAssertEqual(footer.primary, .plans)
+        XCTAssertEqual(footer.primaryTitle, ShowcaseCopy.seePlans)
+        XCTAssertEqual(footer.secondary, .listen)
+        XCTAssertEqual(footer.secondaryTitle, ShowcaseCopy.notNow)
+        XCTAssertEqual(footer.status, PaywallCopy.statusLine(for: .expired))
+    }
+
+    @MainActor
+    func testARunningTrialAndASecondLookListenFirstWithThePlansOneTapAway() {
+        for state in [EntitlementState.trial(daysRemaining: 5), .secondLookReady] {
+            let footer = ShowcaseFooter.make(for: state)
+            XCTAssertEqual(footer.primary, .listen)
+            XCTAssertEqual(footer.primaryTitle, ShowcaseCopy.proceed)
+            XCTAssertEqual(footer.secondary, .plans)
+            XCTAssertEqual(footer.status, PaywallCopy.statusLine(for: state))
+        }
+    }
+
+    @MainActor
+    func testAnOwnerANewPersonAndAStoreThatHasNotAnsweredAreNeverSoldTo() {
+        for state in [EntitlementState.purchased(.lifetime), .purchased(.yearly), .trialNotStarted] {
+            let footer = ShowcaseFooter.make(for: state)
+            XCTAssertEqual(footer.primary, .listen)
+            XCTAssertNil(footer.secondary)
+            XCTAssertNil(footer.secondaryTitle)
+            XCTAssertNotNil(footer.status)
+        }
+        let unknown = ShowcaseFooter.make(for: nil)
+        XCTAssertEqual(unknown.primary, .listen)
+        XCTAssertNil(unknown.status)
+        XCTAssertNil(unknown.secondary)
+    }
+
     func testTheEntranceIsOverInAboutASecond() {
         let buttons = ShowcaseTiming.buttons(rowCount: ShowcaseCopy.highlights.count)
         XCTAssertLessThan(buttons + ShowcaseTiming.settle, 1.4)

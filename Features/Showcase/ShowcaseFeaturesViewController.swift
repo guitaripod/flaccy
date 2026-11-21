@@ -4,12 +4,28 @@ import UIKit
 /// a bar that keeps Continue in reach.
 final class ShowcaseFeaturesViewController: UIViewController {
 
-    var onFinish: (() -> Void)?
+    var onFinish: ((ShowcaseFooter.Action) -> Void)?
 
     private let scrollView = UIScrollView()
     private let bar = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
-    private lazy var continueButton = ShowcaseButtons.primary(title: ShowcaseCopy.proceed) { [weak self] in
-        self?.onFinish?()
+    private var footer: ShowcaseFooter
+    private lazy var continueButton = ShowcaseButtons.primary(title: footer.primaryTitle) { [weak self] in
+        guard let self else { return }
+        self.onFinish?(self.footer.primary)
+    }
+
+    init(footer: ShowcaseFooter) {
+        self.footer = footer
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    /// Takes a foot that changed while this page was open, as when the store answers late.
+    func apply(_ footer: ShowcaseFooter) {
+        self.footer = footer
+        continueButton.configuration?.title = footer.primaryTitle
     }
 
     override func viewDidLoad() {
