@@ -117,7 +117,10 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if !launchLinks.isEmpty {
             DispatchQueue.main.async { [weak self] in launchLinks.forEach { self?.openServerLink($0) } }
         } else {
-            WelcomeFlow.presentIfNeeded(over: rootVC, tabs: tabs)
+            ShowcaseFlow.presentIfNeeded(over: rootVC) { [weak rootVC, weak tabs] followedShowcase in
+                guard let rootVC, let tabs else { return }
+                WelcomeFlow.presentIfNeeded(over: rootVC, tabs: tabs, animated: followedShowcase)
+            }
         }
     }
 

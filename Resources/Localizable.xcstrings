@@ -31337,6 +31337,100 @@
         }
       }
     },
+    "A Real Equalizer": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En rigtig Equalizer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein echter Equalizer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un ecualizador de verdad"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oikea Equalizer"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un vrai égaliseur"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alvöru tónjafnari"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un vero equalizzatore"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本格的なイコライザ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "본격적인 이퀄라이저"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En ekte equalizer"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prawdziwy korektor dźwięku"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um equalizador de verdade"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En riktig equalizer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "真正的均衡器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "真正的等化器"
+          }
+        }
+      }
+    },
     "A code works once and lasts 10 minutes. Make a new one on %@ and try again.": {
       "localizations": {
         "da": {
@@ -43171,6 +43265,100 @@
         }
       }
     },
+    "Albums, artists and playlists with fast search, large artwork and duplicate songs listed once.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album, kunstnere og spillelister med hurtig søgning, store coverbilleder og dubletter vist én gang."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alben, Künstler und Playlists mit schneller Suche, großen Covern und Duplikaten, die nur einmal aufgelistet werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Álbumes, artistas y playlists con búsqueda rápida, carátulas grandes y canciones duplicadas listadas una sola vez."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albumit, artistit ja soittolistat nopealla haulla, suurilla kansikuvilla ja kaksoiskappaleet vain kerran."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albums, artistes et playlists avec recherche rapide, grandes pochettes et morceaux en double listés une seule fois."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plötur, listamenn og spilunarlistar með hraðri leit, stórum plötuumslögum og tvítekin lög birt einu sinni."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album, artisti e playlist con ricerca veloce, copertine grandi e brani duplicati elencati una sola volta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アルバム、アーティスト、プレイリストを素早く検索でき、大きなジャケット写真を表示し、重複する曲は1回だけ表示します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앨범, 아티스트, 재생목록을 빠르게 검색하고, 큰 아트워크로 보며, 중복된 곡은 한 번만 표시해요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album, artister og spillelister med raskt søk, store omslag og dupliserte sanger listet én gang."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albumy, wykonawcy i playlisty z szybkim wyszukiwaniem, dużymi okładkami i zduplikowanymi utworami wyświetlanymi raz."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Álbuns, artistas e playlists com busca rápida, capas grandes e músicas duplicadas listadas uma só vez."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album, artister och spellistor med snabb sökning, stora omslag och dubbletter visas en gång."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按专辑、艺术家和播放列表浏览，支持快速搜索、大幅封面，重复歌曲只列出一次。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依專輯、藝人和播放列表瀏覽，支援快速搜尋、大尺寸封面，重複的歌曲只會列出一次。"
+          }
+        }
+      }
+    },
     "All": {
       "localizations": {
         "da": {
@@ -49493,6 +49681,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "將全部移到最前方"
+          }
+        }
+      }
+    },
+    "Bring It All In": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hent alt ind"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles hereinholen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa todo"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tuo kaikki"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout importer"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taktu allt inn"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi tutto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてを取り込む"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 가져오기"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta med alt"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj wszystko"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traga tudo para cá"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta in allt"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部导入"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部匯入"
           }
         }
       }
@@ -77887,6 +78169,100 @@
         }
       }
     },
+    "Drag the curve, tune up to ten bands or describe the sound you want. Every output keeps its own setting.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Træk i kurven, justér op til ti bånd eller beskriv lyden, du vil have. Hvert output beholder sin egen indstilling."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zieh die Kurve, stimme bis zu zehn Bänder ab oder beschreibe den Klang, den du willst. Jede Ausgabe behält ihre eigene Einstellung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra la curva, ajusta hasta diez bandas o describe el sonido que quieres. Cada salida mantiene su propia configuración."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vedä käyrää, säädä jopa kymmentä taajuuskaistaa tai kuvaile ääntä, jota haluat. Jokainen lähtö säilyttää oman asetuksensa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser la courbe, réglez jusqu'à dix bandes ou décrivez le son souhaité. Chaque sortie garde son propre réglage."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dragðu ferilinn, stilltu allt að tíu bönd eða lýstu hljóðinu sem þú vilt. Hvert úttak heldur sinni eigin stillingu."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina la curva, regola fino a dieci bande o descrivi il suono che vuoi. Ogni output mantiene la sua impostazione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カーブをドラッグ、10バンドまで調整、または欲しい音を説明できます。出力ごとに個別の設定が保たれます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "곡선을 드래그하거나 최대 10개 밴드를 조절하거나, 원하는 소리를 설명해 보세요. 출력마다 각자의 설정이 유지돼요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dra kurven, juster opptil ti bånd eller beskriv lyden du vil ha. Hver utgang beholder sin egen innstilling."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przeciągnij krzywą, dostrój do dziesięciu pasm albo opisz brzmienie, jakiego chcesz. Każde wyjście zachowuje własne ustawienie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste a curva, ajuste até dez bandas ou descreva o som que você quer. Cada saída mantém a própria configuração."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dra kurvan, justera upp till tio band eller beskriv ljudet du vill ha. Varje utgång behåller sin egen inställning."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖动曲线、调整最多十个频段，或描述你想要的声音。每个输出都会保留自己的设置。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖曳曲線、調整最多十個頻段，或描述你想要的聲音。每個輸出都會保留自己的設定。"
+          }
+        }
+      }
+    },
     "Drag to reorder. Turn a section off to hide it; it stays here for when you want it back.": {
       "localizations": {
         "da": {
@@ -80956,6 +81332,100 @@
         }
       }
     },
+    "Every play scrobbled, even offline, with listening charts and a wantlist.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hver afspilning scrobblet, også offline, med lyttestatistik og en ønskeliste."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Wiedergabe gescrobbelt, auch offline, mit Hörstatistiken und einer Wunschliste."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada reproducción scrobbleada, incluso sin conexión, con gráficas de escucha y una lista de deseos."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jokainen toisto scrobblataan, myös offline-tilassa, kuunteluraportit ja toivelista mukana."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque écoute scrobblée, même hors ligne, avec des statistiques d'écoute et une liste d'envies."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hver spilun skrobbuð í Last.fm, líka án nettengingar, með hlustunartölfræði og Óskalista."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni riproduzione scrobblata, anche offline, con grafici di ascolto e la Lista dei desideri."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフラインでもすべての再生をスクロブルし、リスニングチャートとウォントリストで確認できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오프라인에서도 모든 재생을 스크로블하고, 청취 차트와 위시리스트로 확인할 수 있어요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hver avspilling scrobblet, også frakoblet, med lyttediagrammer og Ønskeliste."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Każde odtworzenie scrobblowane, nawet offline, z wykresami słuchania i Listą życzeń."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada reprodução vira scrobble, mesmo offline, com gráficos de escuta e Lista de Desejos."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varje uppspelning scrobblad, även offline, med lyssningsdiagram och Önskelistan."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每次播放都会 Scrobble，即使离线也一样，并提供听歌图表和心愿单。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每次播放都會 Scrobble，即使離線也一樣，並提供聆聽圖表和願望清單。"
+          }
+        }
+      }
+    },
     "Every song plays at its own level": {
       "localizations": {
         "da": {
@@ -81140,6 +81610,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "每首歌曲都會恢復到其母帶製作時的音量。"
+          }
+        }
+      }
+    },
+    "Everything Flaccy Can Do": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alt, Flaccy kan"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles, was Flaccy kann"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo lo que puede hacer Flaccy"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaikki, mihin Flaccy pystyy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout ce que sait faire Flaccy"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allt sem Flaccy getur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutto ciò che sa fare Flaccy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccyのすべての機能"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy의 모든 기능"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alt Flaccy kan gjøre"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wszystko, co potrafi Flaccy"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tudo o que o Flaccy pode fazer"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allt Flaccy kan göra"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 的全部功能"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 的全部功能"
           }
         }
       }
@@ -81704,6 +82268,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部功能，每年續訂，隨時可取消。"
+          }
+        }
+      }
+    },
+    "Everywhere": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overalt"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überall"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En todas partes"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaikkialla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partout"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alls staðar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ovunque"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どこでも"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어디서든"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overalt"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wszędzie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em todo lugar"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Överallt"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无处不在"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無所不在"
           }
         }
       }
@@ -83114,6 +83772,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "FLAC、ALAC、WAV 和 AIFF 專輯可無縫播放，沒有任何例外。"
+          }
+        }
+      }
+    },
+    "FLAC, ALAC, WAV, AIFF, MP3 and AAC, gapless, with the codec, bit depth and sample rate on every track.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 og AAC, uden pauser, med codec, bitdybde og samplefrekvens på hvert nummer."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 und AAC, lückenlos, mit Codec, Bittiefe und Abtastrate bei jedem Titel."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 y AAC, sin pausas, con el códec, la profundidad de bits y la frecuencia de muestreo de cada pista."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 ja AAC, saumattomasti, ja jokaisen raidan koodekki, bittisyvyys ja näytteenottotaajuus näkyvissä."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 et AAC, sans coupure, avec le codec, la profondeur de bits et la fréquence d'échantillonnage de chaque piste."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 og AAC, án bila, með kóðun, bitadýpt og sýnatíðni á hverju lagi."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 e AAC, senza interruzioni, con codec, profondità di bit e frequenza di campionamento su ogni brano."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC、ALAC、WAV、AIFF、MP3、AACに対応し、ギャップレス再生。全トラックでコーデック、ビット深度、サンプルレートを表示します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3, AAC를 지원하며 갭리스 재생을 제공하고, 모든 트랙에 코덱, 비트 심도, 샘플 레이트를 표시해요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 og AAC, sømløst, med kodek, bitdybde og samplingsfrekvens på hvert spor."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 i AAC, bez przerw, z kodekiem, głębią bitów i próbkowaniem przy każdym utworze."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 e AAC, com reprodução sem intervalos e com codec, profundidade de bits e taxa de amostragem em cada faixa."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 och AAC, utan glapp, med codec, bitdjup och samplingsfrekvens på varje spår."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持 FLAC、ALAC、WAV、AIFF、MP3 和 AAC，无缝播放，并在每首曲目上显示编解码器、位深和采样率。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支援 FLAC、ALAC、WAV、AIFF、MP3 和 AAC，無縫播放，並在每首曲目顯示編碼格式、位元深度和取樣率。"
           }
         }
       }
@@ -87269,6 +88021,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy Pro — 年繳。謝謝！"
+          }
+        }
+      }
+    },
+    "Flaccy Server": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server"
           }
         }
       }
@@ -91817,6 +92663,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "頻率（赫茲）"
+          }
+        }
+      }
+    },
+    "From Files, a USB drive or a NAS, or over Wi-Fi from your computer's web browser.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fra Arkiv, et USB-drev, et NAS eller over Wi-Fi fra din computers webbrowser."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus Dateien, von einem USB-Stick, einem NAS oder per Wi-Fi aus dem Webbrowser deines Computers."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desde Archivos, una memoria USB o un NAS, o por Wi-Fi desde el navegador web de tu ordenador."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiedostoista, USB-asemalta, NAS-palvelimelta tai Wi-Fi-yhteyden kautta tietokoneesi selaimesta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Depuis Fichiers, une clé USB ou un NAS, ou par Wi-Fi depuis le navigateur web de votre ordinateur."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Úr Skrám, af USB-drifi eða NAS, eða yfir Wi-Fi úr vafra tölvunnar."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dai File, da un'unità USB o da un NAS, oppure via Wi-Fi dal browser web del computer."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「ファイル」、USBドライブ、NASから、またはコンピュータのWebブラウザからWi-Fi経由で取り込めます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일, USB 드라이브, NAS에서 가져오거나 컴퓨터의 웹 브라우저에서 Wi-Fi로 가져올 수 있어요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fra Filer, en USB-minnepinne eller en NAS, eller over Wi-Fi fra datamaskinens nettleser."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z Plików, dysku USB lub NAS, albo przez Wi-Fi z przeglądarki na komputerze."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De Arquivos, de um pendrive USB ou de um NAS, ou pelo Wi-Fi a partir do navegador do seu computador."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Från Filer, en USB-enhet eller en NAS, eller över Wi-Fi från datorns webbläsare."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可从“文件”、USB 驱动器或 NAS 导入，也可通过 Wi-Fi 从电脑的网页浏览器导入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可從「檔案」、USB 隨身碟或 NAS 匯入，也可透過 Wi-Fi 從電腦的網頁瀏覽器匯入。"
           }
         }
       }
@@ -98063,6 +99003,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "家用伺服器"
+          }
+        }
+      }
+    },
+    "Home and Recap": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hjem og Tilbageblik"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home und Rückblick"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicio y Resumen"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koti ja Katsaus"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil et Récap"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heim og yfirlit"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home e Riepilogo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホームとリキャップ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "홈과 리캡"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hjem og tilbakeblikk"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strona główna i podsumowanie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Início e Retrospectiva"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hem och återblick"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页与回顾"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首頁與回顧"
           }
         }
       }
@@ -110381,6 +111415,100 @@
         }
       }
     },
+    "Lossless, Untouched": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabsfri, uberørt"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlustfrei, unverändert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin pérdida, sin tocar"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Häviötön, koskematon"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans perte, intact"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Án taps, óbreytt"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senza perdite, intatta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロスレス、無加工"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무손실, 원본 그대로"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tapsfritt, uberørt"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bezstratnie, bez zmian"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem perdas, sem alterações"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Förlustfritt, orört"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无损，原汁原味"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無損，原汁原味"
+          }
+        }
+      }
+    },
     "Lossless, hi-res": {
       "localizations": {
         "da": {
@@ -112079,6 +113207,100 @@
         }
       }
     },
+    "Lyrics Worth Sharing": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sangtekster, der er værd at dele"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Songtexte zum Teilen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letras para compartir"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sanoitukset, jotka kannattaa jakaa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Des paroles à partager"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Textar sem vert er að deila"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testi che vale la pena condividere"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有したくなる歌詞"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공유할 만한 가사"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekster verdt å dele"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teksty warte udostępnienia"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letras que valem a pena compartilhar"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Låttexter värda att dela"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "值得分享的歌词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "值得分享的歌詞"
+          }
+        }
+      }
+    },
     "Lyrics timing": {
       "localizations": {
         "da": {
@@ -113497,6 +114719,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "製作播放列表…"
+          }
+        }
+      }
+    },
+    "Make a quiet song louder or a loud one quieter, and it stays that way.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gør en stille sang højere eller en høj sang lavere, og det bliver ved."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach ein leises Lied lauter oder ein lautes leiser, und es bleibt so."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sube el volumen de una canción bajita o baja el de una canción alta, y así se queda."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tee hiljaisesta kappaleesta kovempi tai kovasta hiljaisempi, ja se pysyy niin."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendez un morceau calme plus fort ou un morceau fort plus doux, et il le reste."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerðu hljóðlátt lag hærra eða hátt lag lægra, og það helst þannig."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alza il volume di un brano piano o abbassa quello di uno forte, e resta così."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "静かな曲は大きく、大きな曲は小さくでき、その設定は保たれます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "조용한 곡은 크게, 큰 곡은 작게 바꿀 수 있고, 그 설정이 계속 유지돼요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gjør en stille sang høyere eller en høy sang lavere, og den blir slik."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podgłośnij cichy utwór albo przycisz głośny, a tak zostanie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deixe uma música baixa mais alta ou uma alta mais baixa, e ela continua assim."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gör en tyst låt högre eller en högljudd tystare, och den förblir så."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把安静的歌曲调大声，或把响亮的歌曲调小声，并且会一直保持这个设置。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把安靜的歌調大聲，或把大聲的歌調小聲，而且會一直保持這個設定。"
           }
         }
       }
@@ -115577,6 +116893,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "混音與資料庫電台"
+          }
+        }
+      }
+    },
+    "Mixes from your own listening, what you played on this day and your year in music.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mixer ud fra din egen lytning, det du spillede på denne dag og dit år i musik."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mixe aus deinem eigenen Hören, was du an diesem Tag gespielt hast und dein Musikjahr."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mezclas basadas en lo que escuchas, lo que sonó este día y tu año en la música."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sekoituksia omasta kuuntelustasi, mitä soitit tänä päivänä ja musiikkivuotesi."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mix tirés de vos écoutes, ce que vous avez joué ce jour-là et votre année en musique."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blöndur byggðar á þinni eigin hlustun, því sem þú spilaðir á þessum degi og tónlistarárinu þínu."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mix dai tuoi ascolti, ciò che hai riprodotto in questo giorno e il tuo anno in musica."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたの再生履歴から作られるミックス、この日に聴いた曲、1年の音楽の振り返りを表示します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 청취 기록으로 만든 믹스, 이날 재생한 곡, 한 해의 음악 리캡을 보여 줘요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Miks basert på din egen lytting, det du spilte denne dagen og året ditt i musikk."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Miksy z twojego słuchania, to, czego słuchałeś w tym dniu, i twój rok w muzyce."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mixes com base na sua escuta, o que você ouviu nesse dia e o seu ano na música."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mixar baserade på din egen lyssning, det du spelade den här dagen och ditt år i musik."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "基于你的聆听记录生成的混音、你当天听过的内容，以及你的年度音乐回顾。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "根據你的聆聽紀錄產生的混音、你當天聽過的內容，以及你的年度音樂回顧。"
           }
         }
       }
@@ -118155,6 +119565,100 @@
         }
       }
     },
+    "Music Servers": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikservere"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikserver"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servidores de música"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musiikkipalvelimet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serveurs musicaux"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tónlistarþjónar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server musicali"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽サーバー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음악 서버"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikkservere"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serwery muzyczne"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servidores de música"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikservrar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音乐服务器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音樂伺服器"
+          }
+        }
+      }
+    },
     "Music folder unavailable — reconnect the drive or choose a new folder.": {
       "localizations": {
         "da": {
@@ -119901,6 +121405,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "Navidrome 或其他 Subsonic 伺服器"
+          }
+        }
+      }
+    },
+    "Navidrome, Jellyfin and other Subsonic servers, with downloads for when you are offline.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin og andre Subsonic-servere, med downloads til når du er offline."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin und andere Subsonic-Server, mit Downloads für Zeiten ohne Verbindung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin y otros servidores Subsonic, con descargas para cuando no tengas conexión."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin ja muut Subsonic-palvelimet, ladattavat kappaleet offline-käyttöön."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin et autres serveurs Subsonic, avec téléchargements pour quand vous êtes hors ligne."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin og aðrir Subsonic-þjónar, með niðurhali fyrir þegar þú ert án nettengingar."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin e altri server Subsonic, con download per quando sei offline."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome、Jellyfin、その他のSubsonicサーバーに対応し、オフライン時のためにダウンロードもできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin 및 기타 Subsonic 서버를 지원하며, 오프라인일 때를 위해 다운로드도 할 수 있어요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin og andre Subsonic-servere, med nedlastinger for når du er frakoblet."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin i inne serwery Subsonic, z pobieraniem do słuchania offline."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin e outros servidores Subsonic, com downloads para quando você estiver offline."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin och andra Subsonic-servrar, med nedladdningar för när du är offline."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持 Navidrome、Jellyfin 及其他 Subsonic 服务器，离线时可以使用已下载的内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支援 Navidrome、Jellyfin 及其他 Subsonic 伺服器，離線時可使用已下載的內容。"
           }
         }
       }
@@ -131196,6 +132794,100 @@
         }
       }
     },
+    "On Every Apple Device": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "På alle Apple-enheder"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf jedem Apple-Gerät"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En todos los dispositivos Apple"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jokaisessa Apple-laitteessa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur tous vos appareils Apple"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Á öllum Apple-tækjum"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su ogni dispositivo Apple"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのAppleデバイスで"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 Apple 기기에서"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "På hver Apple-enhet"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na każdym urządzeniu Apple"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em todos os dispositivos Apple"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "På varje Apple-enhet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "覆盖所有 Apple 设备"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "適用於所有 Apple 裝置"
+          }
+        }
+      }
+    },
     "On Repeat": {
       "localizations": {
         "da": {
@@ -135738,6 +137430,100 @@
         }
       }
     },
+    "Organized for You": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organiseret til dig"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für dich geordnet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organizada para ti"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Järjestetty sinulle"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organisée pour vous"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipulagt fyrir þig"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organizzato per te"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなた向けに整理"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나를 위한 정리"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordnet for deg"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uporządkowane dla ciebie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organizado para você"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordnat för dig"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为你整理"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "為你整理"
+          }
+        }
+      }
+    },
     "Original": {
       "localizations": {
         "da": {
@@ -139964,6 +141750,100 @@
         }
       }
     },
+    "Pick the lines you love and get a short video of them over the song itself.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg de linjer, du elsker, og få en kort video af dem over selve sangen."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle die Zeilen, die du liebst, und erhalte ein kurzes Video davon, unterlegt mit dem Song selbst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige los versos que te gusten y obtén un vídeo corto de ellos sobre la propia canción."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valitse rivit, joista pidät, ja saat niistä lyhyen videon itse kappaleen päälle."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez les vers que vous aimez et obtenez une courte vidéo sur le morceau lui-même."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veldu línurnar sem þú elskar og fáðu stutt myndband af þeim yfir laginu sjálfu."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli i versi che ami e ottieni un breve video con quelli sulla canzone stessa."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好きな一節を選ぶと、曲そのものに乗せた短い動画が作られます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "좋아하는 가사 줄을 고르면 곡과 함께 재생되는 짧은 영상을 만들어 드려요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velg linjene du elsker, og få en kort video av dem over selve sangen."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybierz ulubione wersy i dostań krótki film z nimi nałożonymi na sam utwór."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha os trechos de que você gosta e receba um vídeo curto deles sobre a própria música."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Välj raderna du älskar och få en kort video av dem över själva låten."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挑选喜爱的歌词，即可得到配合原曲的短视频。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挑選你喜愛的歌詞，就能得到配合原曲的短影片。"
+          }
+        }
+      }
+    },
     "Pinch and drag to frame the cover": {
       "localizations": {
         "da": {
@@ -142578,6 +144458,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "播放範例專輯"
+          }
+        }
+      }
+    },
+    "Play the library on your Mac or PC at home or away, with playlists, loves and history in step.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afspil biblioteket på din Mac eller pc hjemme eller undervejs, med spillelister, likes og historik synkroniseret."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiele die Mediathek auf deinem Mac oder PC zu Hause oder unterwegs ab, mit Playlists, Likes und Verlauf immer synchron."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproduce la biblioteca en tu Mac o PC en casa o fuera, con playlists, me gusta e historial sincronizados."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toista kirjasto Macillasi tai PC:llä kotona tai matkan päällä, soittolistat, tykkäykset ja historia synkronoituina."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lisez la bibliothèque sur votre Mac ou PC, chez vous ou ailleurs, avec playlists, coups de cœur et historique synchronisés."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spilaðu safnið á Mac eða PC heima eða að heiman, með spilunarlistum, uppáhaldslögum og sögu í takt."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduci la libreria sul Mac o PC a casa o fuori, con playlist, mi piace e cronologia sempre allineati."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自宅でも外出先でも、MacやPCのライブラリを再生でき、プレイリスト、お気に入り、履歴も同期されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "집에서든 밖에서든 Mac이나 PC의 보관함을 재생하고, 재생목록, 좋아요, 재생 기록을 항상 같은 상태로 유지해요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spill biblioteket på Mac-en eller PC-en hjemme eller ute, med spillelister, likte sanger og historikk i takt."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwarzaj bibliotekę na Macu lub PC w domu i poza nim, z playlistami, polubieniami i historią w zgodzie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toque a biblioteca do seu Mac ou PC em casa ou fora, com playlists, curtidas e histórico sempre em dia."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spela biblioteket på din Mac eller PC hemma eller borta, med spellistor, gillade låtar och historik i synk."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在家或外出时，都能播放 Mac 或 PC 上的资料库，播放列表、喜欢的歌曲和历史记录保持同步。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在家或外出時，都能播放 Mac 或 PC 上的資料庫，播放列表、喜愛的歌曲和紀錄保持同步。"
           }
         }
       }
@@ -145228,6 +147202,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "播放列表"
+          }
+        }
+      }
+    },
+    "Playlists From a Sentence": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spillelister ud fra en sætning"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlists aus einem Satz"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlists a partir de una frase"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soittolistat lauseesta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Des playlists à partir d'une phrase"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spilunarlistar úr einni setningu"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlist da una frase"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一文からプレイリストを作成"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 문장으로 만드는 재생목록"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spillelister fra en setning"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlisty z jednego zdania"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlists a partir de uma frase"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spellistor från en mening"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一句话生成播放列表"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一句話產生播放列表"
           }
         }
       }
@@ -166624,6 +168692,100 @@
         }
       }
     },
+    "Say what you want to hear and Flaccy builds it from the music you own.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sig, hvad du vil høre, og Flaccy bygger det ud fra den musik, du ejer."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sag, was du hören willst, und Flaccy baut es aus der Musik, die dir gehört."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Di lo que quieres escuchar y Flaccy lo crea con la música que tienes."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sano, mitä haluat kuulla, ja Flaccy rakentaa sen omistamastasi musiikista."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dites ce que vous voulez entendre et Flaccy le compose à partir de la musique que vous possédez."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segðu hvað þú vilt heyra og Flaccy býr það til úr tónlistinni sem þú átt."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dì cosa vuoi ascoltare e Flaccy lo crea dalla musica che possiedi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聴きたいものを言葉にすると、Flaccyが手元の音楽からそれを組み立てます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원하는 소리를 말해 보세요. Flaccy가 가지고 있는 음악으로 만들어 드려요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si hva du vil høre, så lager Flaccy det av musikken du eier."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powiedz, czego chcesz posłuchać, a Flaccy stworzy to z muzyki, którą masz."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diga o que você quer ouvir e o Flaccy monta com a música que você tem."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Säg vad du vill höra, så skapar Flaccy det av musiken du äger."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说出你想听的，Flaccy 就能用你拥有的音乐为你打造。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "說出你想聽的，Flaccy 就能用你擁有的音樂為你組出來。"
+          }
+        }
+      }
+    },
     "Say what you want to hear and Flaccy makes a playlist from the music you own. Your words and the names of your artists and songs go to Flaccy's AI to choose them. Nothing else leaves this device.": {
       "localizations": {
         "da": {
@@ -168442,6 +170604,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "查看全部"
+          }
+        }
+      }
+    },
+    "See Everything Flaccy Can Do": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se alt, Flaccy kan"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entdecke alles, was Flaccy kann"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descubre todo lo que puede hacer Flaccy"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Katso kaikki, mihin Flaccy pystyy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Découvrez tout ce que Flaccy sait faire"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sjáðu allt sem Flaccy getur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scopri tutto ciò che sa fare Flaccy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccyでできることをすべて見る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy의 모든 기능 살펴보기"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se alt Flaccy kan gjøre"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zobacz wszystko, co potrafi Flaccy"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veja tudo o que o Flaccy pode fazer"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se allt Flaccy kan göra"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看 Flaccy 的全部功能"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "看看 Flaccy 能做什麼"
           }
         }
       }
@@ -172798,6 +175054,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "生成曲線"
+          }
+        }
+      }
+    },
+    "Shape the sound by hand or in a sentence, with its own setting for every output.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Form lyden selv eller med en sætning, med sin egen indstilling for hvert output."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forme den Klang von Hand oder mit einem Satz, mit eigener Einstellung für jede Ausgabe."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajusta el sonido a mano o con una frase, con su propia configuración para cada salida."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muokkaa ääntä käsin tai lauseella, ja jokaisella lähdöllä on oma asetuksensa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Façonnez le son à la main ou par une phrase, avec un réglage propre à chaque sortie."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mótaðu hljóðið með höndunum eða í setningu, með sinni eigin stillingu fyrir hvert úttak."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modella il suono a mano o con una frase, con un'impostazione propria per ogni output."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手動でも一文の指示でも音を整えられ、出力ごとに専用の設定を持てます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 또는 문장으로 소리를 다듬을 수 있고, 출력마다 고유한 설정을 가질 수 있어요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Form lyden med hendene eller med en setning, med egne innstillinger for hver utgang."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kształtuj dźwięk ręcznie lub jednym zdaniem, z własnymi ustawieniami dla każdego wyjścia."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajuste o som manualmente ou com uma frase, com uma configuração própria para cada saída."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forma ljudet för hand eller med en mening, med egna inställningar för varje utgång."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以手动调整，也可以用一句话描述，每个输出都有各自的设置。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以手動調整，也可以用一句話描述，每個輸出都有各自的設定。"
           }
         }
       }
@@ -183671,6 +186021,100 @@
         }
       }
     },
+    "Start Listening": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Begynd at lytte"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt hören"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empezar a escuchar"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aloita kuuntelu"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commencer l’écoute"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Byrja að hlusta"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inizia ad ascoltare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聴きはじめる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "듣기 시작"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Begynn å lytte"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zacznij słuchać"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Começar a ouvir"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Börja lyssna"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始聆听"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始聆聽"
+          }
+        }
+      }
+    },
     "Start Station": {
       "localizations": {
         "da": {
@@ -186885,6 +189329,100 @@
         }
       }
     },
+    "Stream from your computer or your own server, at home or away.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stream fra din computer eller din egen server, hjemme eller undervejs."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streame von deinem Computer oder deinem eigenen Server, zu Hause oder unterwegs."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproduce en streaming desde tu ordenador o tu propio servidor, en casa o fuera."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suoratoista tietokoneeltasi tai omalta palvelimeltasi, kotona tai matkan päällä."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diffusez depuis votre ordinateur ou votre propre serveur, chez vous ou ailleurs."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streymdu úr tölvunni þinni eða þínum eigin netþjóni, heima eða að heiman."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduci in streaming dal computer o dal tuo server, a casa o fuori."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自宅でも外出先でも、コンピュータや自分のサーバーからストリーミングします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "집에서든 밖에서든, 컴퓨터나 직접 운영하는 서버에서 스트리밍할 수 있어요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strøm fra datamaskinen din eller din egen server, hjemme eller ute."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strumieniuj z komputera lub własnego serwera, w domu i poza nim."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transmita do seu computador ou do seu próprio servidor, em casa ou fora dela."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streama från din dator eller din egen server, hemma eller borta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无论在家还是在外，都可以从你的电脑或自己的服务器串流播放。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不論在家或外出，都能從你的電腦或自己的伺服器串流播放。"
+          }
+        }
+      }
+    },
     "Streamed songs stay here for replay. Downloads don’t count toward the limit.": {
       "localizations": {
         "da": {
@@ -188991,6 +191529,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@同步 · %@ 次播放"
+          }
+        }
+      }
+    },
+    "Synced Lyrics": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkroniserede sangtekster"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisierte Songtexte"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letra sincronizada"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkronoidut sanoitukset"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paroles synchronisées"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samstilltir textar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testi sincronizzati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期歌詞"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화된 가사"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkroniserte tekster"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zsynchronizowane teksty"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letras sincronizadas"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkade låttexter"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步歌词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步歌詞"
           }
         }
       }
@@ -197739,6 +200371,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "那些你一再回頭聽的歌"
+          }
+        }
+      }
+    },
+    "The story behind a song and any line of it, one tap away.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historien bag en sang og enhver linje i den, ét tryk væk."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Geschichte hinter einem Song und jeder Zeile davon, nur einen Fingertipp entfernt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La historia detrás de una canción y de cualquiera de sus versos, a un toque de distancia."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kappaleen taustatarina ja mikä tahansa sen säe yhdellä napautuksella."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'histoire d'un morceau et de chacun de ses vers, à un toucher près."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sagan á bak við lag og hvaða línu sem er, einum smelli í burtu."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La storia dietro una canzone e ogni suo verso, a un tocco di distanza."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲の背景や歌詞の一節の意味が、ワンタップで見られます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "곡과 가사 한 줄의 배경 이야기를 한 번의 탭으로 볼 수 있어요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historien bak en sang, og hvilken som helst linje av den, ett trykk unna."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historia za piosenką i każdym jej wersem, o jedno dotknięcie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A história por trás de uma música e de qualquer trecho dela, a um toque de distância."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historien bakom en låt och vilken rad som helst i den, ett tryck bort."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲背后的故事，以及任意一句歌词的含义，轻点即可查看。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲背後的故事，以及任何一句歌詞的含義，輕觸即可看到。"
           }
         }
       }
@@ -216389,6 +219115,194 @@
         }
       }
     },
+    "Word by word when a song has the timing. Tap a line to jump to it.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ord for ord, når sangen har timingen. Tryk på en linje for at springe til den."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wort für Wort, wenn der Song Timing hat. Tippe auf eine Zeile, um dorthin zu springen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palabra por palabra si la canción tiene sincronización. Toca una línea para saltar a ella."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sana sanalta, kun kappaleessa on ajoitus. Napauta riviä hypätäksesi siihen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mot à mot lorsque le morceau a le calage. Touchez une ligne pour y accéder."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orð fyrir orð þegar lagið hefur tímasetningu. Pikkaðu á línu til að hoppa í hana."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parola per parola quando il brano ha i tempi. Tocca una riga per andarci."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲にタイミング情報があれば単語ごとに表示します。行をタップすると、その位置へ移動します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "곡에 타이밍 정보가 있으면 단어 단위로 보여 줘요. 줄을 탭하면 그 위치로 이동해요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ord for ord når sangen har tidspunkter. Trykk på en linje for å hoppe til den."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Słowo po słowie, gdy utwór ma czas. Dotknij wiersza, aby do niego przejść."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palavra por palavra, quando a música tem o tempo marcado. Toque em uma linha para ir até ela."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ord för ord när låten har tidskoder. Tryck på en rad för att hoppa dit."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲带有时间信息时逐字显示。点按某一行即可跳转到该处。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲有時間資訊時會逐字顯示。點一下某一行即可跳到該處。"
+          }
+        }
+      }
+    },
+    "Word by word, with what the song means and lines you can share as a video.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ord for ord, med hvad sangen betyder og linjer, du kan dele som video."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wort für Wort, mit dem, was dieser Song bedeutet, und Zeilen, die du als Video teilen kannst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palabra por palabra, con qué significa esta canción y versos que puedes compartir en vídeo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sana sanalta, mitä tämä kappale tarkoittaa, sekä säkeet, jotka voit jakaa videona."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mot à mot, avec ce que veut dire cette chanson et les vers que vous pouvez partager en vidéo."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orð fyrir orð, með merkingu lagsins og línum sem þú getur deilt sem myndbandi."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parola per parola, con il significato della canzone e i versi che puoi condividere come video."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語ごとに表示され、曲の意味や、動画として共有できる一節も確認できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단어 단위로 표시되고, 곡의 의미와 영상으로 공유할 수 있는 가사 줄을 함께 볼 수 있어요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ord for ord, med hva sangen betyr og linjer du kan dele som video."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Słowo po słowie, z tym, co znaczy piosenka, i wersami, które możesz udostępnić jako wideo."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palavra por palavra, com o significado da música e os trechos que você pode compartilhar em vídeo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ord för ord, med vad låten betyder och rader du kan dela som video."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逐字显示，附带歌曲含义，以及可以制成视频分享的歌词段落。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逐字顯示，附上歌曲含義，以及可以製成影片分享的歌詞段落。"
+          }
+        }
+      }
+    },
     "Written by AI from the lyrics. It can be wrong.": {
       "localizations": {
         "da": {
@@ -219413,6 +222327,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的月度回顧 🎧"
+          }
+        }
+      }
+    },
+    "Your Music, Anywhere": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din musik, hvor som helst"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Musik, überall"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu música, en cualquier lugar"
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musiikkisi, missä tahansa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre musique, partout"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tónlistin þín, hvar sem er"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua musica, ovunque"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どこでも、あなたの音楽"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "언제 어디서나, 내 음악"
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikken din, hvor som helst"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Twoja muzyka wszędzie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sua música, em qualquer lugar"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din musik, var som helst"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的音乐，随处可听"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的音樂，隨處可聽"
           }
         }
       }
@@ -224820,6 +227828,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "一次購買，iPhone、iPad、Mac 和 Apple Watch 通用"
+          }
+        }
+      }
+    },
+    "iPhone, iPad, Mac and an Apple Watch that plays without the phone. One purchase covers them all.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac og et Apple Watch, der spiller uden telefonen. Ét køb dækker dem alle."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac und eine Apple Watch, die ohne das iPhone abspielt. Ein Kauf deckt alle ab."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac y Apple Watch, que reproduce música sin el teléfono. Una sola compra los cubre a todos."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac ja Apple Watch, joka soittaa ilman puhelinta. Yksi ostos kattaa ne kaikki."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac et Apple Watch, qui joue sans le téléphone. Un seul achat les couvre tous."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac og Apple Watch sem spilar án símans. Ein kaup duga fyrir þau öll."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac e Apple Watch che riproduce senza il telefono. Un solo acquisto copre tutti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone、iPad、Mac、そしてiPhoneなしで再生できるApple Watchに対応。1回の購入で、すべてが使えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac, 그리고 휴대폰 없이 재생할 수 있는 Apple Watch를 지원해요. 한 번 구매하면 모두 사용할 수 있어요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac og Apple Watch som spiller uten telefonen. Ett kjøp dekker alle."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac i Apple Watch, które odtwarza muzykę bez telefonu. Jeden zakup obejmuje wszystkie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac e um Apple Watch que toca sem o celular. Uma compra cobre todos eles."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone, iPad, Mac och Apple Watch som spelar utan telefonen. Ett köp täcker alla."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持 iPhone、iPad、Mac，以及无需手机即可播放的 Apple Watch。一次购买，全部可用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支援 iPhone、iPad、Mac，以及不需手機也能播放的 Apple Watch。一次購買，全部可用。"
           }
         }
       }

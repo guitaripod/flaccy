@@ -85,6 +85,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         LegacyMacHandoff.exportAtLaunch()
         LegacyMoveCardPresenter.presentOncePerLaunch(over: windowController)
         #endif
+        MacShowcase.presentIfNeeded(over: windowController)
         observeAppEvents()
         notifyLibraryRootFallbackIfNeeded()
         MacTrialRunwayPresenter.refresh(in: windowController.window)
