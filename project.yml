@@ -152,6 +152,7 @@ targets:
           - UI/AppAccent.swift
           - UI/AppAppearance.swift
           - UI/AsyncImageView.swift
+          - UI/CollapsingHeaderView.swift
           - UI/DownloadedMarkView.swift
           - UI/FilterChipsView.swift
           - UI/FoldAwareCollectionView.swift
