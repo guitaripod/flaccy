@@ -325,8 +325,17 @@ final class ThemeChoiceCell: UITableViewCell {
                 UIAction(title: option, state: index == selected ? .on : .off) { _ in onPick(index) }
             }
         )
-        button.sizeToFit()
         button.accessibilityLabel = title
         button.accessibilityValue = shown
+        setNeedsLayout()
+    }
+
+    override func layoutSubviews() {
+        let previous = button.bounds.size
+        button.fitToPullDownTitle(maxWidth: bounds.width * 0.6)
+        if button.bounds.size != previous || accessoryView !== button {
+            accessoryView = button
+        }
+        super.layoutSubviews()
     }
 }

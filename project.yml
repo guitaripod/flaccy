@@ -175,6 +175,7 @@ targets:
           - UI/PointerHover.swift
           - UI/PlaylistWriter.swift
           - UI/PopoverAnchor.swift
+          - UI/PullDownButton.swift
           - UI/QualityBadgeView.swift
           - UI/SectionIndexView.swift
           - UI/SourceChipsView.swift

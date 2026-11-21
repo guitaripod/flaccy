@@ -171,7 +171,7 @@ extension SettingsViewController {
         button.accessibilityLabel = RemoteCopy.downloadQualityTitle
         button.accessibilityValue = RemoteCopy.downloadQualityName(selected)
         button.accessibilityIdentifier = "settings.downloadQuality"
-        button.sizeToFit()
+        button.fitToPullDownTitle()
         return button
     }
 

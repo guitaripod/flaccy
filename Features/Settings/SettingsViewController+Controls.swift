@@ -138,7 +138,7 @@ extension SettingsViewController {
         button.accessibilityLabel = InterruptionCopy.title
         button.accessibilityValue = InterruptionCopy.name(selected)
         button.accessibilityIdentifier = "settings.interruptionResume"
-        button.sizeToFit()
+        button.fitToPullDownTitle()
         return button
     }
 
