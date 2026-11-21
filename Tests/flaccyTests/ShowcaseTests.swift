@@ -52,6 +52,13 @@ nonisolated final class ShowcaseTests: XCTestCase {
         }
     }
 
+    func testThemesAreListedOnEveryDevicesShowcase() {
+        for bringsMusicOverWiFi in [true, false] {
+            let library = ShowcaseCopy.sections(bringsMusicOverWiFi: bringsMusicOverWiFi).first { $0.id == "library" }
+            XCTAssertTrue(library?.features.contains { $0.id == "themes" } ?? false)
+        }
+    }
+
     func testWiFiTransferIsOnlyOfferedWhereItExists() {
         let withTransfer = ShowcaseCopy.sections(bringsMusicOverWiFi: true).flatMap(\.features).map(\.id)
         let without = ShowcaseCopy.sections(bringsMusicOverWiFi: false).flatMap(\.features).map(\.id)
