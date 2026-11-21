@@ -60,6 +60,8 @@ targets:
         type: syncedFolder
       - path: Resources
         type: syncedFolder
+      - path: Platforms/ios
+        type: syncedFolder
     dependencies:
       - package: FlaccyCore
       - package: FlaccyCore
@@ -367,10 +369,6 @@ targets:
           - WiFiTransfer/WiFiTransferViewController.swift
       - path: Resources
         type: syncedFolder
-        excludes:
-          - Assets.xcassets
-          - PrivacyInfo.xcprivacy
-          - WiFiTransferPage.html
     dependencies:
       - package: FlaccyCore
       - package: FlaccyCore
