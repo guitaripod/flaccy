@@ -128,7 +128,7 @@ enum ThemeHooks {
         objc_setAssociatedObject(view, &epochKey, epoch, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         view.layer.reapplyThemedCornerRadius()
         view.coverShaper?.shape()
-        if let cell = view as? UITableViewCell { dressGroupedCell(cell) }
+        if let cell = view as? UITableViewCell { dressGroupedCell(cell, mayWait: true) }
         guard let label = view as? UILabel else { return }
         if dressing, let themed = ThemedColor.replacing(label.textColor) {
             label.flaccyThemed_setTextColor(themed)
@@ -151,10 +151,18 @@ enum ThemeHooks {
     /// Gives a row of a grouped table the theme's card color. The system
     /// paints such a row with a color of its own that nothing else can
     /// reach, so the row is matched by that color and anything the app
-    /// colored itself is left alone.
-    private static func dressGroupedCell(_ cell: UITableViewCell) {
-        guard dressing, let table = cell.superview as? UITableView, table.style != .plain,
-              let painted = cell.backgroundColor else { return }
+    /// colored itself is left alone. A row that enters the window before the
+    /// table has painted it is looked at once more on the next turn.
+    private static func dressGroupedCell(_ cell: UITableViewCell, mayWait: Bool) {
+        guard dressing else { return }
+        guard let table = cell.superview as? UITableView, let painted = cell.backgroundColor else {
+            guard mayWait else { return }
+            DispatchQueue.main.async { [weak cell] in
+                if let cell { dressGroupedCell(cell, mayWait: false) }
+            }
+            return
+        }
+        guard table.style != .plain else { return }
         let traits = cell.traitCollection
         let system = UIColor.secondarySystemGroupedBackground.resolvedColor(with: traits)
         if painted.resolvedColor(with: traits) == system {

@@ -46,6 +46,14 @@ final class SettingsPageViewController: UITableViewController {
         return root?.isSelectable(row) ?? false
     }
 
+    /// A row that keeps the system's grouped background takes the theme's
+    /// card color; a row that is clear by design (the Midgar card) stays clear.
+    override func tableView(
+        _ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath
+    ) {
+        if cell.backgroundColor != .clear { cell.backgroundColor = .flaccySecondaryGroupedBackground }
+    }
+
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         guard let row = dataSource?.itemIdentifier(for: indexPath) else { return }
