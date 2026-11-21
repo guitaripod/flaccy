@@ -6,12 +6,36 @@ import UIKit
 /// any system slider and the sheet's dismiss pan defers to it. The redundant
 /// route button is hidden (AirPlay lives in the action row) and the slider
 /// gets a visible thumb and track tints matching the scrubber.
+///
+/// MPVolumeView re-lays its slider out on its own whenever routes, the audio
+/// session or the volume warning change, often inside an animation. Its slider
+/// and route rects are pinned here so every one of those passes lands on the
+/// same full-height frame and the bar never drifts up and down.
 private final class FullHeightVolumeView: MPVolumeView {
+    override func volumeSliderRect(forBounds bounds: CGRect) -> CGRect {
+        bounds
+    }
+
+    override func routeButtonRect(forBounds bounds: CGRect) -> CGRect {
+        .zero
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
-        for subview in subviews where subview is UISlider {
-            subview.frame = bounds
+        for subview in subviews {
+            if subview is UISlider {
+                pinWithoutAnimation(subview)
+            } else if subview is UIButton {
+                subview.isHidden = true
+            }
         }
+    }
+
+    /// Snaps the slider to the row outside any animation in flight, so a
+    /// relayout MPVolumeView triggers never shows as motion.
+    private func pinWithoutAnimation(_ slider: UIView) {
+        guard slider.frame != bounds else { return }
+        UIView.performWithoutAnimation { slider.frame = bounds }
     }
 }
 
@@ -44,8 +68,9 @@ final class SystemVolumeSlider: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        volumeView.frame = bounds
-        hideRouteButton()
+        if volumeView.frame != bounds {
+            UIView.performWithoutAnimation { volumeView.frame = bounds }
+        }
         styleSliderIfNeeded()
         #if targetEnvironment(simulator)
         addSimulatorSliderIfNeeded()
@@ -91,12 +116,6 @@ final class SystemVolumeSlider: UIView {
 
     private func internalSlider() -> UISlider? {
         volumeView.subviews.lazy.compactMap { $0 as? UISlider }.first
-    }
-
-    private func hideRouteButton() {
-        for subview in volumeView.subviews where subview is UIButton {
-            subview.isHidden = true
-        }
     }
 
     private func styleSliderIfNeeded() {
