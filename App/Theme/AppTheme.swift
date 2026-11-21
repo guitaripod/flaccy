@@ -16,7 +16,7 @@ final class AppTheme {
     static let shared = AppTheme()
 
     /// Posted after the look changed and was applied.
-    static let didChange = Notification.Name("FlaccyThemeDidChange")
+    static let didChange = WornTheme.didChange
 
     private(set) var library: ThemeLibrary
     private(set) var wardrobe: ThemeWardrobe
@@ -116,6 +116,18 @@ final class AppTheme {
 
     private func resolve() {
         look = wardrobe.look(in: library)
+    }
+
+    /// Copies the worn theme into the Themes folder under a name of the
+    /// person's own and puts the copy on, worn the way the original was, so
+    /// what they change in its `theme.toml` is theirs. Returns the copy's id.
+    @discardableResult
+    func copyWornThemeToChange() throws(ThemeLibrary.CopyFailure) -> String {
+        let folder = AppTheme.themesDirectory
+        let id = try library.makeEditableCopy(of: look.pack.id, in: folder)
+        library = ThemeLibrary(themesDirectory: folder)
+        edit { $0.wear(copyOfWorn: id) }
+        return id
     }
 
     /// The style a window takes: the theme's own mode when it is drawn for

@@ -1,27 +1,15 @@
 import FlaccyCore
-import os
 import UIKit
 
-/// The palettes the app's dynamic colors read. UIKit resolves a dynamic color
-/// on whatever thread is drawing, so the palettes sit behind a lock where any
-/// thread may read them, apart from the main-actor runtime that sets them.
+/// The worn theme's palettes as UIKit colors.
 nonisolated enum ThemePaint {
 
-    private struct Palettes: Sendable {
-        var dark: ThemePalette?
-        var light: ThemePalette?
-    }
-
-    private static let palettes = OSAllocatedUnfairLock(initialState: Palettes())
-
-    /// Sets the palettes to paint with; `nil` for both leaves every surface to
-    /// the system, which is how Flaccy's own theme looks.
     static func wear(dark: ThemePalette?, light: ThemePalette?) {
-        palettes.withLock { $0 = Palettes(dark: dark, light: light) }
+        ThemePalettes.wear(dark: dark, light: light)
     }
 
     static func palette(dark: Bool) -> ThemePalette? {
-        palettes.withLock { dark ? $0.dark : $0.light }
+        ThemePalettes.palette(dark: dark)
     }
 
     /// A color that is `system` under Flaccy's own theme and the palette's
@@ -39,7 +27,7 @@ nonisolated enum ThemePaint {
     /// The accent of the worn theme as a tint, or nothing under Flaccy's own
     /// theme, whose tint is the accent picked in Settings.
     static func tint() -> UIColor? {
-        guard palette(dark: true) != nil || palette(dark: false) != nil else { return nil }
+        guard ThemePalettes.isPainting else { return nil }
         return UIColor { traits in
             let dark = traits.userInterfaceStyle == .dark
             guard let palette = palette(dark: dark) ?? palette(dark: !dark) else { return .systemBlue }

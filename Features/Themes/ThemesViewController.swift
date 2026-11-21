@@ -26,6 +26,7 @@ final class ThemesViewController: UITableViewController {
         case font
         case reset
         case folder
+        case copy
         case problem(String)
     }
 
@@ -70,7 +71,9 @@ final class ThemesViewController: UITableViewController {
             [.gallery],
             themeRows,
             [.covers, .corners, .font, .reset],
-            [.folder] + theme.library.problems.map { .problem("\($0.folder): \($0.reason)") },
+            [.folder, .copy]
+                + theme.library.problems.map { .problem("\($0.folder): \($0.reason)") }
+                + theme.look.pack.warnings.map { .problem("\(theme.look.pack.name): \($0)") },
         ]
     }
 
@@ -199,6 +202,17 @@ final class ThemesViewController: UITableViewController {
             cell.accessibilityIdentifier = "themes.folder"
             cell.accessibilityTraits = .button
             return cell
+        case .copy:
+            let cell = tableView.dequeueReusableCell(withIdentifier: "plain", for: indexPath)
+            var content = cell.defaultContentConfiguration()
+            content.text = ThemeCopy.copyToChange(theme.look.pack.name)
+            content.image = UIImage(systemName: "doc.on.doc")
+            content.textProperties.color = .tintColor
+            cell.contentConfiguration = content
+            cell.selectionStyle = .default
+            cell.accessibilityIdentifier = "themes.copy"
+            cell.accessibilityTraits = .button
+            return cell
         case .problem(let text):
             let cell = tableView.dequeueReusableCell(withIdentifier: "plain", for: indexPath)
             var content = cell.defaultContentConfiguration()
@@ -243,6 +257,8 @@ final class ThemesViewController: UITableViewController {
         case .folder:
             impactLight.impactOccurred()
             openThemesFolder()
+        case .copy:
+            copyWornTheme()
         default:
             break
         }
@@ -261,6 +277,20 @@ final class ThemesViewController: UITableViewController {
             UINotificationFeedbackGenerator().notificationOccurred(.error)
             ToastView.show(ThemeCopy.folderDidNotOpen, in: self.view, style: .error)
             MidgarLog.notice("Themes folder did not open in Files", category: .ui)
+        }
+    }
+
+    /// Copies the worn theme into the Themes folder and puts the copy on,
+    /// then says where it went, or what stopped it.
+    private func copyWornTheme() {
+        do {
+            let id = try AppTheme.shared.copyWornThemeToChange()
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            ToastView.show(ThemeCopy.copied(folder: id), in: view, style: .success)
+        } catch {
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            ToastView.show(ThemeCopy.copyFailed, in: view, style: .error)
+            MidgarLog.error("Theme copy failed: \(error.reason)", category: .ui)
         }
     }
 

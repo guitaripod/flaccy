@@ -452,7 +452,7 @@ final class LibraryViewModel {
     /// How Albums is laid out: the worn theme's view, or the one the person
     /// switched that theme to, with the remembered list density.
     var albumsLayoutMode: LibraryLayoutMode {
-        LibraryLayoutMode(albums: AppTheme.shared.look.albums, compactRows: layoutMode == .compact)
+        LibraryLayoutMode(albums: WornTheme.look.albums, compactRows: layoutMode == .compact)
     }
 
     /// The layout of the segment that is showing.
@@ -474,7 +474,7 @@ final class LibraryViewModel {
             layoutMode = next
             next.persist()
         }
-        AppTheme.shared.edit { $0.show(albumsAs: next.albumsView.id) }
+        WornTheme.showAlbums(as: next.albumsView)
     }
 
     func setFilter(_ filter: LibraryFilter) {

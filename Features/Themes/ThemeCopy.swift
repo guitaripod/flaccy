@@ -30,6 +30,12 @@ nonisolated enum ThemeCopy {
         String(localized: "The themes folder did not open. In the Files app, open Flaccy’s folder and look for Themes.")
     }
     static var windowGlow: String { String(localized: "Window Glow") }
+    static func copied(folder: String) -> String {
+        String(localized: "Copied. Change theme.toml in Themes › \(folder) and the app follows.")
+    }
+    static var copyFailed: String {
+        String(localized: "The theme could not be copied. Check that the Themes folder can be written to and try again.")
+    }
     static func copyToChange(_ name: String) -> String { String(localized: "Copy \(name) to Change It") }
     static var ownThemesFooter: String {
         String(localized: "A theme is a folder holding a theme.toml. Put it in the Themes folder and it appears here.")

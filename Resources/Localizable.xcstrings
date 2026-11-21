@@ -60965,6 +60965,100 @@
         }
       }
     },
+    "Copied. Change theme.toml in Themes › %@ and the app follows.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopieret. Ret theme.toml i Themes › %@, så følger appen med."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiert. Ändere theme.toml in Themes › %@, und die App übernimmt es."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiado. Cambia theme.toml en Themes › %@ y la app lo aplicará."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopioitu. Muokkaa tiedostoa theme.toml kansiossa Themes › %@, niin sovellus seuraa muutoksia."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copié. Modifiez theme.toml dans Themes › %@ et l’app suivra."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afritað. Breyttu theme.toml í Themes › %@ og forritið fylgir."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiato. Modifica theme.toml in Themes › %@ e l’app si adeguerà."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピーしました。Themes › %@ の theme.toml を変更すると、アプリに反映されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사했습니다. Themes › %@의 theme.toml을 수정하면 앱에 반영됩니다."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiert. Endre theme.toml i Themes › %@, så følger appen med."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skopiowano. Zmień theme.toml w Themes › %@, a aplikacja się dostosuje."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiado. Altere o theme.toml em Themes › %@ e o app acompanha."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopierat. Ändra theme.toml i Themes › %@ så följer appen med."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已复制。修改 Themes › %@ 中的 theme.toml，App 会随之更新。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已複製。修改 Themes › %@ 中的 theme.toml，App 會隨之更新。"
+          }
+        }
+      }
+    },
     "Copies files into Flaccy's library folder, preserving folder structure.": {
       "localizations": {
         "da": {
@@ -199431,6 +199525,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "那些你一再回頭聽的歌"
+          }
+        }
+      }
+    },
+    "The theme could not be copied. Check that the Themes folder can be written to and try again.": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temaet kunne ikke kopieres. Kontrollér, at der kan skrives til mappen Themes, og prøv igen."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Thema konnte nicht kopiert werden. Prüfe, ob in den Themes-Ordner geschrieben werden kann, und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo copiar el tema. Comprueba que se pueda escribir en la carpeta Themes e inténtalo de nuevo."
+          }
+        },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teemaa ei voitu kopioida. Tarkista, että Themes-kansioon voi kirjoittaa, ja yritä uudelleen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le thème n’a pas pu être copié. Vérifiez que le dossier Themes est accessible en écriture, puis réessayez."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekki tókst að afrita þemað. Athugaðu að hægt sé að skrifa í möppuna Themes og reyndu aftur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile copiare il tema. Verifica che sia possibile scrivere nella cartella Themes e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テーマをコピーできませんでした。Themes フォルダに書き込めることを確認して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "테마를 복사할 수 없습니다. Themes 폴더에 쓸 수 있는지 확인한 후 다시 시도하세요."
+          }
+        },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temaet kunne ikke kopieres. Kontroller at det går an å skrive til Themes-mappen, og prøv igjen."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się skopiować motywu. Sprawdź, czy można zapisywać w folderze Themes, i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível copiar o tema. Verifique se é possível gravar na pasta Themes e tente novamente."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temat kunde inte kopieras. Kontrollera att det går att skriva till mappen Themes och försök igen."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法复制主题。请确认 Themes 文件夹可以写入，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法複製主題。請確認 Themes 資料夾可以寫入，然後再試一次。"
           }
         }
       }

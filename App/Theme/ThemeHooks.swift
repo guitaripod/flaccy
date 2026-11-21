@@ -21,6 +21,7 @@ enum ThemeHooks {
     private nonisolated(unsafe) static var baseFontKey: UInt8 = 0
     private nonisolated(unsafe) static var baseTextKey: UInt8 = 0
     private nonisolated(unsafe) static var epochKey: UInt8 = 0
+    private nonisolated(unsafe) static var filledKey: UInt8 = 0
 
     /// Starts dressing labels in `faces` and the theme's text colors, or stops
     /// when `dressing` is false. `epoch` marks the look, so a label that was
@@ -61,11 +62,24 @@ enum ThemeHooks {
         return ThemedColor.replacing(color) ?? color
     }
 
+    /// Whether a label sits in the tab bar, whose items the system sizes for
+    /// its own face: a wider one there cuts "Library" short.
+    private static func keepsSystemFace(_ label: UILabel) -> Bool {
+        var ancestor = label.superview
+        var steps = 0
+        while let view = ancestor, steps < 8 {
+            if view is UITabBar { return true }
+            ancestor = view.superview
+            steps += 1
+        }
+        return false
+    }
+
     /// The font a label is given for `font`, remembering `font` itself on the
     /// label so another theme can start from it again.
     static func font(for font: UIFont?, on label: UILabel) -> UIFont? {
         guard let font else { return font }
-        guard dressing, !faces.isSystem else {
+        guard dressing, !faces.isSystem, !keepsSystemFace(label) else {
             objc_setAssociatedObject(label, &baseFontKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             return font
         }
@@ -129,6 +143,7 @@ enum ThemeHooks {
         view.layer.reapplyThemedCornerRadius()
         view.coverShaper?.shape()
         if let cell = view as? UITableViewCell { dressGroupedCell(cell, mayWait: true) }
+        if let button = view as? UIButton { dressFilledButton(button) }
         guard let label = view as? UILabel else { return }
         if dressing, let themed = ThemedColor.replacing(label.textColor) {
             label.flaccyThemed_setTextColor(themed)
@@ -139,13 +154,36 @@ enum ThemeHooks {
         }
         let base = (objc_getAssociatedObject(label, &baseFontKey) as? UIFont) ?? label.font
         guard let base else { return }
-        if dressing, !faces.isSystem {
+        if dressing, !faces.isSystem, !keepsSystemFace(label) {
             objc_setAssociatedObject(label, &baseFontKey, base, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             label.flaccyThemed_setFont(ThemeTypography.themed(base, faces: faces))
         } else if objc_getAssociatedObject(label, &baseFontKey) != nil {
             objc_setAssociatedObject(label, &baseFontKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             label.flaccyThemed_setFont(base)
         }
+    }
+
+    /// Gives a button filled with the accent a title that reads on it. The
+    /// system sets such a title in white, which a theme's bright accent
+    /// washes out; a button the app gave a title color of its own is left
+    /// alone, and the system's white comes back once no theme paints.
+    private static func dressFilledButton(_ button: UIButton) {
+        guard var configuration = button.configuration else { return }
+        let wasDressed = objc_getAssociatedObject(button, &filledKey) != nil
+        guard dressing, ThemePalettes.isPainting else {
+            guard wasDressed else { return }
+            objc_setAssociatedObject(button, &filledKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            configuration.baseForegroundColor = nil
+            button.configuration = configuration
+            return
+        }
+        guard wasDressed || configuration.baseForegroundColor == nil else { return }
+        let traits = button.traitCollection
+        let fill = configuration.updated(for: button).background.backgroundColor?.resolvedColor(with: traits)
+        guard let fill, fill == button.tintColor.resolvedColor(with: traits) else { return }
+        objc_setAssociatedObject(button, &filledKey, true, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        configuration.baseForegroundColor = .flaccyOnAccent
+        button.configuration = configuration
     }
 
     /// Gives a row of a grouped table the theme's card color. The system
