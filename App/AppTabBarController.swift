@@ -80,7 +80,20 @@ final class AppTabBarController: UITabBarController {
         }
         if #available(iOS 26.0, *) {
             tabBarMinimizeBehavior = .onScrollDown
+        } else {
+            keepBarBackground()
         }
+    }
+
+    /// Gives the bar its material wherever the content is scrolled to. Before
+    /// iOS 26 it drew no background at all over the rows and cards under it
+    /// (seen on an iPhone XS on iOS 18.7), so they showed straight through
+    /// the tabs and their names ran into each other.
+    private func keepBarBackground() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithDefaultBackground()
+        tabBar.standardAppearance = appearance
+        tabBar.scrollEdgeAppearance = appearance
     }
 
     @available(*, unavailable)
