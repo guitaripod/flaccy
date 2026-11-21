@@ -19,6 +19,6 @@ struct ArtworkView: View {
                     .foregroundStyle(.white.opacity(0.85))
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .clipShape(WatchTheme.coverShape(radius: cornerRadius))
     }
 }

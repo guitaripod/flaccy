@@ -65,6 +65,7 @@ final class WatchSyncService: NSObject {
     var libraryObserver: NSObjectProtocol?
     var revisionObserver: NSObjectProtocol?
     var accentObserver: NSObjectProtocol?
+    var themeObserver: NSObjectProtocol?
 
     private var trackIndex: [String: Track]?
     private var stemCache: [URL: String] = [:]
@@ -667,11 +668,18 @@ final class WatchSyncService: NSObject {
         scheduleContextPublish()
     }
 
-    /// The watch wears the accent picked here, so a new pick goes out with the
-    /// next context.
+    /// The watch wears the accent and the theme picked here, so a new pick
+    /// goes out with the next context.
     private func observeAccent() {
         accentObserver = NotificationCenter.default.addObserver(
             forName: AppAccent.didChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.scheduleContextPublish() }
+        }
+        themeObserver = NotificationCenter.default.addObserver(
+            forName: AppTheme.didChange,
             object: nil,
             queue: .main
         ) { [weak self] _ in

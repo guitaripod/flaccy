@@ -25,7 +25,10 @@ struct RootView: View {
     @State private var pendingRemovals = PendingRemovals()
 
     var body: some View {
-        content.tint(WatchTheme.accent)
+        content
+            .tint(WatchTheme.accent)
+            .foregroundStyle(WatchTheme.text)
+            .fontDesign(WatchTheme.fontDesign)
     }
 
     private var content: some View {

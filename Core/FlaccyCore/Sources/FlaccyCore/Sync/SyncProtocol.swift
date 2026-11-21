@@ -34,6 +34,10 @@ public enum SyncKeys {
     /// UTF-8 (phone -> watch, via updateApplicationContext).
     public static let accent = "accent"
 
+    /// What the watch wears of the phone's theme, as an encoded
+    /// `ThemeWatchLook` (phone -> watch, via updateApplicationContext).
+    public static let theme = "theme"
+
     /// User-info command (phone -> watch).
     public static let command = "command"
     public static let removePaths = "removePaths"

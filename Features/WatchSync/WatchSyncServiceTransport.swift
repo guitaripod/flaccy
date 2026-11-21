@@ -182,6 +182,7 @@ extension WatchSyncService {
             context[SyncKeys.syncBatch] = payload
         }
         context[SyncKeys.accent] = Data(AppAccent.current.rawValue.utf8)
+        context[SyncKeys.theme] = ThemeWatchLook(look: AppTheme.shared.look).encoded
         guard context != lastSentContext else { return }
         do {
             try wcSession.updateApplicationContext(context)

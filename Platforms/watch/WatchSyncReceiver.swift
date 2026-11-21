@@ -299,6 +299,9 @@ nonisolated final class WatchSyncReceiver: NSObject, @unchecked Sendable {
         if let data = context[SyncKeys.accent] as? Data, let id = String(data: data, encoding: .utf8) {
             DispatchQueue.main.async { WatchAccent.shared.adopt(id: id) }
         }
+        if let look = ThemeWatchLook(encoded: context[SyncKeys.theme] as? Data) {
+            DispatchQueue.main.async { WatchAccent.shared.adopt(look: look) }
+        }
         let progress = EnrichmentJobTransfer.decode(context[SyncKeys.enrichmentJob])
         let batch = SyncBatchTransfer.decode(context[SyncKeys.syncBatch])
         guard progress != nil || batch != nil else { return }

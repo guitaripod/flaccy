@@ -117,3 +117,36 @@ final class ThemeSurfaceTests: XCTestCase {
         XCTAssertEqual(ThemeFontFace.resolve(nil, isInstalled: has), nil)
     }
 }
+
+final class ThemeWatchLookTests: XCTestCase {
+
+    private func look(_ pack: String, scheme: String = "") -> ThemeLook {
+        ThemeLook(pack: ThemeLibrary().pack(id: pack), choice: .init(pack: pack, scheme: scheme))
+    }
+
+    func testTheWatchIsToldTheOutcomeOfATheme() throws {
+        let phosphor = ThemeWatchLook(look: look("phosphor", scheme: "amber"))
+        XCTAssertFalse(phosphor.isOwnLook)
+        XCTAssertEqual(phosphor.accent, 0xf5a700)
+        XCTAssertEqual(phosphor.text, 0xffdf9e)
+        XCTAssertEqual(phosphor.bodyFace, .monospaced)
+        XCTAssertEqual(phosphor.coverShape, .square)
+        XCTAssertEqual(phosphor.coverRadius(10, side: 40), 0)
+
+        let hifi = ThemeWatchLook(look: look("hi-fi"))
+        XCTAssertEqual(hifi.coverRadius(10, side: 40), 20)
+        XCTAssertNil(hifi.bodyFace)
+
+        let liner = ThemeWatchLook(look: look("liner-notes", scheme: "lamplight"))
+        XCTAssertEqual(liner.headingFace, .serif)
+        XCTAssertEqual(liner.coverRadius(10, side: 40), 10)
+        XCTAssertTrue(ThemeWatchLook(look: look("flaccy")).isOwnLook)
+    }
+
+    func testItCrossesToTheWatchAndBack() {
+        let sent = ThemeWatchLook(look: look("marquee", scheme: "arcade"))
+        XCTAssertEqual(ThemeWatchLook(encoded: sent.encoded), sent)
+        XCTAssertNil(ThemeWatchLook(encoded: nil))
+        XCTAssertNil(ThemeWatchLook(encoded: Data("{}".utf8)))
+    }
+}
