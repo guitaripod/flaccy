@@ -125,6 +125,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         )
 
         view.addSubview(collectionView)
+        setContentScrollView(collectionView)
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.topAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
