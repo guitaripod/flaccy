@@ -55,11 +55,23 @@ struct PurchaseStoreKitTests {
 
     private static let probeStorefront = "BTN"
 
+    private static let probeProduct = "com.midgarcorp.flaccy.lifetime"
+
     /// A test session only stands in for the App Store when the device's StoreKit follows it. Where it does not, as on
     /// the iPad and iPhone running iOS 27 on 2026-11-20, the very same calls reach the sandbox store: real purchase
-    /// sheets come up and the Apple Account's sandbox purchases change. So before a test may buy, the session is moved
-    /// to a storefront nobody here shops in and StoreKit is asked which one it sees; reading it shows nothing on screen.
+    /// sheets come up and the Apple Account's sandbox purchases change. So before a test may buy, a device is asked
+    /// which storefront it sees and a simulator whether it sees the session's own purchase.
     private static func requireInControl(_ session: SKTestSession) async throws {
+        #if targetEnvironment(simulator)
+            try await requireSessionPurchaseSeen(session)
+        #else
+            try await requireProbeStorefrontSeen(session)
+        #endif
+    }
+
+    /// On a device the session is moved to a storefront nobody here shops in and StoreKit is asked which one it sees;
+    /// reading it shows nothing on screen.
+    private static func requireProbeStorefrontSeen(_ session: SKTestSession) async throws {
         session.storefront = probeStorefront
         var seen: String?
         for _ in 0..<30 {
@@ -69,6 +81,23 @@ struct PurchaseStoreKitTests {
         }
         session.resetToDefaultState()
         guard seen == probeStorefront else { throw TestSessionNotInControl(storefrontSeen: seen) }
+    }
+
+    /// A simulator's StoreKit never reports the session's storefront (`Storefront.current` stayed USA for eight seconds
+    /// on iOS 26.5, 27.0 and 27.1 on 2026-11-21), so there the session buys a product itself, which no store and no
+    /// sheet is part of, and StoreKit is asked whether it holds a transaction made by Xcode. The purchase is cleared
+    /// before any test runs.
+    private static func requireSessionPurchaseSeen(_ session: SKTestSession) async throws {
+        session.disableDialogs = true
+        _ = try await session.buyProduct(identifier: probeProduct)
+        var seen = false
+        for _ in 0..<30 where !seen {
+            for await result in Transaction.all where result.unsafePayloadValue.environment == .xcode { seen = true }
+            if !seen { try await Task.sleep(for: .milliseconds(100)) }
+        }
+        session.clearTransactions()
+        session.resetToDefaultState()
+        guard seen else { throw TestSessionNotInControl(storefrontSeen: await Storefront.current?.countryCode) }
     }
 
     @Test func theConfigurationFileSellsExactlyTheThreeProducts() throws {
