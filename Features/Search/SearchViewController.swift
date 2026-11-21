@@ -95,6 +95,7 @@ final class SearchViewController: UIViewController, SonglinkShareable {
         collectionView.keyboardDismissMode = .onDrag
         collectionView.contentInsetAdjustmentBehavior = .scrollableAxes
         view.addSubview(collectionView)
+        setContentScrollView(collectionView)
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.topAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),

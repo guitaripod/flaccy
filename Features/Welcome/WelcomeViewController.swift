@@ -145,7 +145,7 @@ final class WelcomeViewController: UIViewController {
         return icon
     }
 
-    private static func appIcon() -> UIImage? {
+    static func appIcon() -> UIImage? {
         guard let icons = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
               let primary = icons["CFBundlePrimaryIcon"] as? [String: Any],
               let files = primary["CFBundleIconFiles"] as? [String],

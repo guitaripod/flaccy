@@ -128,6 +128,7 @@ final class EqualizerViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        FlaccyLifestream.opened(.equalizer)
         engine.beginAnalysis(for: self)
         refresh(animated: false)
     }

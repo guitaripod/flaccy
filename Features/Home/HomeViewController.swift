@@ -56,6 +56,7 @@ final class HomeViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        FlaccyLifestream.opened(.home)
         viewModel.reload()
     }
 
@@ -112,7 +113,7 @@ final class HomeViewController: UIViewController {
         collectionView.contentInset.bottom = 16
         collectionView.accessibilityIdentifier = "home.collection"
         view.addSubview(collectionView)
-        setContentScrollView(collectionView, for: .top)
+        setContentScrollView(collectionView)
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.topAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),

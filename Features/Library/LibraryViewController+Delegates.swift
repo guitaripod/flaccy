@@ -69,6 +69,24 @@ extension LibraryViewController: UICollectionViewDelegate {
     }
 }
 
+extension LibraryViewController {
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard scrollView === collectionView else { return }
+        header.listDidScroll()
+    }
+
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        guard scrollView === collectionView, !decelerate else { return }
+        header.listDidRest()
+    }
+
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        guard scrollView === collectionView else { return }
+        header.listDidRest()
+    }
+}
+
 extension LibraryViewController: UIAdaptivePresentationControllerDelegate {
     func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
         guard presentationController.presentedViewController is LibraryDebutSheetController else { return }

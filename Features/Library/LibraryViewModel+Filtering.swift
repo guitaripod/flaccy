@@ -105,23 +105,34 @@ extension LibraryViewModel {
         }
     }
 
-    func indexTitles() -> [String] {
-        let items: [String]
+    /// The name each row on screen is indexed by, in the order the list shows
+    /// them. Read from the lists the snapshot was built from, so the index
+    /// still points at the right row when a source chip, a search or Clean
+    /// Library leaves fewer rows on screen than the library holds.
+    private func indexedNames() -> [String] {
+        let query = LibrarySearch.Query(searchQuery)
         switch currentSegment {
         case .albums:
-            items = sortedAlbums.map { albumSort == .artist ? $0.artist : $0.title }
+            return matchingAlbums(filteredAlbums(sortedAlbums), query: query).map { albumSort == .artist ? $0.artist : $0.title }
         case .songs:
-            items = sortedSongs.map { songSort == .artist ? $0.artist : $0.title }
+            return visibleSongs.map { songSort == .artist ? $0.artist : $0.title }
         case .artists:
-            items = sortedArtists.map(\.name)
+            return matchingArtists(sortedArtists, query: query).map(\.name)
         case .playlists:
             return []
         }
+    }
+
+    private static func indexLetter(of name: String) -> String {
+        let first = String(name.prefix(1)).uppercased()
+        return first.first?.isLetter == true ? first : "#"
+    }
+
+    func indexTitles() -> [String] {
         var seen = Set<String>()
         var titles = [String]()
-        for item in items {
-            let letter = String(item.prefix(1)).uppercased()
-            let key = letter.first?.isLetter == true ? letter : "#"
+        for name in indexedNames() {
+            let key = Self.indexLetter(of: name)
             if seen.insert(key).inserted {
                 titles.append(key)
             }
@@ -130,23 +141,7 @@ extension LibraryViewModel {
     }
 
     func indexOfFirstItem(forLetter letter: String) -> Int? {
-        let items: [(String, Int)]
-        switch currentSegment {
-        case .albums:
-            items = sortedAlbums.enumerated().map { (albumSort == .artist ? $1.artist : $1.title, $0) }
-        case .songs:
-            items = sortedSongs.enumerated().map { (songSort == .artist ? $1.artist : $1.title, $0) }
-        case .artists:
-            items = sortedArtists.enumerated().map { ($1.name, $0) }
-        case .playlists:
-            return nil
-        }
-        for (name, index) in items {
-            let first = String(name.prefix(1)).uppercased()
-            let key = first.first?.isLetter == true ? first : "#"
-            if key == letter { return index }
-        }
-        return nil
+        indexedNames().firstIndex { Self.indexLetter(of: $0) == letter }
     }
 
     /// An artist's albums, split into the ones credited to them and the ones

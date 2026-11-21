@@ -60,6 +60,8 @@ targets:
         type: syncedFolder
       - path: Resources
         type: syncedFolder
+      - path: Platforms/ios
+        type: syncedFolder
     dependencies:
       - package: FlaccyCore
       - package: FlaccyCore
@@ -159,6 +161,7 @@ targets:
           - UI/AppAccent.swift
           - UI/AppAppearance.swift
           - UI/AsyncImageView.swift
+          - UI/CollapsingHeaderView.swift
           - UI/DownloadedMarkView.swift
           - UI/FilterChipsView.swift
           - UI/FoldAwareCollectionView.swift
@@ -251,6 +254,7 @@ targets:
           - Library/LibraryViewController+Drag.swift
           - Library/LibraryViewController+Delegates.swift
           - Library/LibraryViewController+Layout.swift
+          - Library/LibraryHeaderShot.swift
           - Library/LibraryViewController+Sample.swift
           - Library/LibraryViewController+Sorting.swift
           - Library/LibraryViewController.swift
@@ -346,6 +350,12 @@ targets:
           - Settings/SongVolumesViewController.swift
           - Sharing/SonglinkShareable.swift
           - Sharing/StreamingLinksViewController.swift
+          - Showcase/ShowcaseFeaturesViewController.swift
+          - Showcase/ShowcaseFlow.swift
+          - Showcase/ShowcaseHaptics.swift
+          - Showcase/ShowcaseHeroView.swift
+          - Showcase/ShowcaseRowView.swift
+          - Showcase/ShowcaseViewController.swift
           - Wantlist/WantlistViewController.swift
           - WatchSync/WatchPlayIngestor.swift
           - WatchSync/WatchSyncCells.swift
@@ -375,10 +385,6 @@ targets:
           - WiFiTransfer/WiFiTransferViewController.swift
       - path: Resources
         type: syncedFolder
-        excludes:
-          - Assets.xcassets
-          - PrivacyInfo.xcprivacy
-          - WiFiTransferPage.html
     dependencies:
       - package: FlaccyCore
       - package: FlaccyCore

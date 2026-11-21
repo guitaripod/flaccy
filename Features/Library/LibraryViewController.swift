@@ -37,8 +37,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     var runwayBannerHeight: NSLayoutConstraint!
     var runwayBannerRequested = false
     var onSegmentChange: ((LibraryViewModel.Segment) -> Void)?
-    var chipsBelowPicker: NSLayoutConstraint!
-    var chipsBelowBar: NSLayoutConstraint!
+    var header: CollapsingHeaderView!
+    let segmentRow = UIView()
+    let emptyStateScrollView = UIScrollView()
 
     /// The root container's view, handed over by `adoptDebutHost(_:)` once the
     /// window is up.
@@ -179,7 +180,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         stack.setCustomSpacing(14, after: streamButton)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        let scrollView = UIScrollView()
+        let scrollView = emptyStateScrollView
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.contentInsetAdjustmentBehavior = .automatic
         scrollView.showsVerticalScrollIndicator = false
@@ -217,6 +218,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        FlaccyLifestream.opened(.library)
         guard viewModel.currentSegment == .playlists else { return }
         playlistAlbumIndex.invalidate()
         reconfigureVisibleArtwork()
@@ -229,12 +231,13 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         installDebutViewIfNeeded()
 
         setupSearchController()
+        setupCollectionView()
+        setupHeader()
         setupSegmentedControl()
         setupFilterChips()
         setupSourceChips()
         setupRunwayBanner()
         setupStatusBanner()
-        setupCollectionView()
         setupSectionIndex()
         configureDataSource()
         if let debutView { debutHost.bringSubviewToFront(debutView) }
@@ -329,13 +332,35 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         searchController.obscuresBackgroundDuringPresentation = false
         searchController.searchBar.placeholder = String(localized: "Albums, Artists, Songs")
         navigationItem.searchController = searchController
-        navigationItem.hidesSearchBarWhenScrolling = false
+        navigationItem.hidesSearchBarWhenScrolling = true
         navigationItem.preferredSearchBarPlacement = .stacked
         navigationItem.largeTitleDisplayMode = .never
         definesPresentationContext = true
     }
 
-    /// Hosts the segment picker as a full-width control pinned below the nav bar
+    /// The picker, chips and banners ride over the list in one header that
+    /// scrolls away with it and returns on the first move back up, so the
+    /// library gets the whole screen while it is being browsed.
+    func setupHeader() {
+        header = CollapsingHeaderView(following: collectionView)
+        header.onHeightChange = { [weak self] height in
+            self?.emptyStateScrollView.contentInset.top = height
+        }
+        view.addSubview(header)
+        NSLayoutConstraint.activate([
+            header.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            header.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            header.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+        ])
+        setContentScrollView(collectionView)
+        guard #unavailable(iOS 26.0) else { return }
+        let bar = UINavigationBarAppearance()
+        bar.configureWithDefaultBackground()
+        bar.shadowColor = .clear
+        navigationItem.standardAppearance = bar
+    }
+
+    /// Hosts the segment picker as a full-width control at the top of the header
     /// rather than as a width-constrained `titleView`, so all four titles render
     /// without truncation across device widths and Dynamic Type sizes.
     func setupSegmentedControl() {
@@ -358,11 +383,13 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             self.updatePivotTitle()
             self.onSegmentChange?(segment)
         }, for: .valueChanged)
-        view.addSubview(segmentedControl)
+        segmentRow.addSubview(segmentedControl)
+        header.stack.addArrangedSubview(segmentRow)
         NSLayoutConstraint.activate([
-            segmentedControl.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            segmentedControl.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            segmentedControl.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            segmentedControl.topAnchor.constraint(equalTo: segmentRow.topAnchor, constant: 8),
+            segmentedControl.bottomAnchor.constraint(equalTo: segmentRow.bottomAnchor, constant: -8),
+            segmentedControl.leadingAnchor.constraint(equalTo: segmentRow.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            segmentedControl.trailingAnchor.constraint(equalTo: segmentRow.safeAreaLayoutGuide.trailingAnchor, constant: -16),
         ])
     }
 
@@ -425,8 +452,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         loadViewIfNeeded()
         guard segmentedControl.isHidden != hidden else { return }
         segmentedControl.isHidden = hidden
-        chipsBelowPicker.isActive = !hidden
-        chipsBelowBar.isActive = hidden
+        segmentRow.isHidden = hidden
         updatePivotTitle()
         view.layoutIfNeeded()
     }
@@ -461,16 +487,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             self?.viewModel.setFilter(filter)
             self?.updateSectionIndex()
         }
-        view.addSubview(filterChipsView)
+        header.stack.addArrangedSubview(filterChipsView)
         chipsHeightConstraint = filterChipsView.heightAnchor.constraint(equalToConstant: 46)
-        chipsBelowPicker = filterChipsView.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 8)
-        chipsBelowBar = filterChipsView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 4)
-        NSLayoutConstraint.activate([
-            chipsBelowPicker,
-            filterChipsView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
-            filterChipsView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
-            chipsHeightConstraint,
-        ])
+        chipsHeightConstraint.isActive = true
     }
 
     func updateChips(for segment: LibraryViewModel.Segment) {
@@ -490,14 +509,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             self?.viewModel.setSource(source)
             self?.updateSectionIndex()
         }
-        view.addSubview(sourceChipsView)
+        header.stack.addArrangedSubview(sourceChipsView)
         sourceChipsHeightConstraint = sourceChipsView.heightAnchor.constraint(equalToConstant: 0)
-        NSLayoutConstraint.activate([
-            sourceChipsView.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor),
-            sourceChipsView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
-            sourceChipsView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
-            sourceChipsHeightConstraint,
-        ])
+        sourceChipsHeightConstraint.isActive = true
         NotificationCenter.default.addObserver(
             self, selector: #selector(remoteServersDidChange), name: RemoteServers.didChange, object: nil
         )
@@ -543,7 +557,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: statusBanner.bottomAnchor),
+            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -556,7 +570,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         NSLayoutConstraint.activate([
             sectionIndexView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 2),
-            sectionIndexView.topAnchor.constraint(equalTo: statusBanner.bottomAnchor, constant: 8),
+            sectionIndexView.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 8),
             sectionIndexView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
             sectionIndexView.widthAnchor.constraint(equalToConstant: 16),
         ])
@@ -570,6 +584,32 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                   itemIndex < self.collectionView.numberOfItems(inSection: section) else { return }
             let indexPath = IndexPath(item: itemIndex, section: section)
             self.collectionView.scrollToItem(at: indexPath, at: .top, animated: false)
+            self.settleJump(to: indexPath)
+        }
+    }
+
+    /// Checks an index jump once the list has laid out, and corrects it at
+    /// most twice. A jump made while the search bar is showing collapses the
+    /// bar, and the list's next layout pass then puts the list back at its top
+    /// (iOS 18 and 27 alike): the jump is made again. A jump that held but left
+    /// its row above or below the header's edge is moved by the difference. It
+    /// never forces a layout pass itself: doing that between the two jumps hung
+    /// the app on iOS 18.
+    func settleJump(to indexPath: IndexPath, attemptsLeft: Int = 2) {
+        guard attemptsLeft > 0 else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let list = self.collectionView,
+                  indexPath.section < list.numberOfSections,
+                  indexPath.item < list.numberOfItems(inSection: indexPath.section) else { return }
+            let edge = list.contentOffset.y + list.adjustedContentInset.top
+            if let row = list.cellForItem(at: indexPath), edge >= 1 {
+                let gap = row.frame.minY - edge
+                guard abs(gap) >= 1 else { return }
+                list.contentOffset.y += gap
+            } else {
+                list.scrollToItem(at: indexPath, at: .top, animated: false)
+            }
+            self.settleJump(to: indexPath, attemptsLeft: attemptsLeft - 1)
         }
     }
 

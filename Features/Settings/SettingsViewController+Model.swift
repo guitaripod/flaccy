@@ -194,6 +194,7 @@ extension SettingsViewController {
         case libraryDebutSummary
         case midgarEntry
         case version(String)
+        case usageCounts(status: String)
         case privacyPolicy
         case termsOfUse
         case support

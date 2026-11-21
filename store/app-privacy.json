@@ -2,6 +2,15 @@
   "schemaVersion": 1,
   "dataUsages": [
     {
+      "category": "CRASH_DATA",
+      "purposes": [
+        "APP_FUNCTIONALITY"
+      ],
+      "dataProtections": [
+        "DATA_NOT_LINKED_TO_YOU"
+      ]
+    },
+    {
       "category": "DEVICE_ID",
       "purposes": [
         "APP_FUNCTIONALITY"
@@ -12,6 +21,15 @@
     },
     {
       "category": "OTHER_USER_CONTENT",
+      "purposes": [
+        "APP_FUNCTIONALITY"
+      ],
+      "dataProtections": [
+        "DATA_NOT_LINKED_TO_YOU"
+      ]
+    },
+    {
+      "category": "PERFORMANCE_DATA",
       "purposes": [
         "APP_FUNCTIONALITY"
       ],

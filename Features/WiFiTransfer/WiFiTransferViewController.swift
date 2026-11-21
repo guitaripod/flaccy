@@ -59,6 +59,7 @@ final class WiFiTransferViewController: UIViewController {
             MainActor.assumeIsolated { self?.session.resume() }
         }
         FunnelSignals.shared.noteWiFiTransferOpened()
+        FlaccyLifestream.opened(.wifiTransfer)
     }
 
     override func viewWillAppear(_ animated: Bool) {

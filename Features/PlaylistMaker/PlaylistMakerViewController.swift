@@ -92,6 +92,7 @@ final class PlaylistMakerViewController: UIViewController, UITableViewDataSource
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        FlaccyLifestream.opened(.playlistMaker)
         if case .asking = phase, field.text.isEmpty { field.becomeFirstResponder() }
     }
 

@@ -3,6 +3,7 @@ import MidgarCore
 import FlaccyCore
 import StoreKit
 import MidgarPortal
+import MidgarUI
 import UIKit
 
 extension SettingsViewController {
@@ -124,6 +125,15 @@ extension SettingsViewController {
             cell.accessibilityTraits = .staticText
             cell.accessibilityLabel = String(localized: "Version")
             cell.accessibilityValue = version
+
+        case .usageCounts(let status):
+            content.image = RowIcon.image(systemName: "chart.bar.fill", tint: .systemIndigo)
+            content.text = MidgarUsageCounts.title
+            content.secondaryText = status
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = MidgarUsageCounts.title
+            cell.accessibilityValue = status
+            cell.accessibilityIdentifier = "settings.usageCounts"
 
         case .privacyPolicy:
             content.image = RowIcon.image(systemName: "hand.raised.fill", tint: .systemBlue)

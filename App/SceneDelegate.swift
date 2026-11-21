@@ -71,6 +71,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         LibraryWalkExercise.runIfRequested(window: window, tabs: tabs, player: playerContainer)
         RecapOpenExercise.runIfRequested(tabs: tabs)
         ColumnExercise.runIfRequested(tabs: tabs, player: playerContainer)
+        LibraryHeaderShot.runIfRequested(tabs: tabs)
         WatchRemoteExercise.runIfRequested()
         EqualizerExercise.runIfRequested()
         SongVolumeExercise.runIfRequested()
@@ -117,7 +118,10 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if !launchLinks.isEmpty {
             DispatchQueue.main.async { [weak self] in launchLinks.forEach { self?.openServerLink($0) } }
         } else {
-            WelcomeFlow.presentIfNeeded(over: rootVC, tabs: tabs)
+            ShowcaseFlow.presentIfNeeded(over: rootVC) { [weak rootVC, weak tabs] followedShowcase in
+                guard let rootVC, let tabs else { return }
+                WelcomeFlow.presentIfNeeded(over: rootVC, tabs: tabs, animated: followedShowcase)
+            }
         }
     }
 

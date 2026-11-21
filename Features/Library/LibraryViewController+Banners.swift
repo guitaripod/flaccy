@@ -17,14 +17,9 @@ extension LibraryViewController {
             self?.setRunwayBanner(visible: false)
             MidgarLog.info("Runway banner dismissed", category: .purchases)
         }
-        view.addSubview(runwayBanner)
+        header.stack.addArrangedSubview(runwayBanner)
         runwayBannerHeight = runwayBanner.heightAnchor.constraint(equalToConstant: 0)
-        NSLayoutConstraint.activate([
-            runwayBanner.topAnchor.constraint(equalTo: sourceChipsView.bottomAnchor),
-            runwayBanner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            runwayBanner.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            runwayBannerHeight,
-        ])
+        runwayBannerHeight.isActive = true
     }
 
     func setRunwayBanner(visible: Bool) {
@@ -63,14 +58,9 @@ extension LibraryViewController {
                 self.navigationController?.pushViewController(EnrichmentReportViewController(), animated: true)
             }
         }
-        view.addSubview(statusBanner)
+        header.stack.addArrangedSubview(statusBanner)
         statusBannerHeight = statusBanner.heightAnchor.constraint(equalToConstant: 0)
-        NSLayoutConstraint.activate([
-            statusBanner.topAnchor.constraint(equalTo: runwayBanner.bottomAnchor),
-            statusBanner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            statusBanner.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            statusBannerHeight,
-        ])
+        statusBannerHeight.isActive = true
     }
 
     func setStatusBanner(visible: Bool, animated: Bool) {
