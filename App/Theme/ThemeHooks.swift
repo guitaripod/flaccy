@@ -62,16 +62,24 @@ enum ThemeHooks {
         return ThemedColor.replacing(color) ?? color
     }
 
-    /// Whether a label sits where the system sizes things for its own face:
-    /// the tab bar, a navigation bar's buttons, a text field's placeholder.
-    /// A wider face there cut "Library" and "Edit" short and ran a search
-    /// field's prompt out of room, so those keep the system's.
+    /// Whether a label belongs to the system's own chrome, which the system
+    /// sizes for its own face: a tab bar, the iPad's floating tab bar and
+    /// sidebar, a navigation bar's title and buttons, an alert, a text
+    /// field's prompt. A wider face there cut "Library" and "Edit" short and
+    /// ran a search field's prompt out of room, so chrome keeps the system's
+    /// face and takes only the theme's colors. Chrome is told from content
+    /// by who owns it: the first view controller up from the label is a
+    /// container or one UIKit made, where content sits in one of the app's.
     private static func keepsSystemFace(_ label: UILabel) -> Bool {
-        var ancestor = label.superview
+        var responder = label.next
         var steps = 0
-        while let view = ancestor, steps < 8 {
-            if view is UITabBar || view is UINavigationBar || view is UITextField { return true }
-            ancestor = view.superview
+        while let current = responder, steps < 48 {
+            if current is UITextField { return true }
+            if let controller = current as? UIViewController {
+                return controller is UITabBarController || controller is UINavigationController
+                    || controller is UISplitViewController || Bundle(for: type(of: controller)) != .main
+            }
+            responder = current.next
             steps += 1
         }
         return false
@@ -112,7 +120,7 @@ enum ThemeHooks {
     /// The attributed text a label is given for `text`, remembering `text`
     /// itself on the label so another theme can start from it again.
     static func attributedText(for text: NSAttributedString?, on label: UILabel) -> NSAttributedString? {
-        guard dressing, !faces.isSystem, let text, text.length > 0 else {
+        guard dressing, !faces.isSystem, let text, text.length > 0, !keepsSystemFace(label) else {
             objc_setAssociatedObject(label, &baseTextKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             return text
         }
@@ -125,7 +133,7 @@ enum ThemeHooks {
     private static func dressRuns(of label: UILabel) {
         let base = (objc_getAssociatedObject(label, &baseTextKey) as? NSAttributedString) ?? label.attributedText
         guard let base else { return }
-        if dressing, !faces.isSystem {
+        if dressing, !faces.isSystem, !keepsSystemFace(label) {
             objc_setAssociatedObject(label, &baseTextKey, base.copy(), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             label.flaccyThemed_setAttributedText(themed(base))
         } else if objc_getAssociatedObject(label, &baseTextKey) != nil {
