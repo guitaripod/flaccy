@@ -4,6 +4,8 @@
   build_iphone_set.py --raw RAW_DIR --out OUT_DIR [--locales en,de,...] [--only hero,lyrics] [--watch-raw FILE]
 
 RAW_DIR holds <locale>/dark/<screen>.png and <locale>/light/<screen>.png from capture_all_locales.sh.
+The themes slide pairs two looks: Albums under Liner Notes in the light folder (theme-liner-notes.png) and
+under Hi-Fi in the dark one (theme-hi-fi.png), captured with FLACCY_ROUTE=library and FLACCY_THEME=<id>.
 """
 import argparse
 import json
@@ -26,10 +28,11 @@ SLIDES = [
     dict(id="scrobble", raw="charts", accent=c.AMBER, secondary=c.CORAL),
     dict(id="year", raw="year", accent=c.CORAL, secondary=c.AMBER),
     dict(id="watch", layout="watch", raw="now-playing", accent=c.BLUE, secondary=c.TEAL),
-    dict(id="eqpro", raw="equalizer-advanced", accent=c.AMBER, secondary=c.TEAL),
+    dict(id="themes", layout="pair", raw_left="theme-liner-notes", raw_right="theme-hi-fi", accent=c.AMBER,
+         secondary=c.VIOLET),
 ]
 
-LOCALES = ["en", "de", "es", "fr", "it", "ja", "ko", "pl", "pt-BR", "zh-Hans", "zh-Hant"]
+LOCALES = ["en", "de", "es", "fr", "it", "ja", "ko", "pl", "pt-BR", "zh-Hans", "zh-Hant", "sv", "da", "no", "fi"]
 
 
 def load_copy():

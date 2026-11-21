@@ -39,6 +39,11 @@
       "headline": "Dein Musikjahr, *zum Teilen bereit.*",
       "kicker": "Dein Jahr in Musik",
       "maxLines": 1
+    },
+    "themes": {
+      "headline": "Dein Look, *deine Regeln.*",
+      "kicker": "Themen",
+      "maxLines": 1
     }
   },
   "es": {
@@ -80,6 +85,11 @@
     "year": {
       "headline": "Tu año en música, *para compartir.*",
       "kicker": "Tu año en música",
+      "maxLines": 1
+    },
+    "themes": {
+      "headline": "Se ve como *tú lo quieres.*",
+      "kicker": "Temas",
       "maxLines": 1
     }
   },
@@ -123,6 +133,11 @@
       "kicker": "Année en musique",
       "headline": "Votre année, *prête à partager.*",
       "maxLines": 1
+    },
+    "themes": {
+      "headline": "Une allure *à votre image.*",
+      "kicker": "Thèmes",
+      "maxLines": 1
     }
   },
   "it": {
@@ -164,6 +179,11 @@
     "year": {
       "kicker": "Anno in musica",
       "headline": "Il tuo anno, *da condividere.*",
+      "maxLines": 1
+    },
+    "themes": {
+      "headline": "Ha l’aspetto *che piace a te.*",
+      "kicker": "Temi",
       "maxLines": 1
     }
   },
@@ -207,6 +227,11 @@
       "kicker": "年間ミュージック",
       "headline": "今年の音楽を、*共有しよう。*",
       "maxLines": 1
+    },
+    "themes": {
+      "headline": "あなた好みの見た目に *着せ替える。*",
+      "kicker": "テーマ",
+      "maxLines": 1
     }
   },
   "ko": {
@@ -248,6 +273,11 @@
     "year": {
       "kicker": "올해의 음악 리포트",
       "headline": "올해의 음악을, *공유해요.*",
+      "maxLines": 1
+    },
+    "themes": {
+      "headline": "내 취향대로 *보이게 하세요.*",
+      "kicker": "테마",
       "maxLines": 1
     }
   },
@@ -291,6 +321,11 @@
       "kicker": "Rok w muzyce",
       "headline": "Twój rok, *gotowy do dzielenia.*",
       "maxLines": 1
+    },
+    "themes": {
+      "headline": "Wygląda *jak ty chcesz.*",
+      "kicker": "Motywy",
+      "maxLines": 1
     }
   },
   "pt-BR": {
@@ -332,6 +367,11 @@
     "year": {
       "kicker": "Seu ano em música",
       "headline": "Seu ano, *para compartilhar.*",
+      "maxLines": 1
+    },
+    "themes": {
+      "headline": "Deixe com a cara *que você quer.*",
+      "kicker": "Temas",
       "maxLines": 1
     }
   },
@@ -375,6 +415,11 @@
       "kicker": "年度音乐",
       "headline": "你的年度音乐，*随时分享。*",
       "maxLines": 1
+    },
+    "themes": {
+      "headline": "让外观 *像你所想。*",
+      "kicker": "主题",
+      "maxLines": 1
     }
   },
   "zh-Hant": {
@@ -416,6 +461,11 @@
     "year": {
       "kicker": "年度音樂",
       "headline": "你的年度音樂，*隨時分享。*",
+      "maxLines": 1
+    },
+    "themes": {
+      "headline": "讓外觀 *如你所想。*",
+      "kicker": "主題",
       "maxLines": 1
     }
   },
@@ -459,6 +509,11 @@
       "kicker": "Ditt musikår",
       "headline": "Ditt år i musik, *redo att dela.*",
       "maxLines": 1
+    },
+    "themes": {
+      "headline": "Få det att se ut *som du vill.*",
+      "kicker": "Teman",
+      "maxLines": 1
     }
   },
   "da": {
@@ -500,6 +555,11 @@
     "year": {
       "kicker": "Dit musikår",
       "headline": "Dit år i musik, *klar til at dele.*",
+      "maxLines": 1
+    },
+    "themes": {
+      "headline": "Få det til at ligne *dig.*",
+      "kicker": "Temaer",
       "maxLines": 1
     }
   },
@@ -543,6 +603,11 @@
       "kicker": "Musikkåret ditt",
       "headline": "Året ditt i musikk, *klart til å deles.*",
       "maxLines": 1
+    },
+    "themes": {
+      "headline": "Få det til å se ut *som deg.*",
+      "kicker": "Temaer",
+      "maxLines": 1
     }
   },
   "fi": {
@@ -584,6 +649,11 @@
     "year": {
       "kicker": "Musiikkivuotesi",
       "headline": "Vuotesi musiikissa, *valmiina jaettavaksi.*",
+      "maxLines": 1
+    },
+    "themes": {
+      "headline": "Saa se näyttämään *omaltasi.*",
+      "kicker": "Teemat",
       "maxLines": 1
     }
   }

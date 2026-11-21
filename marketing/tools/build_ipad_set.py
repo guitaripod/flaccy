@@ -27,6 +27,7 @@ SLIDES = [
     dict(id="scrobble", raw="charts", accent=c.AMBER, secondary=c.CORAL),
     dict(id="eq", raw="equalizer", accent=c.TEAL, secondary=c.VIOLET),
     dict(id="year", raw="year", accent=c.CORAL, secondary=c.AMBER),
+    dict(id="themes", raw="theme-phosphor", accent=c.TEAL, secondary=c.VIOLET),
 ]
 
 
