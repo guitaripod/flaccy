@@ -1,0 +1,14 @@
+WHAT'S NEW IN 2.0.1: a short patch on top of 2.0.
+
+1. The volume bar in Now Playing stays put. Connecting headphones, a call ending or a volume change used to nudge the bar up and down while the system laid the row out again; it now holds its place.
+2. Music added to a Flaccy Server appears in the Library within a couple of minutes while the app stays open, without leaving and reopening Flaccy. The app asks the server whether its library changed every two minutes, and once more when it comes back to the front.
+
+NOTHING ELSE CHANGED: the store listing, the plans, the privacy answers and the crash reports are the same as in 2.0.0, which is live.
+
+HOW TO TEST: the app is a player for music files the person already owns. Tap Add Sample Music for a free album, or import any audio files (FLAC, ALAC, WAV, AIFF, MP3, AAC) with Add Music from the Files app. No account is required for playback. Settings > Servers adds the person's own music server (Navidrome, Flaccy Server or any OpenSubsonic server) for streaming and downloading; it needs their server, and the app works fully without one. Last.fm scrobbling is optional and needs the user's own Last.fm account. A reviewer without a paired Apple Watch can still open Settings > Apple Watch: it says no Watch is paired and explains how to set one up.
+
+PRICES: the yearly plan is $14.99. Lifetime is $34.99. A separate "Lifetime · Welcome Back" product, the same entitlement, is offered only to a device whose 7-day trial ended 1 to 8 days ago or that is in its second look; it is never shown together with the regular Lifetime product. The trial starts on the first play of the user's own music, not at install or on the sample album. A review device that ran an earlier Flaccy may already be in or past its trial, because the start date is stored in the Keychain and survives reinstalling; a device whose trial has ended still opens, keeps everything it set up, and reaches the plans from Settings.
+
+PURCHASE PATH: Settings (the gear button on Home) > the plan card at the top opens the plans.
+
+NSAllowsArbitraryLoads: people point Flaccy at their own server on a home network or a Tailscale address, which is often plain HTTP. Flaccy's own services all use HTTPS.
