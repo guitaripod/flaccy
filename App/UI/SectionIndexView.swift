@@ -28,6 +28,7 @@ final class SectionIndexView: UIView {
     required init?(coder: NSCoder) { fatalError() }
 
     func update(titles: [String]) {
+        guard titles != self.titles || labels.isEmpty else { return }
         self.titles = titles
         labels.forEach { $0.removeFromSuperview() }
 

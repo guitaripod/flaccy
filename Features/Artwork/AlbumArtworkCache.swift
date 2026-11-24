@@ -24,6 +24,7 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
     private let memoryCache = NSCache<NSString, PlatformImage>()
     private let loadQueue = DispatchQueue(label: "com.midgarcorp.flaccy.artwork", qos: .userInitiated, attributes: .concurrent)
     private var pending = Set<String>()
+    private var coverless = Set<String>()
     private var completionsByKey = [String: [(PlatformImage?) -> Void]]()
     private let pendingLock = NSLock()
     private var epoch = 0
@@ -71,6 +72,7 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
     func invalidate(keys: [(title: String, artist: String)]) {
         pendingLock.lock()
         epoch += 1
+        for key in keys { coverless.remove(Self.albumKey(title: key.title, artist: key.artist)) }
         pendingLock.unlock()
         for key in keys {
             for tier in Tier.allCases {
@@ -124,7 +126,13 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
             return
         }
 
+        let album = Self.albumKey(title: title, artist: artist)
         pendingLock.lock()
+        if coverless.contains(album) {
+            pendingLock.unlock()
+            completion?(nil)
+            return
+        }
         if pending.contains(key) {
             if let completion { completionsByKey[key, default: []].append(completion) }
             pendingLock.unlock()
@@ -149,6 +157,7 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
             }
 
             self.pendingLock.lock()
+            if image == nil, startedAtEpoch == self.currentEpoch() { self.coverless.insert(album) }
             let callbacks = self.completionsByKey.removeValue(forKey: key) ?? []
             self.pending.remove(key)
             self.pendingLock.unlock()
@@ -190,6 +199,10 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
         let square = CGRect(x: (cgImage.width - side) / 2, y: (cgImage.height - side) / 2, width: side, height: side)
         guard let cropped = cgImage.cropping(to: square) else { return image }
         return PlatformImage(cgImage: cropped)
+    }
+
+    private static func albumKey(title: String, artist: String) -> String {
+        "\(title)\0\(artist)"
     }
 
     private func cacheKey(title: String, artist: String, tier: Tier) -> String {

@@ -6,73 +6,26 @@ import UniformTypeIdentifiers
 
 extension LibraryViewController {
 
+    /// The marks a row shows after its title, as one hand-laid-out view: a
+    /// dequeued row no longer builds a stack, a badge with trait registrations
+    /// and a layout solve before it can be shown.
     func badgeAccessories(
         qualityTrack: Track?, loved: Bool, scrobbleCount: Int? = nil, newMix: Bool = false, downloaded: Bool = false
     ) -> [UICellAccessory] {
-        let container = UIStackView()
-        container.axis = .horizontal
-        container.spacing = 6
-        container.alignment = .center
-
-        if newMix {
-            container.addArrangedSubview(NewMixChipView())
-        }
-        if downloaded {
-            container.addArrangedSubview(DownloadedMarkView())
-        }
-        if let scrobbleCount {
-            container.addArrangedSubview(scrobbleCountView(scrobbleCount))
-        }
-        if loved {
-            let heart = UIImageView(image: UIImage(
-                systemName: "heart.fill",
-                withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
-            ))
-            heart.tintColor = .systemPink
-            heart.accessibilityLabel = String(localized: "Loved")
-            heart.isAccessibilityElement = true
-            container.addArrangedSubview(heart)
-        }
-        if qualityTrack?.qualityBadge != nil {
-            let badge = QualityBadgeView(size: .compact)
-            badge.configure(with: qualityTrack)
-            container.addArrangedSubview(badge)
-        }
-        guard !container.arrangedSubviews.isEmpty else { return [] }
-        let size = container.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
-        container.frame = CGRect(origin: .zero, size: size)
+        var marks = ListBadgeRow.Marks()
+        marks.newMix = newMix
+        marks.downloaded = downloaded
+        marks.scrobbleCount = scrobbleCount
+        marks.loved = loved
+        marks.quality = qualityTrack
+        guard newMix || downloaded || scrobbleCount != nil || loved || qualityTrack?.qualityBadge != nil else { return [] }
+        let row = ListBadgeRow(marks: marks, traits: traitCollection)
         return [.customView(configuration: .init(
-            customView: container,
+            customView: row,
             placement: .trailing(),
             reservedLayoutWidth: .actual,
             maintainsFixedSize: true
         ))]
-    }
-
-    /// A compact play-count pill (waveform glyph + monospaced count) shown on song
-    /// rows, sized so it never increases the row height set by the title/subtitle.
-    func scrobbleCountView(_ count: Int) -> UIView {
-        let stack = UIStackView()
-        stack.axis = .horizontal
-        stack.spacing = 3
-        stack.alignment = .center
-
-        let glyph = UIImageView(image: UIImage(
-            systemName: "waveform",
-            withConfiguration: UIImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
-        ))
-        glyph.tintColor = .flaccyTertiaryLabel
-
-        let label = UILabel()
-        label.text = count > 999 ? String(localized: "\(count / 1000)k") : "\(count)"
-        label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-        label.textColor = .flaccySecondaryLabel
-
-        stack.addArrangedSubview(glyph)
-        stack.addArrangedSubview(label)
-        stack.isAccessibilityElement = true
-        stack.accessibilityLabel = String(localized: "\(count) scrobbles")
-        return stack
     }
 
     func configureArtworkRow(
