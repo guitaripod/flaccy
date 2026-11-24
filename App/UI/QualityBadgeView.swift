@@ -38,6 +38,9 @@ final class QualityBadgeView: UIView {
         let fontSize: CGFloat = size == .regular ? 11 : 9.5
         label.font = .scaled(.caption2, size: fontSize, weight: .heavy)
         label.adjustsFontForContentSizeCategory = true
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.78
+        label.lineBreakMode = .byClipping
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         addSubview(label)
@@ -206,7 +209,11 @@ private final class BadgePill: UILabel {
         self.text = text
         font = .scaled(.caption2, size: 9.5, weight: .heavy)
         adjustsFontForContentSizeCategory = true
+        adjustsFontSizeToFitWidth = true
+        minimumScaleFactor = 0.78
+        lineBreakMode = .byClipping
         textAlignment = .center
+        setContentCompressionResistancePriority(.required, for: .horizontal)
         layer.cornerCurve = .continuous
         layer.borderWidth = 1
 
@@ -222,8 +229,16 @@ private final class BadgePill: UILabel {
     required init?(coder: NSCoder) { fatalError() }
 
     override var intrinsicContentSize: CGSize {
-        let text = super.intrinsicContentSize
-        return CGSize(width: ceil(text.width) + horizontalPadding * 2, height: max(17, ceil(text.height)))
+        let measured = NSAttributedString(string: text ?? "", attributes: [.font: font as Any]).size()
+        return CGSize(width: ceil(measured.width) + horizontalPadding * 2, height: max(17, ceil(measured.height)))
+    }
+
+    /// Keeps the hand padding outside the text so the label never narrows itself into an
+    /// ellipsis to make room for it.
+    override func textRect(forBounds bounds: CGRect, limitedToNumberOfLines numberOfLines: Int) -> CGRect {
+        let inset = bounds.insetBy(dx: horizontalPadding, dy: 0)
+        let rect = super.textRect(forBounds: inset, limitedToNumberOfLines: numberOfLines)
+        return rect.insetBy(dx: -horizontalPadding, dy: 0)
     }
 
     override func drawText(in rect: CGRect) {

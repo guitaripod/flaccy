@@ -157,7 +157,7 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
             }
 
             self.pendingLock.lock()
-            if image == nil, startedAtEpoch == self.currentEpoch() { self.coverless.insert(album) }
+            if image == nil, startedAtEpoch == self.epoch { self.coverless.insert(album) }
             let callbacks = self.completionsByKey.removeValue(forKey: key) ?? []
             self.pending.remove(key)
             self.pendingLock.unlock()
