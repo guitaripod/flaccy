@@ -31,6 +31,7 @@ final class PadSidebar: NSObject {
     let playlistsGroup: UITabGroup
     let discoverGroup: UITabGroup
     let playlistsNavigation = UINavigationController()
+    let discoverNavigation = UINavigationController()
 
     private weak var tabs: AppTabBarController?
     private var playlistObservation: AnyDatabaseCancellable?
@@ -71,21 +72,18 @@ final class PadSidebar: NSObject {
         let wantlist = UITab(
             title: String(localized: "Wantlist"), image: UIImage(systemName: "sparkles.rectangle.stack"),
             identifier: Identifier.wantlist
-        ) { _ in
-            UINavigationController(rootViewController: WantlistViewController())
-        }
+        ) { _ in WantlistViewController() }
         let guide = UITab(
             title: String(localized: "Listening Guide"), image: UIImage(systemName: "book"),
             identifier: Identifier.listeningGuide
-        ) { _ in
-            UINavigationController(rootViewController: ListeningGuideViewController())
-        }
+        ) { _ in ListeningGuideViewController() }
         discoverGroup = UITabGroup(
             title: String(localized: "Discover"), image: UIImage(systemName: "sparkles"),
             identifier: Identifier.discoverGroup, children: [wantlist, guide]
         ) { _ in SidebarSectionPlaceholder() }
         discoverGroup.preferredPlacement = .sidebarOnly
         discoverGroup.sidebarAppearance = .rootSection
+        discoverGroup.managingNavigationController = discoverNavigation
         super.init()
 
         playlistsGroup.sidebarActions = playlistActions()
@@ -271,7 +269,10 @@ extension PadSidebar: UITabBarControllerDelegate {
             guard pivot == displayedPivot, stack.count > 1, stack.first === tabs.library else { return [tabs.library] }
             return stack
         }
-        if tab.parent === playlistsGroup, let controller = tab.viewController { return [controller] }
+        if tab === playlistsGroup || tab === discoverGroup { return [] }
+        if (tab.parent === playlistsGroup || tab.parent === discoverGroup), let controller = tab.viewController {
+            return [controller]
+        }
         return proposedViewControllers
     }
 }
