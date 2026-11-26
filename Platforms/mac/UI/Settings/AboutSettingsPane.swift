@@ -68,9 +68,7 @@ final class AboutSettingsPane: SettingsPane {
 
     /// Opens the Usage Counts screen as a sheet: what Flaccy counts and reports, and the one switch that turns it off.
     @objc func openUsageCounts() {
-        let screen = NSHostingController(rootView: MacUsageCountsSheet())
-        screen.preferredContentSize = NSSize(width: 460, height: 560)
-        presentAsSheet(screen)
+        presentAsSheet(MacUsageCountsPanelViewController())
     }
 
     /// Starts an email to support with the log attached, through the mail app's link when the
@@ -91,20 +89,70 @@ final class AboutSettingsPane: SettingsPane {
     }
 }
 
-/// The Usage Counts screen with a Done button, as the sheet the About page opens.
-struct MacUsageCountsSheet: View {
+/// The Usage Counts sheet: the shared screen under its name over a Done button. A Mac sheet has no title bar, so the
+/// SwiftUI toolbar the screen's own Done sat in had nowhere to appear and the sheet could not be closed.
+final class MacUsageCountsPanelViewController: NSViewController {
 
-    @Environment(\.dismiss) private var dismiss
+    private var escapeMonitor: Any?
 
-    var body: some View {
-        NavigationStack {
-            MidgarUsageCounts()
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(String(localized: "Done")) { dismiss() }
-                    }
-                }
+    override func loadView() {
+        let title = NSTextField(labelWithString: MidgarUsageCounts.title)
+        title.font = .systemFont(ofSize: 15, weight: .semibold)
+        title.translatesAutoresizingMaskIntoConstraints = false
+        let screen = NSHostingView(rootView: NavigationStack { MidgarUsageCounts() })
+        screen.translatesAutoresizingMaskIntoConstraints = false
+        let separator = NSBox()
+        separator.boxType = .separator
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        let done = PanelButton(title: String(localized: "Done")) { [weak self] in self?.close() }
+        done.bezelStyle = .rounded
+        done.keyEquivalent = "\r"
+        done.setAccessibilityIdentifier("usageCounts.done")
+        let footer = NSStackView(views: [NSView(), done])
+        footer.orientation = .horizontal
+        footer.translatesAutoresizingMaskIntoConstraints = false
+        let root = NSView()
+        for item in [title, screen, separator, footer] {
+            root.addSubview(item)
         }
-        .frame(width: 460, height: 560)
+        NSLayoutConstraint.activate([
+            root.widthAnchor.constraint(equalToConstant: 460),
+            root.heightAnchor.constraint(equalToConstant: 560),
+            title.topAnchor.constraint(equalTo: root.topAnchor, constant: 18),
+            title.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 20),
+            title.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -20),
+            screen.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 12),
+            screen.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            screen.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            screen.bottomAnchor.constraint(equalTo: separator.topAnchor),
+            separator.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            footer.topAnchor.constraint(equalTo: separator.bottomAnchor, constant: 12),
+            footer.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 20),
+            footer.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -20),
+            footer.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -16),
+        ])
+        view = root
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        guard escapeMonitor == nil else { return }
+        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.keyCode == 53, self?.view.window === event.window else { return event }
+            self?.close()
+            return nil
+        }
+    }
+
+    override func viewWillDisappear() {
+        super.viewWillDisappear()
+        guard let escapeMonitor else { return }
+        NSEvent.removeMonitor(escapeMonitor)
+        self.escapeMonitor = nil
+    }
+
+    private func close() {
+        dismiss(nil)
     }
 }
