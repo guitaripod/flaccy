@@ -22,10 +22,11 @@ enum IntentsExercise {
     }
 
     private static func run() async {
-        await check("Shuffle My Music fills the queue from the library and plays") {
+        await check("Shuffle My Music fills the queue from the library, plays, and keeps the queue for Resume") {
             try await timed("Shuffle My Music") { _ = try await ShuffleLibraryIntent().perform() }
             let playing = await waitUntilPlaying()
-            return playing && player.queue.count == CleanLibrarySetting.uniquePool(Library.shared.allTracks).count
+            let kept = UserDefaults.standard.stringArray(forKey: "flaccy.queue.paths")?.count == player.queue.count
+            return playing && kept && player.queue.count == CleanLibrarySetting.uniquePool(Library.shared.allTracks).count
         }
         await exerciseMixes()
         await exerciseAlbum()

@@ -41,6 +41,7 @@ struct LoveCurrentSongIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         IntentLibrary.note("Love This Song")
+        await IntentLibrary.restoreSavedQueue()
         guard let track = IntentLibrary.player.currentTrack else { throw IntentLibrary.fail(.nothingPlaying) }
         let loves = LovedTracksService.shared
         guard !loves.isLoved(track: track) else {
@@ -59,6 +60,7 @@ struct GetCurrentSongIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
         IntentLibrary.note("Get Current Song")
+        await IntentLibrary.restoreSavedQueue()
         let player = IntentLibrary.player
         guard let track = player.currentTrack else { throw IntentLibrary.fail(.nothingPlaying) }
         let line = track.artist.isEmpty ? track.title : "\(track.title) – \(track.artist)"

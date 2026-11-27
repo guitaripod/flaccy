@@ -51,6 +51,7 @@ enum IntentLibrary {
         guard !tracks.isEmpty else { throw fail(.nothingToPlay) }
         MidgarLog.info("Intent plays \(tracks.count) songs (\(context?.key ?? "no context"))", category: .playback)
         player.play(shuffled ? tracks.shuffled() : tracks, startingAt: 0, context: context)
+        player.saveQueueState()
     }
 
     /// Puts back the queue an earlier launch saved and waits up to five seconds for it. The engine only announces

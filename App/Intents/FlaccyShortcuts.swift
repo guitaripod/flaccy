@@ -32,7 +32,6 @@ struct FlaccyShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: ResumeListeningIntent(),
             phrases: [
-                "Resume \(.applicationName)",
                 "Resume my music in \(.applicationName)",
                 "Keep listening in \(.applicationName)",
             ],

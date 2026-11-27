@@ -1,6 +1,9 @@
 import AVFoundation
 import MidgarCore
 import FlaccyCore
+#if os(iOS)
+import UIKit
+#endif
 
 extension AudioPlayer: PlaybackEngineHost {
 
@@ -71,6 +74,17 @@ extension AudioPlayer: PlaybackEngineHost {
 
     func playbackStateDidUpdate() {
         updateNowPlayingInfo()
+        keepQueueWhenStoppedInBackground()
+    }
+
+    /// A session Siri, a shortcut or the lock screen ran entirely in the background never resigns active, the one
+    /// moment the queue used to be kept, so it is also kept when the music stops there: the point after which iOS may
+    /// close the app and Resume would otherwise find nothing.
+    private func keepQueueWhenStoppedInBackground() {
+        #if os(iOS)
+        guard !isPlaying, UIApplication.shared.applicationState == .background else { return }
+        engine.saveQueueState()
+        #endif
     }
 
     func trackDidStart(_ track: Track) {
