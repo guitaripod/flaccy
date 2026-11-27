@@ -81,8 +81,9 @@ final class SystemVolumeSlider: UIView {
     private var simulatorSlider: UISlider?
 
     /// MPVolumeView renders no slider on the Simulator (there is no volume
-    /// hardware), which blanks the row in screenshots. A static stand-in
-    /// slider keeps the Now Playing layout truthful to what devices show.
+    /// hardware), only a "No Volume Available" label that blanks the row in
+    /// screenshots. A static stand-in slider takes its place and the label is
+    /// hidden, keeping the Now Playing layout truthful to what devices show.
     private func addSimulatorSliderIfNeeded() {
         guard internalSlider() == nil else { return }
         if let simulatorSlider {
@@ -98,6 +99,7 @@ final class SystemVolumeSlider: UIView {
         slider.accessibilityLabel = String(localized: "Volume")
         addSubview(slider)
         simulatorSlider = slider
+        volumeView.alpha = 0
     }
     #endif
 
