@@ -16,6 +16,7 @@ struct SetSleepTimerIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        IntentLibrary.note("Set Sleep Timer \(length.rawValue)")
         let player = IntentLibrary.player
         switch length {
         case .off:
@@ -39,7 +40,8 @@ struct LoveCurrentSongIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        guard let track = IntentLibrary.player.currentTrack else { throw FlaccyIntentError.nothingPlaying }
+        IntentLibrary.note("Love This Song")
+        guard let track = IntentLibrary.player.currentTrack else { throw IntentLibrary.fail(.nothingPlaying) }
         let loves = LovedTracksService.shared
         guard !loves.isLoved(track: track) else {
             return .result(dialog: "\(track.title) is already loved.")
@@ -56,8 +58,9 @@ struct GetCurrentSongIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
+        IntentLibrary.note("Get Current Song")
         let player = IntentLibrary.player
-        guard let track = player.currentTrack else { throw FlaccyIntentError.nothingPlaying }
+        guard let track = player.currentTrack else { throw IntentLibrary.fail(.nothingPlaying) }
         let line = track.artist.isEmpty ? track.title : "\(track.title) – \(track.artist)"
         guard !track.artist.isEmpty else {
             return .result(value: line, dialog: "\(track.title)")

@@ -41,11 +41,11 @@ nonisolated struct AlbumEntityQuery: EntityStringQuery {
         Array(await Self.all().prefix(Self.limit))
     }
 
-    @MainActor
     private static func all() async -> [AlbumEntity] {
-        await IntentLibrary.albums()
-            .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
-            .map(AlbumEntity.init(album:))
+        let albums = await IntentLibrary.albums()
+        return await IntentLibrary.offMain {
+            albums.map(AlbumEntity.init(album:)).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        }
     }
 }
 
@@ -61,8 +61,29 @@ nonisolated struct ArtistEntity: AppEntity {
         DisplayRepresentation(title: "\(name)", image: .init(systemName: "music.mic"))
     }
 
+    /// The songs credited to the artist, folding each distinct spelling once rather than twice per song.
     static func tracks(by id: String, in pool: [Track]) -> [Track] {
-        pool.filter { HomeKeys.fold($0.artist) == id || HomeKeys.fold($0.credit) == id }
+        var folded: [String: String] = [:]
+        func key(_ name: String) -> String {
+            if let known = folded[name] { return known }
+            let key = HomeKeys.fold(name)
+            folded[name] = key
+            return key
+        }
+        return pool.filter { key($0.artist) == id || key($0.credit) == id }
+    }
+
+    /// Every artist credited on a song, each once, under the spelling its first song uses.
+    static func all(in pool: [Track]) -> [ArtistEntity] {
+        var spellings = Set<String>()
+        var seen = Set<String>()
+        var artists: [ArtistEntity] = []
+        for track in pool where spellings.insert(track.credit).inserted {
+            let key = HomeKeys.fold(track.credit)
+            guard !key.isEmpty, seen.insert(key).inserted else { continue }
+            artists.append(ArtistEntity(id: key, name: track.credit))
+        }
+        return artists.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 }
 
@@ -82,17 +103,9 @@ nonisolated struct ArtistEntityQuery: EntityStringQuery {
         Array(await Self.all().prefix(Self.limit))
     }
 
-    /// Every artist credited on a song, each once, under the spelling its first song uses.
-    @MainActor
     private static func all() async -> [ArtistEntity] {
-        var seen = Set<String>()
-        var artists: [ArtistEntity] = []
-        for track in await IntentLibrary.tracks() {
-            let key = HomeKeys.fold(track.credit)
-            guard !key.isEmpty, seen.insert(key).inserted else { continue }
-            artists.append(ArtistEntity(id: key, name: track.credit))
-        }
-        return artists.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        let pool = await IntentLibrary.tracks()
+        return await IntentLibrary.offMain { ArtistEntity.all(in: pool) }
     }
 }
 

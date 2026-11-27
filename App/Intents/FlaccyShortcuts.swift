@@ -115,9 +115,23 @@ final class ShortcutParameterRefresh {
 
     func start() {
         guard observation == nil else { return }
-        observation = DatabaseManager.shared.observePlaylists { _ in
-            FlaccyShortcuts.updateAppShortcutParameters()
+        observation = DatabaseManager.shared.observePlaylists { playlists in
+            Self.registerIfChanged(playlists)
         }
+    }
+
+    private static let signatureKey = "flaccy.shortcuts.playlistSignature"
+
+    /// Tells the system the playlist names only when they differ from what this build last told it, so a launch or
+    /// a write that renames nothing costs no call.
+    private static func registerIfChanged(_ playlists: [PlaylistRecord]) {
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+        let names = playlists.map { "\($0.id ?? 0)\u{1F}\($0.name)" }.sorted()
+        let signature = ([build] + names).joined(separator: "\u{1E}")
+        let defaults = UserDefaults.standard
+        guard defaults.string(forKey: signatureKey) != signature else { return }
+        defaults.set(signature, forKey: signatureKey)
+        FlaccyShortcuts.updateAppShortcutParameters()
     }
 }
 #endif

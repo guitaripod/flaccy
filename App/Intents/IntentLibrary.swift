@@ -1,5 +1,6 @@
 #if !LEGACY_MAC_HANDOFF
 import Foundation
+import MidgarCore
 
 /// What the intents need when Siri, Shortcuts or the Action button wakes Flaccy with no window open: the indexed
 /// library read back from the database, the saved queue put back the way opening the app does, and the trial
@@ -19,18 +20,36 @@ enum IntentLibrary {
     }
 
     static func requireListening() throws {
-        guard PurchaseManager.shared.allowsPlayback else { throw FlaccyIntentError.trialEnded }
+        guard PurchaseManager.shared.allowsPlayback else { throw fail(.trialEnded) }
     }
 
     static func requireMusic() async throws -> [Track] {
         try requireListening()
         let pool = await tracks()
-        guard !pool.isEmpty else { throw FlaccyIntentError.emptyLibrary }
+        guard !pool.isEmpty else { throw fail(.emptyLibrary) }
         return pool
     }
 
+    /// Runs library-sized work (deduplicating, filtering or sorting tens of thousands of songs) off the main thread,
+    /// so an action run while Flaccy is on screen never costs a frame.
+    nonisolated static func offMain<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
+        await Task.detached(priority: .userInitiated) { work() }.value
+    }
+
+    /// Names the action in the app log, so a support log shows what Siri or a shortcut asked for.
+    static func note(_ action: String) {
+        MidgarLog.info("Intent: \(action)", category: .playback)
+    }
+
+    /// Logs why an action stopped before handing the reason to Siri.
+    static func fail(_ error: FlaccyIntentError) -> FlaccyIntentError {
+        MidgarLog.notice("Intent stopped: \(error)", category: .playback)
+        return error
+    }
+
     static func play(_ tracks: [Track], context: PlaybackContext?, shuffled: Bool) throws {
-        guard !tracks.isEmpty else { throw FlaccyIntentError.nothingToPlay }
+        guard !tracks.isEmpty else { throw fail(.nothingToPlay) }
+        MidgarLog.info("Intent plays \(tracks.count) songs (\(context?.key ?? "no context"))", category: .playback)
         player.play(shuffled ? tracks.shuffled() : tracks, startingAt: 0, context: context)
     }
 
@@ -46,11 +65,21 @@ enum IntentLibrary {
         }
     }
 
-    /// Reads the library the last scan indexed when nothing has asked for it yet, as on a launch Siri started.
-    /// A database read only: the folder scan still waits for the library screen, as it does on a normal launch.
+    /// Reads the library the last scan indexed when nothing has asked for it yet, as on a launch Siri started. When
+    /// the library screen is already loading it (Siri woke the app with its window), that load is awaited instead of
+    /// read a second time. A database read only: the folder scan still waits for the library screen.
     private static func loadIfNeeded() async {
-        guard Library.shared.allTracks.isEmpty else { return }
-        await Library.shared.reloadFromDatabase()
+        let library = Library.shared
+        guard library.allTracks.isEmpty else { return }
+        if library.isLoading {
+            var checks = 0
+            while library.isLoading, library.allTracks.isEmpty, checks < 400 {
+                checks += 1
+                try? await Task.sleep(for: .milliseconds(25))
+            }
+            guard library.allTracks.isEmpty else { return }
+        }
+        await library.reloadFromDatabase()
     }
 }
 

@@ -28,6 +28,7 @@ struct PlayMixIntent: AudioPlaybackIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        IntentLibrary.note("Play a Mix \(mix.rawValue)")
         let pool = try await IntentLibrary.requireMusic()
         if mix == .libraryRadio {
             IntentLibrary.player.playLibraryRadio()
@@ -36,7 +37,7 @@ struct PlayMixIntent: AudioPlaybackIntent {
         let mixes = await Task.detached {
             SuggestedPlaylistService.build(pool: CleanLibrarySetting.uniquePool(pool))
         }.value
-        guard let built = mixes.first(where: { $0.id == mix.rawValue }) else { throw FlaccyIntentError.mixNotReady }
+        guard let built = mixes.first(where: { $0.id == mix.rawValue }) else { throw IntentLibrary.fail(.mixNotReady) }
         let context = PlaybackContext(kind: .mix, id: built.id, title: built.title, subtitle: built.subtitle)
         try IntentLibrary.play(built.tracks, context: context, shuffled: shuffle)
         return .result()
@@ -50,8 +51,10 @@ struct ShuffleLibraryIntent: AudioPlaybackIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        IntentLibrary.note("Shuffle My Music")
         let pool = try await IntentLibrary.requireMusic()
-        try IntentLibrary.play(CleanLibrarySetting.uniquePool(pool), context: nil, shuffled: true)
+        let shuffled = await IntentLibrary.offMain { CleanLibrarySetting.uniquePool(pool).shuffled() }
+        try IntentLibrary.play(shuffled, context: nil, shuffled: false)
         return .result()
     }
 }
@@ -63,10 +66,11 @@ struct ResumeListeningIntent: AudioPlaybackIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        IntentLibrary.note("Resume Listening")
         try IntentLibrary.requireListening()
         await IntentLibrary.restoreSavedQueue()
         let player = IntentLibrary.player
-        guard !player.queue.isEmpty else { throw FlaccyIntentError.nothingToResume }
+        guard !player.queue.isEmpty else { throw IntentLibrary.fail(.nothingToResume) }
         if !player.isPlaying { player.togglePlayPause() }
         return .result()
     }
@@ -90,9 +94,10 @@ struct PlayAlbumIntent: AudioPlaybackIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        IntentLibrary.note("Play Album")
         try IntentLibrary.requireListening()
         guard let found = await IntentLibrary.albums().first(where: { $0.id == album.id }) else {
-            throw FlaccyIntentError.nothingToPlay
+            throw IntentLibrary.fail(.nothingToPlay)
         }
         let context = PlaybackContext.derived(from: found.tracks.map { .init(album: $0.albumTitle, credit: $0.credit) })
         try IntentLibrary.play(found.tracks, context: context, shuffled: shuffle)
@@ -119,8 +124,10 @@ struct PlayArtistIntent: AudioPlaybackIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        IntentLibrary.note("Play Artist")
         let pool = try await IntentLibrary.requireMusic()
-        let tracks = ArtistEntity.tracks(by: artist.id, in: CleanLibrarySetting.uniquePool(pool))
+        let id = artist.id
+        let tracks = await IntentLibrary.offMain { ArtistEntity.tracks(by: id, in: CleanLibrarySetting.uniquePool(pool)) }
         try IntentLibrary.play(tracks, context: nil, shuffled: shuffle)
         return .result()
     }
@@ -150,8 +157,10 @@ struct PlayPlaylistIntent: AudioPlaybackIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        IntentLibrary.note("Play Playlist")
         let pool = try await IntentLibrary.requireMusic()
-        let tracks = HomeFeedBuilder.playlistTracks(id: Int64(playlist.id), library: pool, database: .shared)
+        let id = Int64(playlist.id)
+        let tracks = await IntentLibrary.offMain { HomeFeedBuilder.playlistTracks(id: id, library: pool, database: .shared) }
         try IntentLibrary.play(tracks, context: playlist.context, shuffled: shuffle)
         return .result()
     }
@@ -171,6 +180,7 @@ struct StartStationIntent: AudioPlaybackIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        IntentLibrary.note("Start Station")
         _ = try await IntentLibrary.requireMusic()
         let player = IntentLibrary.player
         if let artist {
@@ -178,7 +188,7 @@ struct StartStationIntent: AudioPlaybackIntent {
             return .result()
         }
         await IntentLibrary.restoreSavedQueue()
-        guard let seed = player.currentTrack else { throw FlaccyIntentError.nothingPlaying }
+        guard let seed = player.currentTrack else { throw IntentLibrary.fail(.nothingPlaying) }
         player.startStation(seedTrack: seed)
         return .result()
     }
