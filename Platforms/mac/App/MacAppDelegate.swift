@@ -48,6 +48,9 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
         EqualizerExercise.runIfRequested()
         SongVolumeExercise.runIfRequested()
+        #if !LEGACY_MAC_HANDOFF
+        IntentsExercise.runIfRequested()
+        #endif
         SecondLookExercise.runIfRequested()
         LyricShareExercise.runIfRequested()
         LyricsMeaningExercise.runIfRequested()
@@ -84,6 +87,9 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         startLibraryPipeline()
         RemoteLaunch.start()
         MacServerSync.shared.start()
+        #if !LEGACY_MAC_HANDOFF
+        ShortcutParameterRefresh.shared.start()
+        #endif
         #if LEGACY_MAC_HANDOFF
         LegacyMacHandoff.exportAtLaunch()
         LegacyMoveCardPresenter.presentOncePerLaunch(over: windowController)

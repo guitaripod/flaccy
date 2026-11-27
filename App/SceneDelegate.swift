@@ -77,6 +77,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         WatchRemoteExercise.runIfRequested()
         EqualizerExercise.runIfRequested()
         SongVolumeExercise.runIfRequested()
+        IntentsExercise.runIfRequested()
         InterruptionExercise.runIfRequested()
         LyricShareExercise.runIfRequested()
         LyricsMeaningExercise.runIfRequested()

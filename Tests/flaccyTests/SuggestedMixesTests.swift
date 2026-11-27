@@ -37,6 +37,16 @@ nonisolated final class SuggestedMixesTests: XCTestCase {
         XCTAssertTrue(later.contains { $0 != first.spin })
     }
 
+    /// Siri and Shortcuts name a mix by the id Home gives it, so a mix Home builds under a new id would be
+    /// one the Play a Mix action can never start.
+    func testEveryMixHomeBuildsIsOneSiriCanName() throws {
+        let built = SuggestedPlaylistService.build(pool: try shelf(), now: evening, database: db)
+        XCTAssertFalse(built.isEmpty)
+        for mix in built {
+            XCTAssertNotNil(FlaccyMix(rawValue: mix.id), "Play a Mix has no case for \(mix.id)")
+        }
+    }
+
     private struct Picks: Equatable {
         let spin: String
         let dig: [String]
